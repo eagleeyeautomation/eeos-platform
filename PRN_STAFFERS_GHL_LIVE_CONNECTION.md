@@ -18,6 +18,9 @@
 - `GHL_WEBHOOK_SECRET`
 - `GHL_WEBHOOK_REGISTRATION_PATH`
 - `GHL_TOKEN_VAULT_FILE`
+- `GHL_RETRY_MAX_ATTEMPTS`
+- `GHL_RETRY_BASE_DELAY_MS`
+- `GHL_RATE_LIMIT_MIN_INTERVAL_MS`
 
 ## OAuth Callback URL
 
@@ -63,6 +66,11 @@ Runtime generated from `GHL_WEBHOOK_URL` when provided, otherwise the production
 - Opportunity event processing: `Opportunity Created` and `Opportunity Updated`.
 - Calendar event processing: `Appointment Created`, `Appointment Booked`, and `Calendar Event Created`.
 - Integration health status: implemented at `/api/integrations/gohighlevel/health`.
+- Integration diagnostics: implemented at `/api/integrations/gohighlevel/diagnostics` for Contacts, Opportunities, Calendars, Conversations, Custom Fields, Pipelines, and Locations.
+- Enterprise error handling: implemented with structured error codes.
+- Structured logging: implemented as JSON runtime logs.
+- Retry and rate-limit handling: implemented for GoHighLevel API calls.
+- Webhook security: shared-secret and HMAC validation implemented.
 - Audit logging: every accepted event writes an audit record in the live receiver.
 - Retry handling: rejected webhook deliveries are queued with a next retry timestamp.
 

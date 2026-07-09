@@ -24,7 +24,20 @@
 - [ ] Confirm OAuth callback automatically registers webhooks.
 - [ ] If needed, call `POST /api/integrations/gohighlevel/webhook/register`.
 - [ ] Confirm GoHighLevel is configured to send the shared webhook secret header.
+- [ ] Confirm GoHighLevel webhook HMAC/shared-secret validation rejects unsigned requests.
 - [ ] Confirm `/api/integrations/gohighlevel/health` reports `webhookStatus: Configured`.
+
+## Diagnostics
+
+- [ ] Confirm `/api/integrations/gohighlevel/diagnostics` can reach Contacts.
+- [ ] Confirm `/api/integrations/gohighlevel/diagnostics` can reach Opportunities.
+- [ ] Confirm `/api/integrations/gohighlevel/diagnostics` can reach Calendars.
+- [ ] Confirm `/api/integrations/gohighlevel/diagnostics` can reach Conversations.
+- [ ] Confirm `/api/integrations/gohighlevel/diagnostics` can reach Custom Fields.
+- [ ] Confirm `/api/integrations/gohighlevel/diagnostics` can reach Pipelines.
+- [ ] Confirm `/api/integrations/gohighlevel/diagnostics` can reach Locations.
+- [ ] Confirm 429/5xx responses retry with backoff and respect `Retry-After`.
+- [ ] Confirm structured logs are visible in production runtime logs.
 
 ## Live Event Verification
 
