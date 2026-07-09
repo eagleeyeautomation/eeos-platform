@@ -22,6 +22,12 @@ import OAuthFailure from "./pages/OAuthFailure";
 import IntegrationHealth from "./pages/IntegrationHealth";
 import TenantConfirmation from "./pages/TenantConfirmation";
 import PRNOnboarding from "./pages/PRNOnboarding";
+// Sprint 12 — Executive Experience
+import ExecutiveHome from "./pages/ExecutiveHome";
+import LiveStatus from "./pages/LiveStatus";
+import ConnectedApps from "./pages/ConnectedApps";
+import SystemHealth from "./pages/SystemHealth";
+import Notifications from "./pages/Notifications";
 
 function Router() {
   return (
@@ -44,6 +50,12 @@ function Router() {
       <Route path="/integration-health" component={IntegrationHealth} />
       <Route path="/tenant-confirmation" component={TenantConfirmation} />
       <Route path="/prn-onboarding" component={PRNOnboarding} />
+      {/* Sprint 12 — Executive Experience */}
+      <Route path="/executive-home" component={ExecutiveHome} />
+      <Route path="/live-status" component={LiveStatus} />
+      <Route path="/connected-apps" component={ConnectedApps} />
+      <Route path="/system-health" component={SystemHealth} />
+      <Route path="/notifications" component={Notifications} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

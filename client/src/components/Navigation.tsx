@@ -26,7 +26,18 @@ const NAV_LINKS = [
     children: [
       { label: "Connect GoHighLevel", href: "/connect-ghl" },
       { label: "Integration Health", href: "/integration-health" },
+      { label: "Live Signal Status", href: "/live-status" },
+      { label: "Connected Apps", href: "/connected-apps" },
       { label: "PRN Staffers Setup", href: "/prn-onboarding" },
+    ],
+  },
+  {
+    label: "Dashboard",
+    href: "#",
+    children: [
+      { label: "Executive Home", href: "/executive-home" },
+      { label: "System Health", href: "/system-health" },
+      { label: "Notifications", href: "/notifications" },
     ],
   },
 ];
