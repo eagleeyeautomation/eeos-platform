@@ -6,7 +6,7 @@ import { Link } from "wouter";
 import {
   LayoutDashboard, ListChecks, Dna, Lightbulb, GitBranch, Network,
   ArrowRight, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle2,
-  Zap, Users, Clock, ChevronRight, Info
+  Zap, Users, Clock, ChevronRight, Info, Plug, Activity
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -682,10 +682,10 @@ export default function Demo() {
               <div className="flex-1">
                 <p className="text-base font-semibold text-[#E8EDF5] mb-1"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  Ready to activate EEOS for your organization?
+                  Ready to connect your business to EEOS?
                 </p>
                 <p className="text-sm text-[#E8EDF5]/50 leading-relaxed">
-                  EEOS connects to your business systems, reads approved signals, and turns them into executive recommendations. Full deployment in 6 weeks.
+                  Connect your business systems. EEOS turns approved signals into executive recommendations — giving you clarity, speed, and decisive advantage.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 shrink-0">
@@ -694,15 +694,23 @@ export default function Demo() {
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(0,212,200,0.35)]"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  <Zap className="w-4 h-4" />
-                  Start Private Beta
+                  <Plug className="w-4 h-4" />
+                  Connect GoHighLevel
                 </Link>
                 <Link
-                  href="/onboarding"
+                  href="/integration-health"
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  Connect Your Business
+                  <Activity className="w-4 h-4" />
+                  View Integration Health
+                </Link>
+                <Link
+                  href="/onboarding"
+                  className="hidden sm:inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#E8EDF5]/60 border border-[rgba(232,237,245,0.1)] rounded-lg hover:border-[rgba(0,212,200,0.2)] hover:text-[#E8EDF5]/80 active:scale-[0.97] transition-all duration-200"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  Start Private Beta
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>

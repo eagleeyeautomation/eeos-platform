@@ -16,6 +16,12 @@ import Contact from "./pages/Contact";
 import Onboarding from "./pages/Onboarding";
 import Integrations from "./pages/Integrations";
 import ConnectGHL from "./pages/ConnectGHL";
+// Sprint 11 pages
+import OAuthSuccess from "./pages/OAuthSuccess";
+import OAuthFailure from "./pages/OAuthFailure";
+import IntegrationHealth from "./pages/IntegrationHealth";
+import TenantConfirmation from "./pages/TenantConfirmation";
+import PRNOnboarding from "./pages/PRNOnboarding";
 
 function Router() {
   return (
@@ -32,6 +38,12 @@ function Router() {
       <Route path="/onboarding" component={Onboarding} />
       <Route path="/integrations" component={Integrations} />
       <Route path="/connect-ghl" component={ConnectGHL} />
+      {/* Sprint 11 — GHL Connection Journey */}
+      <Route path="/oauth-success" component={OAuthSuccess} />
+      <Route path="/oauth-failure" component={OAuthFailure} />
+      <Route path="/integration-health" component={IntegrationHealth} />
+      <Route path="/tenant-confirmation" component={TenantConfirmation} />
+      <Route path="/prn-onboarding" component={PRNOnboarding} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

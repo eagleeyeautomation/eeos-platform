@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, ChevronDown, ArrowRight, Zap } from "lucide-react";
+import { Menu, X, ChevronDown, ArrowRight, Zap, Plug, Activity } from "lucide-react";
 
 const NAV_LINKS = [
   { label: "Why EEOS", href: "/why-eeos" },
@@ -18,6 +18,15 @@ const NAV_LINKS = [
       { label: "About Eagle Eye", href: "/about" },
       { label: "Integrations", href: "/integrations" },
       { label: "Contact", href: "/contact" },
+    ],
+  },
+  {
+    label: "Connect",
+    href: "#",
+    children: [
+      { label: "Connect GoHighLevel", href: "/connect-ghl" },
+      { label: "Integration Health", href: "/integration-health" },
+      { label: "PRN Staffers Setup", href: "/prn-onboarding" },
     ],
   },
 ];
@@ -220,26 +229,27 @@ export default function Navigation() {
           {/* Mobile CTAs */}
           <div className="mt-8 space-y-3 border-t border-[rgba(0,212,200,0.1)] pt-6">
             <Link
-              href="/demo"
-              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-xl hover:bg-[rgba(0,212,200,0.08)] transition-all"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              Request Demo
-            </Link>
-            <Link
               href="/connect-ghl"
               className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-xl hover:bg-[#00E8DB] transition-all shadow-[0_0_20px_rgba(0,212,200,0.4)]"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              <Zap className="w-4 h-4" />
-              Start Private Beta
+              <Plug className="w-4 h-4" />
+              Connect GoHighLevel
             </Link>
             <Link
-              href="/onboarding"
+              href="/integration-health"
+              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-xl hover:bg-[rgba(0,212,200,0.08)] transition-all"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              <Activity className="w-4 h-4" />
+              View Integration Health
+            </Link>
+            <Link
+              href="/demo"
               className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#E8EDF5]/70 hover:text-[#E8EDF5] transition-all"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              Connect Your Business
+              Open Executive Dashboard
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
