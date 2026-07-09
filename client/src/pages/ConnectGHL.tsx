@@ -25,7 +25,7 @@ const STEPS = [
     title: "Connect GoHighLevel",
     description: "Authorize EEOS to read your GoHighLevel account using a secure OAuth connection. We request read-only access to contacts, pipelines, campaigns, and reporting data.",
     action: "Authorize Connection →",
-    href: "#authorize",
+    href: "/api/integrations/gohighlevel/oauth/start",
     color: "#6366F1",
     highlight: true,
   },
@@ -240,13 +240,23 @@ export default function ConnectGHL() {
                     </div>
                     <p className="text-sm text-[#E8EDF5]/60 leading-relaxed">{step.description}</p>
                   </div>
-                  <Link
-                    href={step.href}
-                    className="shrink-0 flex items-center gap-1.5 text-sm font-semibold transition-all duration-200 hover:gap-2.5"
-                    style={{ color: step.color, fontFamily: "'Space Grotesk', sans-serif" }}
-                  >
-                    {step.action}
-                  </Link>
+                  {step.href.startsWith("/api/") ? (
+                    <a
+                      href={step.href}
+                      className="shrink-0 flex items-center gap-1.5 text-sm font-semibold transition-all duration-200 hover:gap-2.5"
+                      style={{ color: step.color, fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      {step.action}
+                    </a>
+                  ) : (
+                    <Link
+                      href={step.href}
+                      className="shrink-0 flex items-center gap-1.5 text-sm font-semibold transition-all duration-200 hover:gap-2.5"
+                      style={{ color: step.color, fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      {step.action}
+                    </Link>
+                  )}
                 </div>
               </AnimatedSection>
             ))}
