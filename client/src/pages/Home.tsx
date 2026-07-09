@@ -1,10 +1,13 @@
-// EEOS Home Page — Sovereign Night Design System
-// Hero + How It Works + Stats + Value Props + Demo Preview + Knowledge Graph + Final CTA
+// EEOS Customer Experience — Home Page
+// Eagle Eye Automation company positioning + EEOS as flagship product
+// "Transcend Your Business. Stop managing. Start leading."
+// Sovereign Night — aerospace command interface
 
 import { Link } from "wouter";
 import {
   ArrowRight, Play, ChevronRight, Zap, Shield, Brain,
   BarChart3, Globe, Users, Database, Eye, Cpu, Lock,
+  TrendingUp, Lightbulb, Target,
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -14,7 +17,7 @@ import CountUp from "@/components/CountUp";
 const STATS = [
   { value: 340, suffix: "%", label: "Average ROI" },
   { value: 6, suffix: " weeks", label: "Time to Value" },
-  { value: 42, suffix: "+", label: "Enterprise Clients" },
+  { value: 42, suffix: "+", label: "Service Businesses" },
   { value: 98, suffix: "%", label: "Retention Rate" },
 ];
 
@@ -22,7 +25,7 @@ const VALUE_PROPS = [
   {
     icon: Brain,
     title: "Executive Intelligence",
-    description: "EEOS synthesizes data from every corner of your organization into clear, actionable intelligence — delivered before you need to ask.",
+    description: "EEOS synthesizes data from every corner of your business into clear, actionable intelligence — delivered before you need to ask.",
   },
   {
     icon: Zap,
@@ -37,23 +40,23 @@ const VALUE_PROPS = [
   {
     icon: Globe,
     title: "Universal Integration",
-    description: "Connect every system your organization runs — ERP, CRM, HR, finance, operations — into one unified intelligence layer.",
+    description: "Connect every system your business runs — CRM, HR, finance, operations — into one unified intelligence layer.",
   },
   {
     icon: BarChart3,
     title: "Business DNA Mapping",
-    description: "EEOS builds a living model of your organization's strengths, risks, and strategic momentum — updated in real time.",
+    description: "EEOS builds a living model of your business's strengths, risks, and strategic momentum — updated in real time.",
   },
   {
     icon: Users,
-    title: "Built for the C-Suite",
-    description: "Designed for CEOs, CFOs, COOs, and their teams. No dashboards to configure. No data science required. Just intelligence.",
+    title: "Built for Business Owners",
+    description: "Designed for founders, operators, and their leadership teams. No dashboards to configure. No data science required. Just intelligence.",
   },
 ];
 
 const LOGOS = [
-  "MERIDIAN GLOBAL", "APEX DEFENSE", "NORTHSTAR CAPITAL", "VANTAGE HEALTH",
-  "ORBITAL SYSTEMS", "PINNACLE ENERGY", "SOVEREIGN TECH", "ATLAS MANUFACTURING",
+  "MERIDIAN STAFFING", "APEX SERVICES", "NORTHSTAR CONSULTING", "VANTAGE HEALTH",
+  "SUMMIT OPERATIONS", "PINNACLE STAFFING", "SOVEREIGN SERVICES", "ATLAS GROUP",
 ];
 
 const HOW_IT_WORKS = [
@@ -77,6 +80,30 @@ const HOW_IT_WORKS = [
     title: "Turns them into executive recommendations",
     description: "EEOS synthesizes every signal into prioritized, context-rich recommendations delivered directly to your executive dashboard. No noise. Just decisions.",
     color: "#10B981",
+  },
+];
+
+// The transformation narrative — what business owners move from and to
+const TRANSFORMATION = [
+  {
+    from: "Reacting to yesterday's problems",
+    to: "Making tomorrow's decisions with confidence",
+    icon: Target,
+  },
+  {
+    from: "Buried in reports and dashboards",
+    to: "One clear view of what matters most",
+    icon: Eye,
+  },
+  {
+    from: "Managing the business",
+    to: "Leading the business",
+    icon: TrendingUp,
+  },
+  {
+    from: "Guessing what to prioritize",
+    to: "Acting on AI-ranked recommendations",
+    icon: Lightbulb,
   },
 ];
 
@@ -109,38 +136,41 @@ export default function Home() {
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 w-full">
           <div className="max-w-3xl">
-            {/* Live indicator */}
+
+            {/* Company badge */}
             <div className="flex items-center gap-3 mb-8 animate-fade-up">
               <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-[rgba(0,212,200,0.25)] bg-[rgba(0,212,200,0.06)]">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#00D4C8] animate-pulse" />
-                <span className="section-label text-[10px]">Executive Intelligence Platform</span>
+                <span className="section-label text-[10px]">Eagle Eye Automation — AI Software for Service Businesses</span>
               </div>
             </div>
 
-            {/* Headline */}
+            {/* Primary headline — the transcendence message */}
             <h1
-              className="text-5xl sm:text-6xl lg:text-7xl font-bold text-[#E8EDF5] leading-[1.05] tracking-tight mb-6 animate-fade-up"
+              className="text-5xl sm:text-6xl lg:text-7xl font-bold text-[#E8EDF5] leading-[1.05] tracking-tight mb-4 animate-fade-up"
               style={{ fontFamily: "'Space Grotesk', sans-serif", animationDelay: "100ms" }}
             >
-              Your organization
+              Transcend Your
               <br />
-              has a nervous system.
-              <br />
-              <span className="gradient-text">EEOS is its brain.</span>
+              Business.
             </h1>
-
-            {/* Explanation — the key copy */}
-            <div
-              className="mb-8 animate-fade-up"
-              style={{ animationDelay: "200ms" }}
+            <p
+              className="text-2xl sm:text-3xl font-semibold text-[#E8EDF5]/70 mb-6 animate-fade-up"
+              style={{ fontFamily: "'Space Grotesk', sans-serif", animationDelay: "150ms" }}
             >
-              <p className="text-lg sm:text-xl text-[#E8EDF5]/70 leading-relaxed max-w-2xl mb-4">
-                The executive operating system that transforms organizational complexity into decisive clarity.
+              Stop managing.{" "}
+              <span className="gradient-text">Start leading.</span>
+            </p>
+
+            {/* The core explanation */}
+            <div className="mb-8 animate-fade-up" style={{ animationDelay: "200ms" }}>
+              <p className="text-base sm:text-lg text-[#E8EDF5]/65 leading-relaxed max-w-2xl mb-5">
+                Eagle Eye Automation builds AI software that helps service businesses grow. Our flagship product, <span className="text-[#00D4C8] font-semibold">EEOS</span>, helps business owners move beyond reacting to today's problems and begin making tomorrow's decisions with confidence.
               </p>
               <div className="flex items-start gap-3 p-4 rounded-xl border border-[rgba(0,212,200,0.2)] bg-[rgba(0,212,200,0.04)]">
                 <Lock className="w-4 h-4 text-[#00D4C8] mt-0.5 shrink-0" />
                 <p className="text-sm text-[#E8EDF5]/75 leading-relaxed">
-                  <span className="text-[#00D4C8] font-semibold">How it works:</span> EEOS connects to your business systems, reads approved signals, and turns them into executive recommendations — all without storing your data.
+                  <span className="text-[#00D4C8] font-semibold">How EEOS works:</span> Connects to your business systems, reads approved signals, and turns them into executive recommendations — all without storing your data.
                 </p>
               </div>
             </div>
@@ -181,7 +211,7 @@ export default function Home() {
               className="flex flex-wrap items-center gap-4 sm:gap-6 mt-10 animate-fade-up"
               style={{ animationDelay: "400ms" }}
             >
-              {["SOC 2 Type II", "ISO 27001", "FedRAMP Ready", "Fortune 500 Trusted"].map((badge) => (
+              {["SOC 2 Type II", "ISO 27001", "FedRAMP Ready", "Service Business Specialists"].map((badge) => (
                 <div key={badge} className="flex items-center gap-1.5">
                   <div className="w-1 h-1 rounded-full bg-[#00D4C8]" />
                   <span
@@ -232,8 +262,58 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
+      {/* ── THE TRANSFORMATION ── */}
       <section className="bg-[#050C1A] py-20 sm:py-28">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <AnimatedSection className="mb-14">
+            <div className="section-label mb-3">The Shift</div>
+            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+              <h2
+                className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight leading-tight max-w-xl"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                From reactive operator
+                <br />
+                <span className="gradient-text">to confident leader.</span>
+              </h2>
+              <p className="text-[#E8EDF5]/55 max-w-sm text-sm leading-relaxed lg:text-right">
+                EEOS doesn't just report what happened — it tells you what to do next, and why it matters now.
+              </p>
+            </div>
+          </AnimatedSection>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {TRANSFORMATION.map((item, i) => (
+              <AnimatedSection key={item.from} delay={i * 80}>
+                <div className="glass-card rounded-xl p-6 h-full group hover:border-[rgba(0,212,200,0.3)] transition-all duration-300">
+                  <div className="flex items-start gap-4">
+                    <div className="w-9 h-9 rounded-lg bg-[rgba(0,212,200,0.08)] border border-[rgba(0,212,200,0.18)] flex items-center justify-center shrink-0 mt-0.5">
+                      <item.icon className="w-4 h-4 text-[#00D4C8]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {/* Before */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[9px] font-bold text-[#EF4444]/60 tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>BEFORE</span>
+                        <div className="flex-1 h-px bg-[rgba(239,68,68,0.15)]" />
+                      </div>
+                      <p className="text-sm text-[#E8EDF5]/40 line-through mb-3 leading-snug">{item.from}</p>
+                      {/* After */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[9px] font-bold text-[#00D4C8]/70 tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>WITH EEOS</span>
+                        <div className="flex-1 h-px bg-[rgba(0,212,200,0.2)]" />
+                      </div>
+                      <p className="text-sm font-semibold text-[#E8EDF5] leading-snug">{item.to}</p>
+                    </div>
+                  </div>
+                </div>
+              </AnimatedSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ── */}
+      <section className="bg-[#0A1628] py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="mb-14">
             <div className="section-label mb-3">How EEOS Works</div>
@@ -259,20 +339,15 @@ export default function Home() {
             {HOW_IT_WORKS.map((step, i) => (
               <AnimatedSection key={step.step} delay={i * 120}>
                 <div className="relative glass-card rounded-2xl p-6 sm:p-8 h-full group hover:border-[rgba(0,212,200,0.3)] transition-all duration-300">
-                  {/* Step number */}
                   <div
                     className="text-[10px] font-bold tracking-[0.2em] mb-4"
                     style={{ fontFamily: "'JetBrains Mono', monospace", color: step.color }}
                   >
                     STEP {step.step}
                   </div>
-                  {/* Icon */}
                   <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
-                    style={{
-                      background: `${step.color}15`,
-                      border: `1px solid ${step.color}30`,
-                    }}
+                    style={{ background: `${step.color}15`, border: `1px solid ${step.color}30` }}
                   >
                     <step.icon className="w-6 h-6" style={{ color: step.color }} />
                   </div>
@@ -283,8 +358,6 @@ export default function Home() {
                     {step.title}
                   </h3>
                   <p className="text-sm text-[#E8EDF5]/60 leading-relaxed">{step.description}</p>
-
-                  {/* Arrow for mobile */}
                   {i < HOW_IT_WORKS.length - 1 && (
                     <div className="md:hidden flex justify-center mt-6">
                       <ArrowRight className="w-5 h-5 text-[#00D4C8]/40 rotate-90" />
@@ -314,7 +387,7 @@ export default function Home() {
           className="text-center text-[10px] text-[#E8EDF5]/25 tracking-[0.2em] uppercase mb-6"
           style={{ fontFamily: "'JetBrains Mono', monospace" }}
         >
-          Trusted by enterprise leaders across industries
+          Trusted by service businesses across industries
         </p>
         <div
           className="flex gap-16 items-center"
@@ -349,7 +422,7 @@ export default function Home() {
             >
               Intelligence that operates
               <br />
-              <span className="gradient-text">at executive speed</span>
+              <span className="gradient-text">at the speed of leadership</span>
             </h2>
             <p className="text-[#E8EDF5]/55 max-w-lg text-sm leading-relaxed">
               EEOS doesn't just report what happened — it tells you what to do next, and why it matters now.
@@ -382,7 +455,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <AnimatedSection>
-              <div className="section-label mb-4">Executive Dashboard</div>
+              <div className="section-label mb-4">EEOS — Executive Dashboard</div>
               <h2
                 className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight mb-5"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -392,12 +465,12 @@ export default function Home() {
                 <span className="gradient-text">Decide faster.</span>
               </h2>
               <p className="text-[#E8EDF5]/62 leading-relaxed mb-6 text-sm sm:text-base">
-                The EEOS Executive Dashboard delivers a real-time command view of your entire organization — from financial performance to talent risk, supply chain health to strategic momentum — in a single, actionable interface.
+                The EEOS Executive Dashboard delivers a real-time command view of your entire business — from financial performance to team utilization, pipeline health to strategic momentum — in a single, actionable interface.
               </p>
               <ul className="space-y-2.5 mb-8">
                 {[
                   "Real-time KPI synthesis across all departments",
-                  "AI-prioritized action queue for the CEO",
+                  "AI-prioritized action queue for the business owner",
                   "Risk signals surfaced before they become crises",
                   "Strategic alignment scoring across business units",
                 ].map((item) => (
@@ -436,36 +509,13 @@ export default function Home() {
                   className="w-full rounded-2xl border border-[rgba(0,212,200,0.15)] shadow-[0_0_60px_rgba(0,212,200,0.1)]"
                 />
                 <div className="absolute -top-3 -right-3 sm:-top-4 sm:-right-4 glass-card rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 animate-float">
-                  <div
-                    className="text-[10px] text-[#E8EDF5]/50 mb-0.5"
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  >
-                    Revenue YTD
-                  </div>
-                  <div
-                    className="text-base sm:text-lg font-bold text-[#00D4C8]"
-                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                  >
-                    $6.2B
-                  </div>
-                  <div className="text-xs text-[#10B981]">↑ +12.4%</div>
+                  <div className="text-[10px] text-[#E8EDF5]/50 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Revenue YTD</div>
+                  <div className="text-base sm:text-lg font-bold text-[#00D4C8]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>$4.2M</div>
+                  <div className="text-xs text-[#10B981]">↑ +18.4%</div>
                 </div>
-                <div
-                  className="absolute -bottom-3 -left-3 sm:-bottom-4 sm:-left-4 glass-card rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 animate-float"
-                  style={{ animationDelay: "1s" }}
-                >
-                  <div
-                    className="text-[10px] text-[#E8EDF5]/50 mb-0.5"
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  >
-                    Priorities Active
-                  </div>
-                  <div
-                    className="text-base sm:text-lg font-bold text-[#F59E0B]"
-                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                  >
-                    5
-                  </div>
+                <div className="absolute -bottom-3 -left-3 sm:-bottom-4 sm:-left-4 glass-card rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 animate-float" style={{ animationDelay: "1s" }}>
+                  <div className="text-[10px] text-[#E8EDF5]/50 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Priorities Active</div>
+                  <div className="text-base sm:text-lg font-bold text-[#F59E0B]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>5</div>
                   <div className="text-xs text-[#E8EDF5]/50">1 Critical</div>
                 </div>
               </div>
@@ -490,24 +540,24 @@ export default function Home() {
             </AnimatedSection>
 
             <AnimatedSection className="order-1 lg:order-2">
-              <div className="section-label mb-4">Knowledge Graph</div>
+              <div className="section-label mb-4">Business DNA</div>
               <h2
                 className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight mb-5"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                Your organization,
+                Your business,
                 <br />
                 <span className="gradient-text">mapped in real time.</span>
               </h2>
               <p className="text-[#E8EDF5]/62 leading-relaxed mb-6 text-sm sm:text-base">
-                EEOS builds a living knowledge graph of your entire organization — mapping relationships between people, departments, systems, risks, and opportunities. See how everything connects, and where the critical paths run.
+                EEOS builds a living knowledge graph of your entire business — mapping relationships between people, departments, systems, risks, and opportunities. See how everything connects, and where the critical paths run.
               </p>
               <Link
                 href="/features"
                 className="inline-flex items-center gap-2 text-sm font-semibold text-[#00D4C8] hover:gap-3 transition-all duration-200"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                Explore all features
+                Explore all EEOS features
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </AnimatedSection>
@@ -521,17 +571,20 @@ export default function Home() {
           <AnimatedSection>
             <div className="flex flex-col lg:flex-row items-start lg:items-center gap-10 lg:gap-20">
               <div className="flex-1">
-                <div className="section-label mb-3">Activate EEOS</div>
+                {/* Company attribution */}
+                <div className="text-[10px] text-[#E8EDF5]/30 tracking-[0.2em] uppercase mb-3" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  Eagle Eye Automation · Flagship Product
+                </div>
                 <h2
                   className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#E8EDF5] tracking-tight mb-4 leading-tight"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  Ready to operate at a
+                  Ready to transcend
                   <br />
-                  <span className="gradient-text">higher level of intelligence?</span>
+                  <span className="gradient-text">your business?</span>
                 </h2>
                 <p className="text-[#E8EDF5]/55 max-w-lg text-sm sm:text-base leading-relaxed">
-                  Join the executives who have transformed how they lead. EEOS is live in 6 weeks — from onboarding to full organizational intelligence.
+                  Join the service business owners who have moved beyond managing and started leading. EEOS is live in 6 weeks — from onboarding to full organizational intelligence.
                 </p>
               </div>
               <div className="flex flex-col gap-3 w-full sm:w-auto shrink-0">

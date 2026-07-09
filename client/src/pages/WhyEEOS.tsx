@@ -11,25 +11,25 @@ const PAIN_POINTS = [
     icon: AlertTriangle,
     color: "#EF4444",
     title: "Decisions made on stale data",
-    description: "Executive reports are assembled manually, often days or weeks after the events they describe. By the time leadership sees the signal, the window has closed.",
+    description: "Business reports are assembled manually, often days or weeks after the events they describe. By the time you see the signal, the window to act has already closed.",
   },
   {
     icon: Clock,
     color: "#F59E0B",
     title: "Hours lost to information gathering",
-    description: "CEOs spend 40% of their time in meetings that exist solely to gather information that should already be at their fingertips. EEOS eliminates this entirely.",
+    description: "Service business owners spend 40% of their time gathering information that should already be at their fingertips. EEOS eliminates this entirely.",
   },
   {
     icon: Eye,
     color: "#F59E0B",
-    title: "Blind spots across the organization",
-    description: "No single executive can see everything. Talent risks, supply chain signals, regulatory changes, and competitive shifts fall through the cracks between departments.",
+    title: "Blind spots across the business",
+    description: "No single owner can see everything. Revenue risks, team utilization gaps, client health signals, and competitive shifts fall through the cracks between departments.",
   },
   {
     icon: TrendingUp,
     color: "#EF4444",
-    title: "Strategy disconnected from operations",
-    description: "Strategic plans are written once and reviewed quarterly. Meanwhile, the organization drifts. EEOS keeps strategy and execution in continuous alignment.",
+    title: "Reacting instead of leading",
+    description: "Most service businesses operate in permanent reaction mode — solving yesterday's problems instead of making tomorrow's decisions. EEOS changes that equation.",
   },
 ];
 
@@ -46,21 +46,21 @@ const COMPARISON = [
 const TESTIMONIALS = [
   {
     quote: "EEOS gave me back 15 hours a week. I used to spend Monday mornings in briefings. Now I spend them making decisions.",
-    name: "Chief Executive Officer",
-    company: "Global Aerospace Manufacturer",
-    size: "38,000 employees",
+    name: "Founder & CEO",
+    company: "Regional Staffing Firm",
+    size: "320 employees",
   },
   {
-    quote: "We caught a supply chain disruption 11 days before it would have hit our production lines. That single alert paid for three years of EEOS.",
-    name: "Chief Operating Officer",
-    company: "Defense Systems Integrator",
-    size: "12,000 employees",
+    quote: "We caught a client retention risk 11 days before it would have cost us the account. That single alert paid for a full year of EEOS.",
+    name: "Managing Director",
+    company: "Professional Services Group",
+    size: "85 employees",
   },
   {
-    quote: "The Knowledge Graph alone changed how our board thinks about organizational risk. It's not a dashboard — it's a new way of seeing.",
-    name: "Chief Strategy Officer",
-    company: "Fortune 500 Financial Services",
-    size: "85,000 employees",
+    quote: "The Business DNA view changed how I think about our growth strategy. It's not a dashboard — it's a new way of seeing my entire business.",
+    name: "President",
+    company: "Healthcare Staffing Agency",
+    size: "200 employees",
   },
 ];
 
@@ -78,14 +78,14 @@ export default function WhyEEOS() {
               className="text-5xl sm:text-6xl font-bold text-[#E8EDF5] tracking-tight mb-6"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              The executive information
+              The information gap
               <br />
-              gap is costing you
+              is costing your business
               <br />
               <span className="gradient-text">more than you know.</span>
             </h1>
             <p className="text-xl text-[#E8EDF5]/65 leading-relaxed">
-              Fortune 500 executives make decisions on incomplete, outdated, and siloed information every day. EEOS was built to close that gap permanently.
+              Service business owners make decisions on incomplete, outdated, and siloed information every day. Eagle Eye Automation built EEOS to close that gap permanently — so you can stop managing and start leading.
             </p>
           </AnimatedSection>
         </div>

@@ -89,16 +89,16 @@ export default function Navigation() {
               </div>
               <div className="flex flex-col leading-none">
                 <span
-                  className="text-[#E8EDF5] font-bold text-lg tracking-tight"
+                  className="text-[#E8EDF5] font-bold text-base tracking-tight leading-none"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  EEOS
+                  Eagle Eye Automation
                 </span>
                 <span
-                  className="text-[#00D4C8] text-[9px] tracking-[0.15em] uppercase font-medium hidden sm:block"
+                  className="text-[#00D4C8] text-[9px] tracking-[0.15em] uppercase font-medium hidden sm:block mt-0.5"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 >
-                  Eagle Eye Automation
+                  EEOS — AI for Service Businesses
                 </span>
               </div>
             </Link>

@@ -101,7 +101,7 @@ export default function Security() {
               <span className="gradient-text">sovereign intelligence</span>
             </h1>
             <p className="text-xl text-[#E8EDF5]/65 leading-relaxed">
-              EEOS was architected for the security requirements of Fortune 500 enterprises, defense contractors, and regulated industries. Your data never leaves your control.
+              Eagle Eye Automation built EEOS for service businesses that cannot afford data exposure. Enterprise-grade security architecture — your data never leaves your control.
             </p>
           </AnimatedSection>
         </div>

@@ -25,12 +25,12 @@ export default function Industries() {
               className="text-5xl sm:text-6xl font-bold text-[#E8EDF5] tracking-tight mb-6"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              Built for the industries
+              Built for service
               <br />
-              <span className="gradient-text">that shape the world</span>
+              <span className="gradient-text">businesses that grow</span>
             </h1>
             <p className="text-xl text-[#E8EDF5]/65 leading-relaxed">
-              EEOS is purpose-configured for the unique intelligence needs of each industry — from defense contractors to global banks to health systems.
+              Eagle Eye Automation's EEOS is purpose-configured for the unique intelligence needs of each service industry — from staffing firms to healthcare operators to professional services groups.
             </p>
           </AnimatedSection>
         </div>

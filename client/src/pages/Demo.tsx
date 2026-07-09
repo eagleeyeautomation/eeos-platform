@@ -607,19 +607,19 @@ export default function Demo() {
       <section className="pt-32 pb-10 bg-[#050C1A] scan-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <div className="section-label mb-4">Interactive Demo</div>
+            <div className="section-label mb-4">EEOS Interactive Demo — Eagle Eye Automation</div>
             <h1
               className="text-4xl sm:text-5xl font-bold text-[#E8EDF5] tracking-tight mb-4 leading-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              Observe EEOS in command.
+              See what leading
               <br />
-              <span className="gradient-text">Six modules. Live intelligence.</span>
+              <span className="gradient-text">looks like.</span>
             </h1>
             <p className="text-lg text-[#E8EDF5]/60 max-w-xl">
-              All six intelligence modules loaded with demonstration data from{" "}
+              All six EEOS intelligence modules loaded with demonstration data from{" "}
               <span className="text-[#00D4C8] font-semibold">{DEMO_COMPANY.name}</span> — a fictional{" "}
-              {DEMO_COMPANY.industry} enterprise with {DEMO_COMPANY.employees.toLocaleString()} employees.
+              {DEMO_COMPANY.industry} service business with {DEMO_COMPANY.employees.toLocaleString()} employees.
             </p>
           </div>
         </div>
