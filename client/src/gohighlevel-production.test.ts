@@ -3,12 +3,7 @@ import { describe, expect, it } from "vitest";
 import { goHighLevelInternals } from "../../server/integrations/gohighlevel";
 
 describe("GoHighLevel production integration internals", () => {
-  const tenant = {
-    tenantId: "tenant-prn-staffers" as const,
-    locationId: "loc_123",
-    businessDnaProfileId: "business-dna-prn-staffers" as const,
-    officeId: "office-charleston",
-  };
+  const tenant = goHighLevelInternals.resolveTenant({ locationId: "loc_123" });
 
   it("normalizes supported production event names", () => {
     expect(goHighLevelInternals.normalizeEventType("contact_created")).toBe("Contact Created");
@@ -28,6 +23,19 @@ describe("GoHighLevel production integration internals", () => {
     expect(goHighLevelInternals.buildDiagnosticPath("pipelines", locationId)).toContain("locationId=loc_123");
     expect(goHighLevelInternals.buildDiagnosticPath("tags", locationId)).toBe("/locations/loc_123/tags");
     expect(goHighLevelInternals.buildDiagnosticPath("locations", locationId)).toBe("/locations/loc_123");
+  });
+
+  it("models PRN Staffers as a customer membership with operational divisions", () => {
+    const membership = goHighLevelInternals.getCustomerMembershipConfig();
+
+    expect(membership.membershipId).toBe("membership-prn-staffers");
+    expect(membership.membershipName).toBe("PRN Staffers");
+    expect(membership.operationalDivisions.map((division) => division.name)).toEqual([
+      "Delaware",
+      "South Carolina",
+      "Alabama",
+      "Florida",
+    ]);
   });
 
   it("verifies sha256 webhook signatures without exposing secrets", () => {

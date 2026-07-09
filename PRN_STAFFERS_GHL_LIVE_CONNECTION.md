@@ -1,28 +1,65 @@
-# PRN Staffers GoHighLevel Live Connection
+# PRN Staffers GoHighLevel Mission Zero Connection
+
+PRN Staffers is the Founding Customer of Eagle Eye Automation. PRN Staffers is not the EEOS platform.
+
+Mission Zero connects one PRN Staffers customer membership to four GoHighLevel operational divisions:
+
+- Delaware
+- South Carolina
+- Alabama
+- Florida
+
+Mission Zero uses GoHighLevel Private Integration Tokens for fastest production validation. The long-term EEOS onboarding path remains the Eagle Eye Automation OAuth Marketplace App.
 
 ## Required Environment Variables
 
 - `EEOS_APP_BASE_URL`
 - `EEOS_TOKEN_VAULT_KEY`
-- `EEOS_PRN_DEFAULT_OFFICE_ID`
+- `EEOS_CUSTOMER_MEMBERSHIP_ID`
+- `EEOS_CUSTOMER_MEMBERSHIP_NAME`
+- `EEOS_BUSINESS_DNA_PROFILE_ID`
+- `EEOS_DEFAULT_OFFICE_ID`
+- `GHL_PRN_DELAWARE_LOCATION_ID`
+- `GHL_PRN_DELAWARE_PRIVATE_TOKEN`
+- `GHL_PRN_SOUTH_CAROLINA_LOCATION_ID`
+- `GHL_PRN_SOUTH_CAROLINA_PRIVATE_TOKEN`
+- `GHL_PRN_ALABAMA_LOCATION_ID`
+- `GHL_PRN_ALABAMA_PRIVATE_TOKEN`
+- `GHL_PRN_FLORIDA_LOCATION_ID`
+- `GHL_PRN_FLORIDA_PRIVATE_TOKEN`
 - `GHL_BASE_URL`
 - `GHL_API_VERSION`
+- `GHL_WEBHOOK_URL`
+- `GHL_WEBHOOK_SECRET`
+- `GHL_RETRY_MAX_ATTEMPTS`
+- `GHL_RETRY_BASE_DELAY_MS`
+- `GHL_RATE_LIMIT_MIN_INTERVAL_MS`
+
+Future OAuth Marketplace App variables:
+
 - `GHL_OAUTH_CLIENT_ID`
 - `GHL_OAUTH_CLIENT_SECRET`
 - `GHL_OAUTH_REDIRECT_URI`
 - `GHL_OAUTH_STATE_SECRET`
 - `GHL_OAUTH_SCOPES`
-- `GHL_LOCATION_ID`
-- `GHL_PRN_LOCATION_ID`
-- `GHL_WEBHOOK_URL`
-- `GHL_WEBHOOK_SECRET`
 - `GHL_WEBHOOK_REGISTRATION_PATH`
 - `GHL_TOKEN_VAULT_FILE`
-- `GHL_RETRY_MAX_ATTEMPTS`
-- `GHL_RETRY_BASE_DELAY_MS`
-- `GHL_RATE_LIMIT_MIN_INTERVAL_MS`
 
-## OAuth Callback URL
+## Mission Zero Setup Steps
+
+1. Generate a GoHighLevel Private Integration Token for each PRN Staffers operational division.
+2. Store each token and matching GoHighLevel location ID in production environment variables.
+3. Set `EEOS_CUSTOMER_MEMBERSHIP_ID=membership-prn-staffers`.
+4. Set `EEOS_CUSTOMER_MEMBERSHIP_NAME=PRN Staffers`.
+5. Set `EEOS_BUSINESS_DNA_PROFILE_ID=business-dna-prn-staffers`.
+6. Set `GHL_WEBHOOK_URL` and `GHL_WEBHOOK_SECRET`.
+7. Deploy EEOS.
+8. Confirm `/api/integrations/gohighlevel/health` reports configured private-token divisions.
+9. Confirm `/api/integrations/gohighlevel/diagnostics` runs for Delaware, South Carolina, Alabama, and Florida.
+10. Send signed webhooks from each operational division into the EEOS Gateway.
+11. Verify every event routes through Gateway, Tenant Resolver, Business DNA, Decision Engine, Confidence Engine, Executive Recommendation, Executive Dashboard, Timeline, Audit, and Knowledge Graph.
+
+## Future OAuth Callback URL
 
 Runtime generated from `EEOS_APP_BASE_URL`, `VERCEL_PROJECT_PRODUCTION_URL`, `VERCEL_URL`, or the incoming request host:
 
@@ -34,39 +71,22 @@ Runtime generated from `GHL_WEBHOOK_URL` when provided, otherwise the production
 
 `<production-url>/api/integrations/gohighlevel/webhook`
 
-## Setup Steps
-
-1. Configure the EEOS HighLevel Marketplace app with the OAuth callback URL returned by `/api/integrations/gohighlevel/runtime`.
-2. Add the Marketplace client ID and client secret to the production environment.
-3. Add a long random `GHL_OAUTH_STATE_SECRET`.
-4. Add a long random `EEOS_TOKEN_VAULT_KEY`.
-5. Set `EEOS_APP_BASE_URL` to the production domain, or deploy on Vercel with `VERCEL_PROJECT_PRODUCTION_URL`.
-6. Set `GHL_WEBHOOK_URL` to the webhook URL above, or allow EEOS to derive it from the runtime production URL.
-7. Set `GHL_WEBHOOK_SECRET` and configure GoHighLevel webhook delivery to send the same shared secret header.
-8. Deploy EEOS.
-9. Open `/connect-ghl`.
-10. Click `Authorize Connection`.
-11. Approve the PRN Staffers GoHighLevel location.
-12. Confirm the callback returns `connected: true` and `credentialsStored: Secure Token Vault`.
-13. Confirm `/api/integrations/gohighlevel/health` reports `connectionStatus: Connected`.
-14. Create a new GoHighLevel contact in PRN Staffers.
-15. Confirm the webhook response routes through Gateway, Tenant Resolver, Business DNA, Decision Engine, Confidence Engine, Executive Recommendation, Executive Dashboard, Timeline, Audit, and Knowledge Graph.
-
 ## Verification Report
 
-- Official OAuth production flow: implemented at `/api/integrations/gohighlevel/oauth/start`.
-- OAuth callback route: implemented at `/api/integrations/gohighlevel/oauth/callback`.
+- Mission Zero Private Integration Token flow: implemented per customer membership and operational division.
+- Future OAuth production flow: implemented at `/api/integrations/gohighlevel/oauth/start`.
+- Future OAuth callback route: implemented at `/api/integrations/gohighlevel/oauth/callback`.
 - Secure token storage: implemented with AES-256-GCM encrypted vault file keyed by `EEOS_TOKEN_VAULT_KEY`.
 - Token refresh logic: implemented before webhook registration and health-sensitive server use.
-- PRN Staffers tenant resolver: resolves every GoHighLevel event to `tenant-prn-staffers`.
-- Location ID detection: reads `locationId`, `location_id`, nested `location.id`, or configured PRN location env vars.
+- Customer membership resolver: resolves every GoHighLevel event to a customer membership and operational division.
+- Location ID detection: reads `locationId`, `location_id`, nested `location.id`, or configured division location env vars.
 - Webhook registration: implemented at `/api/integrations/gohighlevel/webhook/register` and after OAuth callback.
 - Webhook receiver: implemented at `/api/integrations/gohighlevel/webhook`.
 - Contact event processing: `Contact Created` and `Contact Updated`.
 - Opportunity event processing: `Opportunity Created` and `Opportunity Updated`.
 - Calendar event processing: `Appointment Created`, `Appointment Booked`, and `Calendar Event Created`.
 - Integration health status: implemented at `/api/integrations/gohighlevel/health`.
-- Integration diagnostics: implemented at `/api/integrations/gohighlevel/diagnostics` for Contacts, Opportunities, Calendars, Conversations, Custom Fields, Pipelines, and Locations.
+- Integration diagnostics: implemented at `/api/integrations/gohighlevel/diagnostics` for Contacts, Opportunities, Calendars, Conversations, Custom Fields, Pipelines, Tags, and Locations across configured operational divisions.
 - Enterprise error handling: implemented with structured error codes.
 - Structured logging: implemented as JSON runtime logs.
 - Retry and rate-limit handling: implemented for GoHighLevel API calls.
@@ -76,4 +96,4 @@ Runtime generated from `GHL_WEBHOOK_URL` when provided, otherwise the production
 
 ## Live Blockers
 
-Real live verification still requires production OAuth credentials, a production domain, PRN Staffers location authorization, and a GoHighLevel webhook delivery from the PRN Staffers location.
+Real live verification requires production Private Integration Tokens, matching location IDs for all PRN Staffers operational divisions, a production domain, and signed GoHighLevel webhook delivery.

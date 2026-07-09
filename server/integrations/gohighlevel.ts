@@ -5,20 +5,55 @@ import path from "path";
 import type { Express, Request, Response as ExpressResponse } from "express";
 
 type GhlTokenSet = {
+  authMode: "oauth" | "private_token";
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
   tokenType: string;
   expiresAt: string;
   scopes: string[];
   locationId: string;
+  membershipId: string;
+  operationalDivisionId: string;
   companyId?: string;
 };
 
 type TenantResolution = {
-  tenantId: "tenant-prn-staffers";
+  tenantId: string;
+  membershipId: string;
+  membershipName: string;
+  operationalDivisionId: string;
+  operationalDivisionName: string;
   locationId: string;
-  businessDnaProfileId: "business-dna-prn-staffers";
+  businessDnaProfileId: string;
   officeId: string;
+  businessDna: BusinessDnaProfile;
+};
+
+type CustomerMembershipConfig = {
+  membershipId: string;
+  membershipName: string;
+  businessDnaProfileId: string;
+  defaultOfficeId: string;
+  businessDna: BusinessDnaProfile;
+  operationalDivisions: OperationalDivisionConfig[];
+};
+
+type OperationalDivisionConfig = {
+  id: string;
+  name: string;
+  locationId: string;
+  privateIntegrationToken?: string;
+};
+
+type BusinessDnaProfile = {
+  industry: string;
+  mission: string;
+  executivePriorities: string[];
+  kpis: string[];
+  revenueDrivers: string[];
+  costCenters: string[];
+  complianceRequirements: string[];
+  riskTolerance: string;
 };
 
 type EeosReceipt = {
@@ -197,7 +232,7 @@ const businessMemory: Array<Record<string, unknown>> = [];
 const knowledgeGraphRelationships: KnowledgeGraphRelationship[] = [];
 let nextRequestAt = 0;
 
-const prnBusinessDna = {
+const defaultServiceBusinessDna: BusinessDnaProfile = {
   industry: "Healthcare staffing",
   mission: "Place qualified healthcare staff quickly while protecting compliance and continuity of care.",
   executivePriorities: ["speed-to-lead", "qualified placement", "client retention", "schedule coverage", "compliance readiness"],
@@ -207,6 +242,13 @@ const prnBusinessDna = {
   complianceRequirements: ["credential readiness", "care continuity", "accurate client communication"],
   riskTolerance: "Measured growth with low tolerance for compliance or service-quality drift.",
 };
+
+const missionZeroDivisionDefaults = [
+  { id: "delaware", name: "Delaware", locationEnv: "GHL_PRN_DELAWARE_LOCATION_ID", tokenEnv: "GHL_PRN_DELAWARE_PRIVATE_TOKEN" },
+  { id: "south-carolina", name: "South Carolina", locationEnv: "GHL_PRN_SOUTH_CAROLINA_LOCATION_ID", tokenEnv: "GHL_PRN_SOUTH_CAROLINA_PRIVATE_TOKEN" },
+  { id: "alabama", name: "Alabama", locationEnv: "GHL_PRN_ALABAMA_LOCATION_ID", tokenEnv: "GHL_PRN_ALABAMA_PRIVATE_TOKEN" },
+  { id: "florida", name: "Florida", locationEnv: "GHL_PRN_FLORIDA_LOCATION_ID", tokenEnv: "GHL_PRN_FLORIDA_PRIVATE_TOKEN" },
+] as const;
 
 class GhlIntegrationError extends Error {
   constructor(
@@ -223,8 +265,9 @@ class GhlIntegrationError extends Error {
 export function registerGoHighLevelRoutes(app: Express) {
   app.get("/api/integrations/gohighlevel/oauth/start", (req, res) => {
     withRouteHandling(res, "oauth.start", async () => {
+      const membership = getCustomerMembershipConfig();
       const state = signOAuthState({
-        tenantId: "tenant-prn-staffers",
+        tenantId: membership.membershipId,
         nonce: randomBytes(16).toString("hex"),
         issuedAt: new Date().toISOString(),
       });
@@ -245,14 +288,23 @@ export function registerGoHighLevelRoutes(app: Express) {
 
       const statePayload = verifyOAuthState(state);
       const tokenSet = await exchangeAuthorizationCode(code, runtimeUrls.oauthCallbackUrl);
-      const locationId = tokenSet.locationId || process.env.GHL_PRN_LOCATION_ID || process.env.GHL_LOCATION_ID || "";
+      const membership = getCustomerMembershipConfig();
+      const fallbackDivision = membership.operationalDivisions[0];
+      const locationId = tokenSet.locationId || fallbackDivision?.locationId || process.env.GHL_LOCATION_ID || "";
 
       if (!locationId) {
         throw new GhlIntegrationError("GoHighLevel OAuth callback did not include a location ID.", "OAUTH_ERROR", 400);
       }
 
-      await writeTokenSet({ ...tokenSet, locationId });
-      const registration = await registerWebhook({ ...tokenSet, locationId }, runtimeUrls.webhookUrl);
+      const division = findDivisionByLocationId(locationId, membership) || fallbackDivision;
+      const connectedTokenSet = {
+        ...tokenSet,
+        locationId,
+        membershipId: membership.membershipId,
+        operationalDivisionId: division?.id || "default",
+      };
+      await writeTokenSet(connectedTokenSet);
+      const registration = await registerWebhook(connectedTokenSet, runtimeUrls.webhookUrl);
 
       logIntegration("info", "oauth.callback.connected", {
         tenantId: statePayload.tenantId,
@@ -276,7 +328,7 @@ export function registerGoHighLevelRoutes(app: Express) {
 
   app.post("/api/integrations/gohighlevel/webhook/register", (req, res) => {
     withRouteHandling(res, "webhook.register", async () => {
-      const tokenSet = await getValidTokenSet();
+      const tokenSet = await getPrimaryTokenSet();
       const runtimeUrls = getRuntimeUrls(req);
       const registration = await registerWebhook(tokenSet, runtimeUrls.webhookUrl);
 
@@ -295,14 +347,15 @@ export function registerGoHighLevelRoutes(app: Express) {
       validateWebhookSecurity(req);
 
       const payload = readPayload(req);
-      const tenant = resolvePrnTenant(payload);
+      const tenant = resolveTenant(payload);
       const receipt = processGhlEvent(payload, tenant);
       const memory = writeBusinessMemoryRecord(payload, tenant, receipt, receivedAt);
       const audit = writeAuditRecord(payload, tenant, receipt, receivedAt);
 
       logIntegration("info", "webhook.accepted", {
         eventType: receipt.eventType,
-        tenantId: tenant.tenantId,
+        membershipId: tenant.membershipId,
+        operationalDivisionId: tenant.operationalDivisionId,
         locationId: tenant.locationId,
         recommendationId: receipt.recommendationId,
         recommendationStatus: receipt.recommendationStatus,
@@ -372,7 +425,7 @@ export function registerGoHighLevelRoutes(app: Express) {
     withRouteHandling(res, "runtime", async () => {
       res.json({
         integration: "GoHighLevel",
-        tenantId: "tenant-prn-staffers",
+        membership: describeMembershipForRuntime(),
         ...getRuntimeUrls(req),
         configured: getConfigurationStatus(),
       });
@@ -382,7 +435,7 @@ export function registerGoHighLevelRoutes(app: Express) {
   app.get("/api/integrations/gohighlevel/diagnostics", (req, res) => {
     withRouteHandling(res, "diagnostics", async () => {
       const diagnostics = await runGoHighLevelDiagnostics(req);
-      const failed = diagnostics.results.some((result) => result.status === "Failed");
+      const failed = diagnostics.divisions.some((division) => division.results.some((result) => result.status === "Failed"));
 
       res.status(failed ? 207 : 200).json(diagnostics);
     });
@@ -448,11 +501,15 @@ async function exchangeAuthorizationCode(code: string, redirectUri: string): Pro
 }
 
 async function refreshTokenSet(tokenSet: GhlTokenSet): Promise<GhlTokenSet> {
+  if (tokenSet.authMode === "private_token") {
+    return tokenSet;
+  }
+
   const body = new URLSearchParams({
     grant_type: "refresh_token",
     client_id: requireEnv("GHL_OAUTH_CLIENT_ID"),
     client_secret: requireEnv("GHL_OAUTH_CLIENT_SECRET"),
-    refresh_token: tokenSet.refreshToken,
+    refresh_token: tokenSet.refreshToken || "",
   });
 
   const response = await fetchWithRetry(`${getGhlBaseUrl()}/oauth/token`, {
@@ -462,7 +519,12 @@ async function refreshTokenSet(tokenSet: GhlTokenSet): Promise<GhlTokenSet> {
     operation: "oauth.token.refresh",
   });
   const refreshed = normalizeTokenResponse(await response.json());
-  const next = { ...refreshed, locationId: refreshed.locationId || tokenSet.locationId };
+  const next = {
+    ...refreshed,
+    locationId: refreshed.locationId || tokenSet.locationId,
+    membershipId: tokenSet.membershipId,
+    operationalDivisionId: tokenSet.operationalDivisionId,
+  };
   await writeTokenSet(next);
 
   logIntegration("info", "oauth.token.refreshed", { locationId: next.locationId, expiresAt: next.expiresAt });
@@ -473,11 +535,21 @@ async function refreshTokenSet(tokenSet: GhlTokenSet): Promise<GhlTokenSet> {
 async function getValidTokenSet() {
   const tokenSet = await readTokenSet();
 
-  if (new Date(tokenSet.expiresAt).getTime() <= Date.now() + 60_000) {
+  if (tokenSet.authMode === "oauth" && new Date(tokenSet.expiresAt).getTime() <= Date.now() + 60_000) {
     return refreshTokenSet(tokenSet);
   }
 
   return tokenSet;
+}
+
+async function getPrimaryTokenSet() {
+  const privateTokenSets = readPrivateIntegrationTokenSets();
+
+  if (privateTokenSets.length > 0) {
+    return privateTokenSets[0];
+  }
+
+  return getValidTokenSet();
 }
 
 async function registerWebhook(tokenSet: GhlTokenSet, runtimeWebhookUrl?: string) {
@@ -485,7 +557,7 @@ async function registerWebhook(tokenSet: GhlTokenSet, runtimeWebhookUrl?: string
 
   if (!webhookUrl) {
     throw new GhlIntegrationError(
-      "GHL_WEBHOOK_URL or runtime webhook URL is required for PRN Staffers GoHighLevel live integration.",
+      "GHL_WEBHOOK_URL or runtime webhook URL is required for GoHighLevel live integration.",
       "CONFIGURATION_ERROR",
       500,
     );
@@ -515,34 +587,53 @@ async function registerWebhook(tokenSet: GhlTokenSet, runtimeWebhookUrl?: string
 
 async function runGoHighLevelDiagnostics(req: Request) {
   const runtimeUrls = getRuntimeUrls(req);
-  const tokenSet = await readOptionalTokenSet();
+  const tokenSets = await readConfiguredTokenSets();
 
-  if (!tokenSet) {
+  if (tokenSets.length === 0) {
+    const membership = getCustomerMembershipConfig();
     return {
       integration: "GoHighLevel",
-      tenantId: "tenant-prn-staffers",
+      membershipId: membership.membershipId,
+      membershipName: membership.membershipName,
       productionUrl: runtimeUrls.productionUrl,
       status: "Blocked",
-      reason: "No token vault entry is available. Complete OAuth before running live diagnostics.",
-      results: diagnosticTargets.map((target) => ({
-        target,
-        status: "Skipped" as const,
-        path: buildDiagnosticPath(target, process.env.GHL_PRN_LOCATION_ID || process.env.GHL_LOCATION_ID || "{locationId}"),
-        reason: "Missing OAuth token vault.",
+      reason: "No GoHighLevel credentials are configured. Add Private Integration Tokens per operational division or complete OAuth.",
+      divisions: membership.operationalDivisions.map((division) => ({
+        operationalDivisionId: division.id,
+        operationalDivisionName: division.name,
+        locationId: division.locationId || "{locationId}",
+        credentialStatus: "Missing",
+        results: diagnosticTargets.map((target) => ({
+          target,
+          status: "Skipped" as const,
+          path: buildDiagnosticPath(target, division.locationId || "{locationId}"),
+          reason: "Missing GoHighLevel credential.",
+        })),
       })),
     };
   }
 
-  const validTokenSet = await getValidTokenSet();
-  const results = await Promise.all(diagnosticTargets.map((target) => runDiagnosticTarget(validTokenSet, target)));
+  const divisions = await Promise.all(
+    tokenSets.map(async (tokenSet) => ({
+      operationalDivisionId: tokenSet.operationalDivisionId,
+      operationalDivisionName: findDivisionById(tokenSet.operationalDivisionId)?.name || tokenSet.operationalDivisionId,
+      locationId: tokenSet.locationId,
+      authMode: tokenSet.authMode,
+      credentialStatus: "Configured",
+      results: await Promise.all(diagnosticTargets.map((target) => runDiagnosticTarget(tokenSet, target))),
+    })),
+  );
+  const hasFailed = divisions.some((division) => division.results.some((result) => result.status === "Failed"));
+  const membership = getCustomerMembershipConfig();
 
   return {
     integration: "GoHighLevel",
-    tenantId: "tenant-prn-staffers",
+    membershipId: membership.membershipId,
+    membershipName: membership.membershipName,
     productionUrl: runtimeUrls.productionUrl,
-    connectedLocationId: validTokenSet.locationId,
-    status: results.some((result) => result.status === "Failed") ? "Warning" : "Passed",
-    results,
+    connectedDivisions: divisions.length,
+    status: hasFailed ? "Warning" : "Passed",
+    divisions,
   };
 }
 
@@ -696,21 +787,109 @@ function readRetryDelayMs(response: globalThis.Response | undefined, attempt: nu
   return readNumberEnv("GHL_RETRY_BASE_DELAY_MS", 250) * 2 ** (attempt - 1);
 }
 
-function resolvePrnTenant(payload: Record<string, unknown>): TenantResolution {
+function resolveTenant(payload: Record<string, unknown>): TenantResolution {
+  const membership = getCustomerMembershipConfig();
   const locationId =
     readString(payload.locationId) ||
     readString(payload.location_id) ||
     readString(readRecord(payload.location)?.id) ||
-    process.env.GHL_PRN_LOCATION_ID ||
+    membership.operationalDivisions[0]?.locationId ||
     process.env.GHL_LOCATION_ID ||
     "";
+  const division = findDivisionByLocationId(locationId, membership) || membership.operationalDivisions[0];
 
   return {
-    tenantId: "tenant-prn-staffers",
+    tenantId: membership.membershipId,
+    membershipId: membership.membershipId,
+    membershipName: membership.membershipName,
+    operationalDivisionId: division?.id || "default",
+    operationalDivisionName: division?.name || "Default",
     locationId,
-    businessDnaProfileId: "business-dna-prn-staffers",
-    officeId: process.env.EEOS_PRN_DEFAULT_OFFICE_ID || "office-charleston",
+    businessDnaProfileId: membership.businessDnaProfileId,
+    officeId: membership.defaultOfficeId,
+    businessDna: membership.businessDna,
   };
+}
+
+function getCustomerMembershipConfig(): CustomerMembershipConfig {
+  const jsonConfig = process.env.EEOS_CUSTOMER_MEMBERSHIP_JSON;
+
+  if (jsonConfig) {
+    const parsed = JSON.parse(jsonConfig) as CustomerMembershipConfig;
+
+    return {
+      ...parsed,
+      businessDna: parsed.businessDna || defaultServiceBusinessDna,
+      operationalDivisions: parsed.operationalDivisions || [],
+    };
+  }
+
+  return {
+    membershipId: process.env.EEOS_CUSTOMER_MEMBERSHIP_ID || "membership-prn-staffers",
+    membershipName: process.env.EEOS_CUSTOMER_MEMBERSHIP_NAME || "PRN Staffers",
+    businessDnaProfileId: process.env.EEOS_BUSINESS_DNA_PROFILE_ID || "business-dna-prn-staffers",
+    defaultOfficeId: process.env.EEOS_DEFAULT_OFFICE_ID || process.env.EEOS_PRN_DEFAULT_OFFICE_ID || "office-charleston",
+    businessDna: defaultServiceBusinessDna,
+    operationalDivisions: missionZeroDivisionDefaults
+      .map((division) => ({
+        id: division.id,
+        name: division.name,
+        locationId: process.env[division.locationEnv] || "",
+        privateIntegrationToken: process.env[division.tokenEnv],
+      })),
+  };
+}
+
+function describeMembershipForRuntime() {
+  const membership = getCustomerMembershipConfig();
+
+  return {
+    membershipId: membership.membershipId,
+    membershipName: membership.membershipName,
+    businessDnaProfileId: membership.businessDnaProfileId,
+    operationalDivisions: membership.operationalDivisions.map((division) => ({
+      id: division.id,
+      name: division.name,
+      locationConfigured: Boolean(division.locationId),
+      credentialConfigured: Boolean(division.privateIntegrationToken),
+    })),
+  };
+}
+
+function findDivisionByLocationId(locationId: string, membership = getCustomerMembershipConfig()) {
+  return membership.operationalDivisions.find((division) => division.locationId === locationId);
+}
+
+function findDivisionById(id: string, membership = getCustomerMembershipConfig()) {
+  return membership.operationalDivisions.find((division) => division.id === id);
+}
+
+function readPrivateIntegrationTokenSets(): GhlTokenSet[] {
+  const membership = getCustomerMembershipConfig();
+
+  return membership.operationalDivisions
+    .filter((division) => division.privateIntegrationToken && division.locationId)
+    .map((division) => ({
+      authMode: "private_token" as const,
+      accessToken: division.privateIntegrationToken || "",
+      tokenType: "Bearer",
+      expiresAt: "static",
+      scopes: readScopes(),
+      locationId: division.locationId,
+      membershipId: membership.membershipId,
+      operationalDivisionId: division.id,
+    }));
+}
+
+async function readConfiguredTokenSets() {
+  const tokenSets = [...readPrivateIntegrationTokenSets()];
+  const oauthTokenSet = await readOptionalTokenSet();
+
+  if (oauthTokenSet) {
+    tokenSets.push(await getValidTokenSet());
+  }
+
+  return tokenSets;
 }
 
 function processGhlEvent(payload: Record<string, unknown>, tenant: TenantResolution): EeosReceipt {
@@ -903,11 +1082,12 @@ function buildEventContext(payload: Record<string, unknown>, tenant: TenantResol
 
 function buildRecommendationInsight(eventType: string, tenant: TenantResolution, context: EventContext): RecommendationInsight {
   const supportingBusinessSignals = buildSupportingBusinessSignals(eventType, tenant, context);
-  const businessSignalCorrelation = buildBusinessSignalCorrelation(eventType, context);
+  const businessSignalCorrelation = buildBusinessSignalCorrelation(eventType, context, tenant.businessDna);
   const executivePriority = prioritizeExecutiveSignal(eventType, context);
   const riskLevel = assessRiskLevel(eventType, context, executivePriority);
   const estimatedConfidenceImprovementAfterAction = estimateConfidenceImprovementAfterAction(eventType, context);
-  const reasonPrefix = `${prnBusinessDna.industry} depends on ${prnBusinessDna.executivePriorities.slice(0, 3).join(", ")}.`;
+  const businessDna = tenant.businessDna;
+  const reasonPrefix = `${businessDna.industry} depends on ${businessDna.executivePriorities.slice(0, 3).join(", ")}.`;
 
   if (eventType.includes("Opportunity")) {
     const nextAction = "Assign an executive owner, confirm the opportunity stage, and schedule the next client follow-up within the active pipeline window.";
@@ -918,7 +1098,7 @@ function buildRecommendationInsight(eventType: string, tenant: TenantResolution,
         "Opportunity movement is the strongest current signal of future staffing demand, revenue visibility, and client-retention risk.",
       businessReasoning: [
         reasonPrefix,
-        "Opportunity movement changes near-term staffing demand and revenue visibility for PRN Staffers.",
+        `Opportunity movement changes near-term demand and revenue visibility for ${tenant.membershipName}.`,
         "Business DNA prioritizes qualified placement and client retention, so unattended pipeline changes carry operational risk.",
       ],
       supportingBusinessSignals,
@@ -1007,7 +1187,7 @@ function buildRecommendationInsight(eventType: string, tenant: TenantResolution,
   return {
     action: nextAction,
     whyThisMatters:
-      "Contact changes are the earliest signal of new demand, supply, or relationship movement for PRN Staffers.",
+      `Contact changes are the earliest signal of new demand, supply, or relationship movement for ${tenant.membershipName}.`,
     businessReasoning: [
       reasonPrefix,
       "New or updated contacts are intake signals for staffing demand, clinician supply, or client relationship health.",
@@ -1033,12 +1213,14 @@ function buildRecommendationInsight(eventType: string, tenant: TenantResolution,
 }
 
 function buildSupportingBusinessSignals(eventType: string, tenant: TenantResolution, context: EventContext) {
+  const businessDna = tenant.businessDna;
   const signals = [
     `Event type: ${eventType}`,
-    `Tenant: ${tenant.tenantId}`,
+    `Customer membership: ${tenant.membershipName}`,
+    `Operational division: ${tenant.operationalDivisionName}`,
     `Business DNA profile: ${tenant.businessDnaProfileId}`,
-    `Business priority: ${prnBusinessDna.executivePriorities[0]}`,
-    `Primary KPI: ${prnBusinessDna.kpis[0]}`,
+    `Business priority: ${businessDna.executivePriorities[0]}`,
+    `Primary KPI: ${businessDna.kpis[0]}`,
   ];
 
   if (tenant.locationId) signals.push(`Location ID: ${tenant.locationId}`);
@@ -1056,30 +1238,30 @@ function buildSupportingBusinessSignals(eventType: string, tenant: TenantResolut
   return signals;
 }
 
-function buildBusinessSignalCorrelation(eventType: string, context: EventContext) {
+function buildBusinessSignalCorrelation(eventType: string, context: EventContext, businessDna = defaultServiceBusinessDna) {
   const correlations = [
-    `Business DNA priority '${prnBusinessDna.executivePriorities[0]}' is connected to KPI '${prnBusinessDna.kpis[0]}'.`,
+    `Business DNA priority '${businessDna.executivePriorities[0]}' is connected to KPI '${businessDna.kpis[0]}'.`,
   ];
 
   if (eventType.includes("Opportunity")) {
     correlations.push(
-      `Revenue driver '${prnBusinessDna.revenueDrivers[1]}' is connected to KPI '${prnBusinessDna.kpis[1]}'.`,
-      `Cost exposure '${prnBusinessDna.costCenters[2]}' rises when opportunity ownership or stage data is incomplete.`,
+      `Revenue driver '${businessDna.revenueDrivers[1]}' is connected to KPI '${businessDna.kpis[1]}'.`,
+      `Cost exposure '${businessDna.costCenters[2]}' rises when opportunity ownership or stage data is incomplete.`,
     );
   } else if (eventType.includes("Appointment") || eventType.includes("Calendar")) {
     correlations.push(
-      `Revenue driver '${prnBusinessDna.revenueDrivers[2]}' is connected to KPI '${prnBusinessDna.kpis[3]}'.`,
-      `Cost exposure '${prnBusinessDna.costCenters[1]}' rises when appointment readiness is not confirmed.`,
+      `Revenue driver '${businessDna.revenueDrivers[2]}' is connected to KPI '${businessDna.kpis[3]}'.`,
+      `Cost exposure '${businessDna.costCenters[1]}' rises when appointment readiness is not confirmed.`,
     );
   } else if (eventType.includes("Conversation")) {
     correlations.push(
-      `Revenue driver '${prnBusinessDna.revenueDrivers[0]}' is connected to KPI '${prnBusinessDna.kpis[4]}'.`,
-      `Compliance requirement '${prnBusinessDna.complianceRequirements[2]}' depends on timely, accurate client communication.`,
+      `Revenue driver '${businessDna.revenueDrivers[0]}' is connected to KPI '${businessDna.kpis[4]}'.`,
+      `Compliance requirement '${businessDna.complianceRequirements[2]}' depends on timely, accurate client communication.`,
     );
   } else {
     correlations.push(
-      `Revenue driver '${prnBusinessDna.revenueDrivers[0]}' is connected to KPI '${prnBusinessDna.kpis[1]}'.`,
-      `Cost exposure '${prnBusinessDna.costCenters[0]}' increases when contact qualification lacks ownership.`,
+      `Revenue driver '${businessDna.revenueDrivers[0]}' is connected to KPI '${businessDna.kpis[1]}'.`,
+      `Cost exposure '${businessDna.costCenters[0]}' increases when contact qualification lacks ownership.`,
     );
   }
 
@@ -1268,13 +1450,13 @@ function buildKnowledgeGraphRelationships(
       from: tenant.tenantId,
       to: tenant.businessDnaProfileId,
       relationship: "uses_business_dna",
-      evidence: prnBusinessDna.mission,
+      evidence: tenant.businessDna.mission,
     },
     {
       from: tenant.tenantId,
       to: tenant.locationId || "unknown-location",
       relationship: "owns_location",
-      evidence: "Tenant resolver mapped the GoHighLevel event to PRN Staffers.",
+      evidence: `Tenant resolver mapped the GoHighLevel event to ${tenant.membershipName} / ${tenant.operationalDivisionName}.`,
     },
     {
       from: context.entityId || "unknown-entity",
@@ -1442,6 +1624,12 @@ async function readTokenSet(): Promise<GhlTokenSet> {
 }
 
 async function readTokenStatus() {
+  const privateTokenSets = readPrivateIntegrationTokenSets();
+
+  if (privateTokenSets.length > 0) {
+    return "Private Tokens Ready";
+  }
+
   try {
     const tokenSet = await readTokenSet();
 
@@ -1463,19 +1651,25 @@ async function getGoHighLevelHealth(req: Request) {
   const tokenStatus = await readTokenStatus();
   const tokenSet = await readOptionalTokenSet();
   const runtimeUrls = getRuntimeUrls(req);
-  const locationConfigured = Boolean(process.env.GHL_PRN_LOCATION_ID || process.env.GHL_LOCATION_ID || tokenSet?.locationId);
-  const connectedLocationId = tokenSet?.locationId || process.env.GHL_PRN_LOCATION_ID || process.env.GHL_LOCATION_ID || null;
+  const membership = getCustomerMembershipConfig();
+  const privateTokenSets = readPrivateIntegrationTokenSets();
+  const connectedDivisions = privateTokenSets.length + (tokenSet ? 1 : 0);
+  const locationConfigured = membership.operationalDivisions.some((division) => division.locationId) || Boolean(tokenSet?.locationId);
+  const connectedLocationId = tokenSet?.locationId || membership.operationalDivisions.find((division) => division.locationId)?.locationId || null;
   const configuration = getConfigurationStatus();
 
   return {
     integration: "GoHighLevel",
-    tenantId: "tenant-prn-staffers",
-    connectionStatus: tokenStatus === "Ready" && locationConfigured ? "Connected" : "Waiting",
+    membership: describeMembershipForRuntime(),
+    connectionStatus: connectedDivisions > 0 && locationConfigured ? "Connected" : "Waiting",
     authenticationStatus: tokenStatus,
     productionUrl: runtimeUrls.productionUrl,
     oauthCallbackUrl: runtimeUrls.oauthCallbackUrl,
     webhookUrl: runtimeUrls.webhookUrl,
     connectedLocationId,
+    connectedDivisions,
+    missionZeroAuthentication: privateTokenSets.length > 0 ? "Private Integration Tokens" : "Waiting",
+    futureAuthenticationPath: "Eagle Eye Automation OAuth Marketplace App",
     webhookStatus: configuration.webhookSecret ? "Configured" : "Missing Secret",
     apiStatus: getGhlBaseUrl(),
     diagnosticsUrl: `${runtimeUrls.productionUrl}/api/integrations/gohighlevel/diagnostics`,
@@ -1533,12 +1727,15 @@ function normalizeTokenResponse(value: unknown): GhlTokenSet {
   }
 
   return {
+    authMode: "oauth",
     accessToken,
     refreshToken,
     tokenType: readString(record.token_type) || "Bearer",
     expiresAt: new Date(Date.now() + Number(record.expires_in || 3600) * 1000).toISOString(),
     scopes: readString(record.scope)?.split(/[,\s]+/).filter(Boolean) || readScopes(),
     locationId: readString(record.locationId) || readString(record.location_id) || "",
+    membershipId: getCustomerMembershipConfig().membershipId,
+    operationalDivisionId: "oauth-location",
     companyId: readString(record.companyId) || readString(record.company_id),
   };
 }
@@ -1548,7 +1745,7 @@ function getVaultKey() {
 }
 
 function getVaultFile() {
-  return process.env.GHL_TOKEN_VAULT_FILE || path.join(os.tmpdir(), "eeos-ghl-prn-token-vault.json");
+  return process.env.GHL_TOKEN_VAULT_FILE || path.join(os.tmpdir(), "eeos-ghl-token-vault.json");
 }
 
 function getGhlBaseUrl() {
@@ -1591,13 +1788,19 @@ function normalizeBaseUrl(value: string) {
 }
 
 function getConfigurationStatus() {
+  const membership = getCustomerMembershipConfig();
+  const privateTokenSets = readPrivateIntegrationTokenSets();
+
   return {
+    customerMembership: Boolean(membership.membershipId),
+    operationalDivisions: membership.operationalDivisions.length,
+    privateIntegrationTokens: privateTokenSets.length,
     oauthClientId: Boolean(process.env.GHL_OAUTH_CLIENT_ID),
     oauthClientSecret: Boolean(process.env.GHL_OAUTH_CLIENT_SECRET),
     oauthStateSecret: Boolean(process.env.GHL_OAUTH_STATE_SECRET),
     tokenVaultKey: Boolean(process.env.EEOS_TOKEN_VAULT_KEY),
     webhookSecret: Boolean(process.env.GHL_WEBHOOK_SECRET),
-    locationId: Boolean(process.env.GHL_PRN_LOCATION_ID || process.env.GHL_LOCATION_ID),
+    locationId: membership.operationalDivisions.some((division) => division.locationId) || Boolean(process.env.GHL_LOCATION_ID),
   };
 }
 
@@ -1652,7 +1855,7 @@ function requireEnv(key: string) {
   const value = process.env[key];
 
   if (!value) {
-    throw new GhlIntegrationError(`${key} is required for PRN Staffers GoHighLevel live integration.`, "CONFIGURATION_ERROR", 500, {
+    throw new GhlIntegrationError(`${key} is required for GoHighLevel live integration.`, "CONFIGURATION_ERROR", 500, {
       env: key,
     });
   }
@@ -1692,7 +1895,6 @@ function logIntegration(level: "info" | "warn" | "error", event: string, metadat
     level,
     event,
     integration: "GoHighLevel",
-    tenantId: "tenant-prn-staffers",
     timestamp: new Date().toISOString(),
     ...metadata,
   };
@@ -1719,9 +1921,11 @@ export const goHighLevelInternals = {
   confidenceFor,
   decisionFor,
   evaluateRecommendationQuality,
+  getCustomerMembershipConfig,
   normalizeBaseUrl,
   normalizeEventType,
   processGhlEvent,
+  resolveTenant,
   secureCompare,
   verifyHmacSignature,
 };
