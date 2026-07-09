@@ -3,6 +3,7 @@
 // "Transcend Your Business. Stop managing. Start leading."
 // Sovereign Night — aerospace command interface
 
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Link } from "wouter";
 import {
   ArrowRight, Play, ChevronRight, Zap, Shield, Brain,
@@ -108,6 +109,13 @@ const TRANSFORMATION = [
 ];
 
 export default function Home() {
+  // The useAuth hook provides authentication state.
+  // To implement login/logout, call logout(), or start login from an event
+  // handler: onClick={() => startLogin()} (imported from "@/const"). Never call
+  // startLogin() during render (no href={startLogin()}) — it mints a one-time
+  // nonce cookie and must run only at the moment of navigation.
+  let { user, loading, error, isAuthenticated, logout } = useAuth();
+
   return (
     <div className="min-h-screen bg-[#050C1A]">
       <Navigation />

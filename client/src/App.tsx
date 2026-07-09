@@ -35,8 +35,8 @@ import LiveSignals from "./pages/LiveSignals";
 import IntegrationStatus from "./pages/IntegrationStatus";
 import ExecutiveTimeline from "./pages/ExecutiveTimeline";
 import KnowledgeGraphPreview from "./pages/KnowledgeGraphPreview";
-
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path="/" component={Home} />

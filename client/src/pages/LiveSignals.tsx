@@ -1,184 +1,30 @@
-// LiveSignals.tsx
-// Eagle Eye Automation — EEOS Executive Experience
-// Live Signals: real-time signal feed from connected business systems
-// All data shapes designed to consume real GoHighLevel data once backend is live.
-// GHL webhook events: contact.created, opportunity.status_changed, conversation.message_received, etc.
+/**
+ * EEOS — Live Signal Feed (Signal Pipeline Layer)
+ *
+ * Displays real-time GHL webhook events processed by the EEOS Signal Pipeline.
+ * Every signal is a raw input to the Intelligence Engine.
+ *
+ * Engineering Principle: "Don't Build More. Build Accurate."
+ */
 
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import {
-  Activity, Zap, ArrowRight, Users, DollarSign, MessageSquare,
+  Activity, Zap, Users, DollarSign, MessageSquare,
   Calendar, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2,
-  RefreshCw, Filter, Eye, Clock
+  RefreshCw, Filter, Clock, Loader2, Building2
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 
-// ── GHL-READY DATA SHAPES ──────────────────────────────────────────────────
-// When backend is live, replace with WebSocket or SSE stream:
-// WS /api/ghl/signals/stream?tenantId=xxx
-// or GET /api/ghl/signals?tenantId=xxx&since=ISO8601&limit=50
+// ─────────────────────────────────────────────────────────────────────────────
+// Config
+// ─────────────────────────────────────────────────────────────────────────────
 
-type SignalType =
-  | "contact.created"
-  | "contact.updated"
-  | "opportunity.created"
-  | "opportunity.status_changed"
-  | "opportunity.won"
-  | "opportunity.lost"
-  | "conversation.message_received"
-  | "conversation.message_sent"
-  | "appointment.booked"
-  | "appointment.cancelled"
-  | "payment.received"
-  | "task.completed"
-  | "review.received";
-
-type SignalSeverity = "positive" | "neutral" | "warning" | "critical";
-
-interface Signal {
-  id: string;
-  type: SignalType;
-  severity: SignalSeverity;
-  title: string;
-  description: string;
-  source: string; // GHL sub-account or integration name
-  entity: string; // contact name, opportunity name, etc.
-  value?: string; // monetary value if applicable
-  timestamp: string;
-  ghlEventId: string; // GHL webhook event ID placeholder
-  processed: boolean;
-}
-
-const SIGNAL_FEED: Signal[] = [
-  {
-    id: "s1",
-    type: "opportunity.won",
-    severity: "positive",
-    title: "Opportunity Won",
-    description: "Northstar Health — Q3 Staffing Contract closed successfully",
-    source: "GoHighLevel CRM",
-    entity: "Northstar Health",
-    value: "$128,000",
-    timestamp: "2 min ago",
-    ghlEventId: "ghl_evt_001",
-    processed: true,
-  },
-  {
-    id: "s2",
-    type: "contact.created",
-    severity: "neutral",
-    title: "New Contact",
-    description: "Sarah Mitchell added to pipeline — Director of HR, Apex Industries",
-    source: "GoHighLevel CRM",
-    entity: "Sarah Mitchell",
-    timestamp: "8 min ago",
-    ghlEventId: "ghl_evt_002",
-    processed: true,
-  },
-  {
-    id: "s3",
-    type: "conversation.message_received",
-    severity: "warning",
-    title: "Unread Message — At-Risk Account",
-    description: "Cascade Partners: 'We need to discuss our contract renewal terms'",
-    source: "GoHighLevel Conversations",
-    entity: "Cascade Partners",
-    timestamp: "14 min ago",
-    ghlEventId: "ghl_evt_003",
-    processed: false,
-  },
-  {
-    id: "s4",
-    type: "appointment.booked",
-    severity: "positive",
-    title: "Discovery Call Booked",
-    description: "Summit Logistics — Initial discovery call scheduled for Thursday 2PM",
-    source: "GoHighLevel Calendar",
-    entity: "Summit Logistics",
-    timestamp: "31 min ago",
-    ghlEventId: "ghl_evt_004",
-    processed: true,
-  },
-  {
-    id: "s5",
-    type: "opportunity.status_changed",
-    severity: "warning",
-    title: "Pipeline Stage Change",
-    description: "Vertex Solutions moved from Proposal to Negotiation — 22 days in stage",
-    source: "GoHighLevel CRM",
-    entity: "Vertex Solutions",
-    value: "$54,000",
-    timestamp: "45 min ago",
-    ghlEventId: "ghl_evt_005",
-    processed: true,
-  },
-  {
-    id: "s6",
-    type: "payment.received",
-    severity: "positive",
-    title: "Payment Received",
-    description: "Meridian Group — Invoice #INV-2847 paid in full",
-    source: "GoHighLevel Payments",
-    entity: "Meridian Group",
-    value: "$21,500",
-    timestamp: "1 hr ago",
-    ghlEventId: "ghl_evt_006",
-    processed: true,
-  },
-  {
-    id: "s7",
-    type: "opportunity.lost",
-    severity: "critical",
-    title: "Opportunity Lost",
-    description: "Pacific Staffing Group — Selected competitor. Reason: pricing",
-    source: "GoHighLevel CRM",
-    entity: "Pacific Staffing Group",
-    value: "$96,000",
-    timestamp: "2 hr ago",
-    ghlEventId: "ghl_evt_007",
-    processed: true,
-  },
-  {
-    id: "s8",
-    type: "review.received",
-    severity: "positive",
-    title: "5-Star Review Received",
-    description: "Apex Industries left a 5-star Google review — 'Exceptional placement quality'",
-    source: "GoHighLevel Reviews",
-    entity: "Apex Industries",
-    timestamp: "3 hr ago",
-    ghlEventId: "ghl_evt_008",
-    processed: true,
-  },
-  {
-    id: "s9",
-    type: "task.completed",
-    severity: "neutral",
-    title: "Follow-up Task Completed",
-    description: "Account rep completed 30-day check-in with Northstar Health",
-    source: "GoHighLevel Tasks",
-    entity: "Northstar Health",
-    timestamp: "4 hr ago",
-    ghlEventId: "ghl_evt_009",
-    processed: true,
-  },
-  {
-    id: "s10",
-    type: "appointment.cancelled",
-    severity: "warning",
-    title: "Appointment Cancelled",
-    description: "Cascade Partners cancelled renewal review meeting — no reschedule",
-    source: "GoHighLevel Calendar",
-    entity: "Cascade Partners",
-    timestamp: "5 hr ago",
-    ghlEventId: "ghl_evt_010",
-    processed: true,
-  },
-];
-
-const SIGNAL_ICONS: Record<SignalType, any> = {
+const SIGNAL_ICONS: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   "contact.created": Users,
   "contact.updated": Users,
   "opportunity.created": DollarSign,
@@ -194,33 +40,76 @@ const SIGNAL_ICONS: Record<SignalType, any> = {
   "review.received": CheckCircle2,
 };
 
-const SEVERITY_CONFIG = {
+const SEVERITY_CONFIG: Record<string, { color: string; bg: string; border: string }> = {
   positive: { color: "#10B981", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.2)" },
   neutral: { color: "#00D4C8", bg: "rgba(0,212,200,0.06)", border: "rgba(0,212,200,0.15)" },
   warning: { color: "#F59E0B", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)" },
   critical: { color: "#EF4444", bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)" },
 };
 
-const SIGNAL_STATS = [
-  { label: "Signals Today", value: "47", change: "+12 vs yesterday", color: "#00D4C8", icon: Activity },
-  { label: "Positive Events", value: "31", change: "66% of total", color: "#10B981", icon: TrendingUp },
-  { label: "Warnings", value: "8", change: "Requires attention", color: "#F59E0B", icon: AlertTriangle },
-  { label: "Revenue Signals", value: "$149.5K", change: "Won + received today", color: "#7C3AED", icon: DollarSign },
-];
+function severityFromSignalType(signalType: string): string {
+  if (["opportunity.status_changed", "payment.received", "appointment.completed", "task.completed"].includes(signalType)) return "positive";
+  if (["opportunity.deleted"].includes(signalType)) return "critical";
+  if (["appointment.cancelled", "conversation.message_received"].includes(signalType)) return "warning";
+  return "neutral";
+}
+
+function timeAgo(date: Date): string {
+  const diff = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(mins / 60);
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (mins > 0) return `${mins}m ago`;
+  return "Just now";
+}
+
+function titleFromSignalType(signalType: string): string {
+  return signalType
+    .replace(".", " — ")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Page
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function LiveSignals() {
-  const [filter, setFilter] = useState<SignalSeverity | "all">("all");
-  const [pulseCount, setPulseCount] = useState(0);
+  const { user } = useAuth();
+  const [filter, setFilter] = useState<string>("all");
+  const [selectedTenantId, setSelectedTenantId] = useState<string>("");
+  const [hours, setHours] = useState(24);
 
-  // Simulate live signal counter incrementing
+  // Load subaccounts
+  const { data: subaccounts = [] } = trpc.tenant.mySubaccounts.useQuery(undefined, {
+    enabled: !!user,
+  });
+
+  // Auto-select first subaccount
   useEffect(() => {
-    const interval = setInterval(() => {
-      setPulseCount((c) => c + 1);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
+    if (subaccounts.length > 0 && !selectedTenantId) {
+      setSelectedTenantId(subaccounts[0].ghlLocationId);
+    }
+  }, [subaccounts, selectedTenantId]);
 
-  const filtered = filter === "all" ? SIGNAL_FEED : SIGNAL_FEED.filter((s) => s.severity === filter);
+  const tenantId = selectedTenantId || subaccounts[0]?.ghlLocationId || "";
+
+  // Load live signals
+  const { data: signals = [], isLoading, refetch, isFetching } = trpc.signals.recent.useQuery(
+    { tenantId, hours },
+    { enabled: !!tenantId, refetchInterval: 30_000 }
+  );
+
+  const filtered = filter === "all"
+    ? signals
+    : signals.filter(s => severityFromSignalType(s.signalType) === filter);
+
+  // Stats derived from live data
+  const positiveCount = signals.filter(s => severityFromSignalType(s.signalType) === "positive").length;
+  const warningCount = signals.filter(s => severityFromSignalType(s.signalType) === "warning").length;
+  const criticalCount = signals.filter(s => severityFromSignalType(s.signalType) === "critical").length;
 
   return (
     <div className="min-h-screen bg-[#050C1A]">
@@ -233,39 +122,34 @@ export default function LiveSignals() {
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="section-label">Live Signals</div>
-                  <div
-                    className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[rgba(245,158,11,0.15)] text-[#F59E0B]"
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  >
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-pulse" />
-                    DEMO DATA
-                  </div>
-                  <div
-                    className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[rgba(16,185,129,0.1)] text-[#10B981]"
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  >
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-                    STREAM ACTIVE
-                  </div>
+                  <div className="section-label">Signal Pipeline</div>
+                  {signals.length > 0 ? (
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[rgba(16,185,129,0.1)] text-[#10B981]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+                      LIVE
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[rgba(245,158,11,0.15)] text-[#F59E0B]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
+                      AWAITING SIGNALS
+                    </div>
+                  )}
                 </div>
-                <h1
-                  className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
+                <h1 className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   Live Signal Feed
                 </h1>
                 <p className="text-sm text-[#E8EDF5]/50 mt-1 max-w-xl">
-                  EEOS transforms business data into accurate executive intelligence. Every signal below is a raw input — processed in transit, never stored, turned into executive recommendations.
+                  Every signal is a raw GoHighLevel event processed by the EEOS Signal Pipeline — the input layer for the Intelligence Engine.
                 </p>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.3)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200"
+                  onClick={() => refetch()}
+                  disabled={isFetching}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.3)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200 disabled:opacity-50"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                  aria-label="Refresh signal feed"
                 >
-                  <RefreshCw className="w-4 h-4" />
+                  {isFetching ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                   <span className="hidden sm:inline">Refresh</span>
                 </button>
                 <Link
@@ -274,7 +158,7 @@ export default function LiveSignals() {
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   <Zap className="w-4 h-4" />
-                  Connect GoHighLevel
+                  Connect GHL
                 </Link>
               </div>
             </div>
@@ -282,12 +166,42 @@ export default function LiveSignals() {
         </div>
       </section>
 
+      {/* Subaccount Selector */}
+      {subaccounts.length > 1 && (
+        <section className="py-3">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {subaccounts.map((sub) => (
+                <button
+                  key={sub.ghlLocationId}
+                  onClick={() => setSelectedTenantId(sub.ghlLocationId)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+                    tenantId === sub.ghlLocationId
+                      ? "bg-[rgba(0,212,200,0.12)] text-[#00D4C8] border border-[rgba(0,212,200,0.3)]"
+                      : "text-[#E8EDF5]/50 hover:text-[#E8EDF5]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
+                  }`}
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  <Building2 className="w-3.5 h-3.5" />
+                  {sub.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Stats */}
       <section className="py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection delay={100}>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {SIGNAL_STATS.map((stat) => (
+              {[
+                { label: `Signals (${hours}h)`, value: signals.length.toString(), color: "#00D4C8", icon: Activity },
+                { label: "Positive Events", value: positiveCount.toString(), color: "#10B981", icon: CheckCircle2 },
+                { label: "Warnings", value: warningCount.toString(), color: "#F59E0B", icon: AlertTriangle },
+                { label: "Critical", value: criticalCount.toString(), color: "#EF4444", icon: AlertTriangle },
+              ].map((stat) => (
                 <div key={stat.label} className="glass-card rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
@@ -298,7 +212,6 @@ export default function LiveSignals() {
                   <div className="text-2xl font-bold" style={{ color: stat.color, fontFamily: "'Space Grotesk', sans-serif" }}>
                     {stat.value}
                   </div>
-                  <div className="text-xs text-[#E8EDF5]/40 mt-0.5">{stat.change}</div>
                 </div>
               ))}
             </div>
@@ -306,25 +219,51 @@ export default function LiveSignals() {
         </div>
       </section>
 
-      {/* Filter Bar */}
+      {/* Time Range + Filter Bar */}
       <section className="py-3">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            <Filter className="w-4 h-4 text-[#E8EDF5]/30 shrink-0" aria-hidden="true" />
-            {(["all", "positive", "neutral", "warning", "critical"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 capitalize ${
-                  filter === f
-                    ? "bg-[rgba(0,212,200,0.12)] text-[#00D4C8] border border-[rgba(0,212,200,0.3)]"
-                    : "text-[#E8EDF5]/50 hover:text-[#E8EDF5]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
-                }`}
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                {f === "all" ? `All (${SIGNAL_FEED.length})` : `${f} (${SIGNAL_FEED.filter(s => s.severity === f).length})`}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Time range */}
+            <div className="flex items-center gap-1">
+              {[6, 24, 48, 168].map((h) => (
+                <button
+                  key={h}
+                  onClick={() => setHours(h)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                    hours === h
+                      ? "bg-[rgba(0,212,200,0.12)] text-[#00D4C8] border border-[rgba(0,212,200,0.3)]"
+                      : "text-[#E8EDF5]/40 hover:text-[#E8EDF5]/70 border border-transparent"
+                  }`}
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                >
+                  {h < 24 ? `${h}h` : h === 24 ? "24h" : h === 48 ? "2d" : "7d"}
+                </button>
+              ))}
+            </div>
+
+            <div className="w-px h-4 bg-[rgba(255,255,255,0.1)]" />
+
+            {/* Severity filter */}
+            <div className="flex items-center gap-1">
+              <Filter className="w-3.5 h-3.5 text-[#E8EDF5]/30" />
+              {(["all", "positive", "neutral", "warning", "critical"] as const).map((f) => {
+                const count = f === "all" ? signals.length : signals.filter(s => severityFromSignalType(s.signalType) === f).length;
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 capitalize ${
+                      filter === f
+                        ? "bg-[rgba(0,212,200,0.12)] text-[#00D4C8] border border-[rgba(0,212,200,0.3)]"
+                        : "text-[#E8EDF5]/50 hover:text-[#E8EDF5]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
+                    }`}
+                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    {f === "all" ? `All (${count})` : `${f} (${count})`}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>
@@ -332,98 +271,136 @@ export default function LiveSignals() {
       {/* Signal Feed */}
       <section className="pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="space-y-2">
-            {filtered.map((signal, i) => {
-              const Icon = SIGNAL_ICONS[signal.type];
-              const sConfig = SEVERITY_CONFIG[signal.severity];
 
-              return (
-                <AnimatedSection key={signal.id} delay={i * 40}>
-                  <div
-                    className={`flex items-start gap-4 p-4 rounded-xl border transition-all duration-200 hover:border-[rgba(0,212,200,0.2)] ${
-                      !signal.processed ? "ring-1 ring-[rgba(245,158,11,0.3)]" : ""
-                    }`}
-                    style={{ background: sConfig.bg, borderColor: sConfig.border }}
-                    role="listitem"
-                  >
-                    {/* Icon */}
-                    <div
-                      className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: `${sConfig.color}18` }}
-                    >
-                      <Icon className="w-4 h-4" style={{ color: sConfig.color }} />
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                        <span className="text-sm font-semibold text-[#E8EDF5]">{signal.title}</span>
-                        {!signal.processed && (
-                          <span
-                            className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[rgba(245,158,11,0.2)] text-[#F59E0B]"
-                            style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                          >
-                            UNREAD
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-[#E8EDF5]/60 leading-snug">{signal.description}</p>
-                      <div className="flex flex-wrap items-center gap-3 mt-2">
-                        <span
-                          className="text-[10px] text-[#E8EDF5]/35"
-                          style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                        >
-                          {signal.source}
-                        </span>
-                        <span
-                          className="text-[10px] text-[#E8EDF5]/25"
-                          style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                        >
-                          {signal.ghlEventId}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Right */}
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      {signal.value && (
-                        <span className="text-sm font-bold" style={{ color: sConfig.color, fontFamily: "'Space Grotesk', sans-serif" }}>
-                          {signal.value}
-                        </span>
-                      )}
-                      <div className="flex items-center gap-1 text-[10px] text-[#E8EDF5]/35">
-                        <Clock className="w-3 h-3" />
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{signal.timestamp}</span>
-                      </div>
-                    </div>
-                  </div>
-                </AnimatedSection>
-              );
-            })}
-          </div>
-
-          {/* GHL Connection Prompt */}
-          <AnimatedSection delay={400}>
-            <div className="mt-8 p-6 rounded-2xl border border-dashed border-[rgba(0,212,200,0.2)] text-center">
-              <div className="w-12 h-12 rounded-xl bg-[rgba(0,212,200,0.08)] flex items-center justify-center mx-auto mb-3">
-                <Activity className="w-6 h-6 text-[#00D4C8]/50" />
-              </div>
-              <h3 className="text-base font-semibold text-[#E8EDF5]/50 mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                Live signals from your GoHighLevel account appear here
-              </h3>
-              <p className="text-sm text-[#E8EDF5]/30 mb-4">
-                Connect GoHighLevel to stream real contact, pipeline, and conversation events in real time.
-              </p>
-              <Link
-                href="/connect-ghl"
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                <Zap className="w-4 h-4" />
-                Connect GoHighLevel
-              </Link>
+          {/* Loading */}
+          {isLoading && (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 text-[#00D4C8] animate-spin" />
             </div>
-          </AnimatedSection>
+          )}
+
+          {/* No tenant */}
+          {!tenantId && !isLoading && (
+            <AnimatedSection>
+              <div className="text-center py-20 glass-card rounded-2xl">
+                <Activity className="w-12 h-12 text-[#E8EDF5]/20 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-[#E8EDF5]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  No GoHighLevel subaccounts connected
+                </h3>
+                <p className="text-sm text-[#E8EDF5]/30 mb-6">
+                  Connect your GoHighLevel subaccounts to stream real business signals.
+                </p>
+                <Link
+                  href="/connect-ghl"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  <Zap className="w-4 h-4" />
+                  Connect GoHighLevel
+                </Link>
+              </div>
+            </AnimatedSection>
+          )}
+
+          {/* Empty state — connected but no signals */}
+          {tenantId && !isLoading && signals.length === 0 && (
+            <AnimatedSection>
+              <div className="text-center py-20 glass-card rounded-2xl">
+                <Activity className="w-12 h-12 text-[#E8EDF5]/20 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-[#E8EDF5]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  No signals in the last {hours < 24 ? `${hours} hours` : hours === 24 ? "24 hours" : hours === 48 ? "2 days" : "7 days"}
+                </h3>
+                <p className="text-sm text-[#E8EDF5]/30 mb-4">
+                  Signals appear here when GoHighLevel sends webhook events to EEOS.
+                </p>
+                <p className="text-xs text-[#E8EDF5]/25" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  Webhook endpoint: POST /api/ghl/webhook
+                </p>
+              </div>
+            </AnimatedSection>
+          )}
+
+          {/* Live signals */}
+          {!isLoading && filtered.length > 0 && (
+            <div className="space-y-2" role="list">
+              {filtered.map((signal, i) => {
+                const severity = severityFromSignalType(signal.signalType);
+                const sConfig = SEVERITY_CONFIG[severity] ?? SEVERITY_CONFIG.neutral;
+                const Icon = SIGNAL_ICONS[signal.signalType] ?? Activity;
+                const payload = signal.rawPayload as Record<string, unknown> | null;
+                const contactName = (payload?.contact as Record<string, unknown>)?.name as string | undefined;
+                const opportunityName = (payload?.opportunity as Record<string, unknown>)?.name as string | undefined;
+                const entityName = contactName ?? opportunityName ?? "";
+
+                return (
+                  <AnimatedSection key={signal.id} delay={i * 30}>
+                    <div
+                      className="flex items-start gap-4 p-4 rounded-xl border transition-all duration-200 hover:border-[rgba(0,212,200,0.2)]"
+                      style={{ background: sConfig.bg, borderColor: sConfig.border }}
+                      role="listitem"
+                    >
+                      {/* Icon */}
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${sConfig.color}18` }}>
+                        <Icon className="w-4 h-4" style={{ color: sConfig.color }} />
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                          <span className="text-sm font-semibold text-[#E8EDF5]">
+                            {titleFromSignalType(signal.signalType)}
+                          </span>
+                          {!signal.processed && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[rgba(245,158,11,0.2)] text-[#F59E0B]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                              UNPROCESSED
+                            </span>
+                          )}
+                          {signal.processingError && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[rgba(239,68,68,0.15)] text-[#EF4444]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                              ERROR
+                            </span>
+                          )}
+                        </div>
+                        {entityName && (
+                          <p className="text-sm text-[#E8EDF5]/60 leading-snug">{entityName}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                          <span className="text-[10px] text-[#E8EDF5]/35" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                            GoHighLevel
+                          </span>
+                          {signal.sourceEventId && (
+                            <span className="text-[10px] text-[#E8EDF5]/25" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                              {signal.sourceEventId}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right */}
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <div className="flex items-center gap-1 text-[10px] text-[#E8EDF5]/35">
+                          <Clock className="w-3 h-3" />
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                            {timeAgo(signal.receivedAt)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </AnimatedSection>
+                );
+              })}
+            </div>
+          )}
+
+          {/* No results for filter */}
+          {tenantId && !isLoading && signals.length > 0 && filtered.length === 0 && (
+            <div className="text-center py-12 glass-card rounded-2xl">
+              <p className="text-sm text-[#E8EDF5]/40">No "{filter}" signals in this time range.</p>
+              <button onClick={() => setFilter("all")} className="mt-3 text-xs text-[#00D4C8] hover:text-[#00E8DB] transition-colors" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                Show all →
+              </button>
+            </div>
+          )}
         </div>
       </section>
 

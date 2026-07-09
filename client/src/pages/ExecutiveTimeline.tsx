@@ -1,193 +1,111 @@
-// ExecutiveTimeline.tsx
-// Eagle Eye Automation — EEOS Executive Experience
-// Executive Timeline: chronological view of business events, decisions, and outcomes
-// All data shapes designed to consume real GoHighLevel data once backend is live.
-// GHL data: contact activity, opportunity history, conversation events, appointment records
+/**
+ * EEOS — Executive Timeline (Business Memory Layer)
+ *
+ * Chronological record of every significant business event, decision, and outcome.
+ * Populated by the EEOS Signal Pipeline from GoHighLevel webhook events.
+ *
+ * Engineering Principle: "Don't Build More. Build Accurate."
+ */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import {
   Calendar, DollarSign, Users, MessageSquare, TrendingUp,
-  CheckCircle2, AlertTriangle, Star, Zap, ArrowRight,
-  ChevronDown, Filter, Clock
+  CheckCircle2, AlertTriangle, Star, Zap,
+  Clock, Loader2, Building2
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 
-// ── GHL-READY DATA SHAPES ──────────────────────────────────────────────────
-// When backend is live, replace with:
-// GET /api/eeos/timeline?tenantId=xxx&from=ISO8601&to=ISO8601&categories=all
+// ─────────────────────────────────────────────────────────────────────────────
+// Config
+// ─────────────────────────────────────────────────────────────────────────────
 
 type TimelineCategory = "revenue" | "relationship" | "operations" | "milestone" | "alert";
 
-interface TimelineEvent {
-  id: string;
-  date: string;
-  time: string;
-  category: TimelineCategory;
-  title: string;
-  description: string;
-  entity?: string;
-  value?: string;
-  outcome?: "positive" | "negative" | "neutral";
-  ghlSource: string; // GHL data source
-  tags: string[];
+// Map eventType prefixes to visual config
+const EVENT_CONFIG: Record<string, { color: string; bg: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; label: string }> = {
+  "opportunity": { color: "#10B981", bg: "rgba(16,185,129,0.1)", icon: DollarSign, label: "Revenue" },
+  "contact": { color: "#00D4C8", bg: "rgba(0,212,200,0.1)", icon: Users, label: "Relationship" },
+  "appointment": { color: "#7C3AED", bg: "rgba(124,58,237,0.1)", icon: TrendingUp, label: "Operations" },
+  "payment": { color: "#F59E0B", bg: "rgba(245,158,11,0.1)", icon: Star, label: "Milestone" },
+  "conversation": { color: "#EF4444", bg: "rgba(239,68,68,0.1)", icon: MessageSquare, label: "Alert" },
+  "default": { color: "#6B7280", bg: "rgba(107,114,128,0.1)", icon: CheckCircle2, label: "Event" },
+};
+
+function getEventConfig(eventType: string) {
+  const prefix = eventType.split(".")[0];
+  return EVENT_CONFIG[prefix] ?? EVENT_CONFIG.default;
 }
 
-const TIMELINE_EVENTS: TimelineEvent[] = [
-  {
-    id: "t1",
-    date: "Today",
-    time: "09:14 AM",
-    category: "revenue",
-    title: "Northstar Health Contract Closed",
-    description: "Q3 staffing contract signed and activated. 12-month engagement with option to extend.",
-    entity: "Northstar Health",
-    value: "$128,000",
-    outcome: "positive",
-    ghlSource: "opportunity.status_changed → Won",
-    tags: ["contract", "healthcare", "Q3"],
-  },
-  {
-    id: "t2",
-    date: "Today",
-    time: "08:30 AM",
-    category: "alert",
-    title: "Cascade Partners Disengagement Detected",
-    description: "EEOS flagged 67% drop in contact activity. No open opportunities. Renewal at risk.",
-    entity: "Cascade Partners",
-    value: "$72,000",
-    outcome: "negative",
-    ghlSource: "contact.last_activity_date + conversation.last_message_date",
-    tags: ["at-risk", "retention", "alert"],
-  },
-  {
-    id: "t3",
-    date: "Yesterday",
-    time: "03:45 PM",
-    category: "relationship",
-    title: "Discovery Call — Summit Logistics",
-    description: "Initial discovery call completed. Strong fit identified for executive staffing needs. Proposal requested.",
-    entity: "Summit Logistics",
-    outcome: "positive",
-    ghlSource: "appointment.completed",
-    tags: ["new-prospect", "logistics"],
-  },
-  {
-    id: "t4",
-    date: "Yesterday",
-    time: "11:20 AM",
-    category: "revenue",
-    title: "Invoice Paid — Meridian Group",
-    description: "Invoice #INV-2847 paid in full. 8 days ahead of due date.",
-    entity: "Meridian Group",
-    value: "$21,500",
-    outcome: "positive",
-    ghlSource: "payment.received",
-    tags: ["payment", "on-time"],
-  },
-  {
-    id: "t5",
-    date: "Yesterday",
-    time: "09:00 AM",
-    category: "alert",
-    title: "Pipeline Velocity Drop — 14% Below Target",
-    description: "3 proposals stalled for 14+ days. Combined value $340K. EEOS recommends immediate follow-up.",
-    value: "$340,000",
-    outcome: "negative",
-    ghlSource: "opportunity.last_stage_change_date",
-    tags: ["pipeline", "velocity", "alert"],
-  },
-  {
-    id: "t6",
-    date: "Jul 7",
-    time: "02:15 PM",
-    category: "milestone",
-    title: "5-Star Review — Apex Industries",
-    description: "'Exceptional placement quality and responsiveness. Best staffing partner we've worked with.'",
-    entity: "Apex Industries",
-    outcome: "positive",
-    ghlSource: "reputation.review_received",
-    tags: ["review", "reputation"],
-  },
-  {
-    id: "t7",
-    date: "Jul 7",
-    time: "10:30 AM",
-    category: "operations",
-    title: "Recruiting Team Capacity Alert",
-    description: "Department reached 92% utilization. 4 new requisitions pending. SLA risk in 6 days.",
-    outcome: "negative",
-    ghlSource: "user.task_count + calendar.booked_slots",
-    tags: ["capacity", "operations", "alert"],
-  },
-  {
-    id: "t8",
-    date: "Jul 6",
-    time: "04:00 PM",
-    category: "revenue",
-    title: "Opportunity Lost — Pacific Staffing Group",
-    description: "Lost to competitor on pricing. Reason captured: 'Budget constraints, competitor offered 15% lower rate.'",
-    entity: "Pacific Staffing Group",
-    value: "$96,000",
-    outcome: "negative",
-    ghlSource: "opportunity.status_changed → Lost",
-    tags: ["lost", "pricing", "competitive"],
-  },
-  {
-    id: "t9",
-    date: "Jul 6",
-    time: "11:00 AM",
-    category: "milestone",
-    title: "EEOS Integration Activated",
-    description: "GoHighLevel CRM connected. EEOS began processing signals and generating recommendations.",
-    outcome: "positive",
-    ghlSource: "system.integration_activated",
-    tags: ["eeos", "integration", "milestone"],
-  },
-  {
-    id: "t10",
-    date: "Jul 5",
-    time: "09:30 AM",
-    category: "relationship",
-    title: "Quarterly Business Review — Apex Industries",
-    description: "QBR completed. Client satisfaction score: 94/100. Expansion opportunity identified for Q4.",
-    entity: "Apex Industries",
-    outcome: "positive",
-    ghlSource: "appointment.completed + contact.updated",
-    tags: ["QBR", "expansion", "healthcare"],
-  },
-];
+function getSignificanceConfig(significance: string | null) {
+  if (significance === "critical") return { color: "#EF4444", label: "Critical" };
+  if (significance === "high") return { color: "#F59E0B", label: "High Impact" };
+  if (significance === "medium") return { color: "#00D4C8", label: "Medium" };
+  return { color: "#6B7280", label: "Low" };
+}
 
-const CATEGORY_CONFIG: Record<TimelineCategory, { color: string; bg: string; icon: any; label: string }> = {
-  revenue: { color: "#10B981", bg: "rgba(16,185,129,0.1)", icon: DollarSign, label: "Revenue" },
-  relationship: { color: "#00D4C8", bg: "rgba(0,212,200,0.1)", icon: Users, label: "Relationship" },
-  operations: { color: "#7C3AED", bg: "rgba(124,58,237,0.1)", icon: TrendingUp, label: "Operations" },
-  milestone: { color: "#F59E0B", bg: "rgba(245,158,11,0.1)", icon: Star, label: "Milestone" },
-  alert: { color: "#EF4444", bg: "rgba(239,68,68,0.1)", icon: AlertTriangle, label: "Alert" },
-};
+function formatDateLabel(date: Date): string {
+  const d = new Date(date);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
 
-const OUTCOME_CONFIG = {
-  positive: { color: "#10B981", label: "Positive" },
-  negative: { color: "#EF4444", label: "Negative" },
-  neutral: { color: "#6B7280", label: "Neutral" },
-};
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+}
+
+function formatTime(date: Date): string {
+  return new Date(date).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Page
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function ExecutiveTimeline() {
-  const [activeFilter, setActiveFilter] = useState<TimelineCategory | "all">("all");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [activeFilter, setActiveFilter] = useState<string>("all");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [selectedTenantId, setSelectedTenantId] = useState<string>("");
+
+  // Load subaccounts
+  const { data: subaccounts = [] } = trpc.tenant.mySubaccounts.useQuery(undefined, {
+    enabled: !!user,
+  });
+
+  // Auto-select first subaccount
+  useEffect(() => {
+    if (subaccounts.length > 0 && !selectedTenantId) {
+      setSelectedTenantId(subaccounts[0].ghlLocationId);
+    }
+  }, [subaccounts, selectedTenantId]);
+
+  const tenantId = selectedTenantId || subaccounts[0]?.ghlLocationId || "";
+
+  // Load live timeline events
+  const { data: events = [], isLoading } = trpc.timeline.list.useQuery(
+    { tenantId, limit: 50 },
+    { enabled: !!tenantId }
+  );
 
   const filtered = activeFilter === "all"
-    ? TIMELINE_EVENTS
-    : TIMELINE_EVENTS.filter((e) => e.category === activeFilter);
+    ? events
+    : events.filter(e => e.eventType.startsWith(activeFilter + "."));
 
-  // Group by date
-  const grouped: Record<string, TimelineEvent[]> = {};
+  // Group by date label
+  const grouped: Record<string, typeof events> = {};
   filtered.forEach((event) => {
-    if (!grouped[event.date]) grouped[event.date] = [];
-    grouped[event.date].push(event);
+    const label = formatDateLabel(event.occurredAt);
+    if (!grouped[label]) grouped[label] = [];
+    grouped[label].push(event);
   });
+
+  const eventPrefixes = Array.from(new Set(events.map(e => e.eventType.split(".")[0])));
 
   return (
     <div className="min-h-screen bg-[#050C1A]">
@@ -200,11 +118,18 @@ export default function ExecutiveTimeline() {
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="section-label">Executive Timeline</div>
-                  <div className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[rgba(245,158,11,0.15)] text-[#F59E0B]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-pulse" />
-                    DEMO DATA
-                  </div>
+                  <div className="section-label">Business Memory</div>
+                  {events.length > 0 ? (
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[rgba(16,185,129,0.1)] text-[#10B981]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+                      LIVE
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[rgba(245,158,11,0.15)] text-[#F59E0B]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
+                      AWAITING DATA
+                    </div>
+                  )}
                 </div>
                 <h1 className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   Executive Timeline
@@ -213,71 +138,152 @@ export default function ExecutiveTimeline() {
                   A chronological record of every significant business event, decision, and outcome.
                 </p>
               </div>
-              <Link href="/connect-ghl" className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(0,212,200,0.3)] shrink-0 self-start" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <Link
+                href="/connect-ghl"
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(0,212,200,0.3)] shrink-0 self-start"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
                 <Zap className="w-4 h-4" />
-                Connect GoHighLevel
+                Connect GHL
               </Link>
             </div>
           </AnimatedSection>
         </div>
       </section>
 
-      {/* Filter */}
-      <section className="py-3">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" role="tablist">
-            {(["all", "revenue", "relationship", "operations", "milestone", "alert"] as const).map((f) => {
-              const count = f === "all" ? TIMELINE_EVENTS.length : TIMELINE_EVENTS.filter(e => e.category === f).length;
-              const config = f !== "all" ? CATEGORY_CONFIG[f] : null;
-              return (
+      {/* Subaccount Selector */}
+      {subaccounts.length > 1 && (
+        <section className="py-3">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {subaccounts.map((sub) => (
                 <button
-                  key={f}
-                  role="tab"
-                  aria-selected={activeFilter === f}
-                  onClick={() => setActiveFilter(f)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 capitalize ${
-                    activeFilter === f
+                  key={sub.ghlLocationId}
+                  onClick={() => setSelectedTenantId(sub.ghlLocationId)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+                    tenantId === sub.ghlLocationId
                       ? "bg-[rgba(0,212,200,0.12)] text-[#00D4C8] border border-[rgba(0,212,200,0.3)]"
                       : "text-[#E8EDF5]/50 hover:text-[#E8EDF5]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
                   }`}
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  {config && <config.icon className="w-3.5 h-3.5" style={{ color: activeFilter === f ? "#00D4C8" : config.color }} />}
-                  {f === "all" ? "All Events" : config?.label}
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeFilter === f ? "bg-[rgba(0,212,200,0.2)]" : "bg-[rgba(255,255,255,0.06)]"}`}>{count}</span>
+                  <Building2 className="w-3.5 h-3.5" />
+                  {sub.name}
                 </button>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Category Filter */}
+      {events.length > 0 && (
+        <section className="py-3">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex gap-2 overflow-x-auto pb-1" role="tablist">
+              {(["all", ...eventPrefixes] as string[]).map((f) => {
+                const count = f === "all" ? events.length : events.filter(e => e.eventType.startsWith(f + ".")).length;
+                const config = f !== "all" ? (EVENT_CONFIG[f] ?? EVENT_CONFIG.default) : null;
+                return (
+                  <button
+                    key={f}
+                    role="tab"
+                    aria-selected={activeFilter === f}
+                    onClick={() => setActiveFilter(f)}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 capitalize ${
+                      activeFilter === f
+                        ? "bg-[rgba(0,212,200,0.12)] text-[#00D4C8] border border-[rgba(0,212,200,0.3)]"
+                        : "text-[#E8EDF5]/50 hover:text-[#E8EDF5]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
+                    }`}
+                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    {config && <config.icon className="w-3.5 h-3.5" style={{ color: activeFilter === f ? "#00D4C8" : config.color }} />}
+                    {f === "all" ? "All Events" : (config?.label ?? f.charAt(0).toUpperCase() + f.slice(1))}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeFilter === f ? "bg-[rgba(0,212,200,0.2)]" : "bg-[rgba(255,255,255,0.06)]"}`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Timeline */}
       <section className="pb-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          {Object.entries(grouped).map(([date, events], groupIdx) => (
-            <div key={date} className="mb-8">
+
+          {/* Loading */}
+          {isLoading && (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 text-[#00D4C8] animate-spin" />
+            </div>
+          )}
+
+          {/* No tenant */}
+          {!tenantId && !isLoading && (
+            <AnimatedSection>
+              <div className="text-center py-20 glass-card rounded-2xl">
+                <Calendar className="w-12 h-12 text-[#E8EDF5]/20 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-[#E8EDF5]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  No GoHighLevel subaccounts connected
+                </h3>
+                <p className="text-sm text-[#E8EDF5]/30 mb-6">
+                  Connect your GoHighLevel subaccounts to populate the Executive Timeline.
+                </p>
+                <Link
+                  href="/connect-ghl"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  <Zap className="w-4 h-4" />
+                  Connect GoHighLevel
+                </Link>
+              </div>
+            </AnimatedSection>
+          )}
+
+          {/* Empty state — connected but no events */}
+          {tenantId && !isLoading && events.length === 0 && (
+            <AnimatedSection>
+              <div className="text-center py-20 glass-card rounded-2xl">
+                <Calendar className="w-12 h-12 text-[#E8EDF5]/20 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-[#E8EDF5]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  No timeline events yet
+                </h3>
+                <p className="text-sm text-[#E8EDF5]/30">
+                  Timeline events are created as GoHighLevel sends webhook signals to EEOS.
+                </p>
+              </div>
+            </AnimatedSection>
+          )}
+
+          {/* Grouped timeline */}
+          {!isLoading && Object.entries(grouped).map(([dateLabel, dateEvents], groupIdx) => (
+            <div key={dateLabel} className="mb-8">
               <AnimatedSection delay={groupIdx * 80}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(0,212,200,0.08)] border border-[rgba(0,212,200,0.15)]">
                     <Calendar className="w-3.5 h-3.5 text-[#00D4C8]" />
-                    <span className="text-sm font-bold text-[#00D4C8]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{date}</span>
+                    <span className="text-sm font-bold text-[#00D4C8]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{dateLabel}</span>
                   </div>
                   <div className="flex-1 h-px bg-[rgba(0,212,200,0.08)]" />
-                  <span className="text-xs text-[#E8EDF5]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{events.length} event{events.length > 1 ? "s" : ""}</span>
+                  <span className="text-xs text-[#E8EDF5]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    {dateEvents.length} event{dateEvents.length > 1 ? "s" : ""}
+                  </span>
                 </div>
               </AnimatedSection>
 
               <div className="relative pl-6">
-                {/* Vertical line */}
                 <div className="absolute left-2 top-0 bottom-0 w-px bg-[rgba(0,212,200,0.1)]" aria-hidden="true" />
-
                 <div className="space-y-3">
-                  {events.map((event, eventIdx) => {
-                    const cConfig = CATEGORY_CONFIG[event.category];
-                    const oConfig = event.outcome ? OUTCOME_CONFIG[event.outcome] : null;
+                  {dateEvents.map((event, eventIdx) => {
+                    const cConfig = getEventConfig(event.eventType);
+                    const sigConfig = getSignificanceConfig(event.significance);
                     const isExpanded = expandedId === event.id;
                     const Icon = cConfig.icon;
+                    const metadata = event.metadata as Record<string, unknown> | null;
 
                     return (
                       <AnimatedSection key={event.id} delay={groupIdx * 80 + eventIdx * 50}>
@@ -305,54 +311,47 @@ export default function ExecutiveTimeline() {
                               <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap items-center gap-2 mb-0.5">
                                   <span className="text-sm font-semibold text-[#E8EDF5]">{event.title}</span>
-                                  {event.entity && (
-                                    <span className="text-xs text-[#E8EDF5]/40">· {event.entity}</span>
+                                  {event.entityName && (
+                                    <span className="text-xs text-[#E8EDF5]/40">· {event.entityName}</span>
                                   )}
                                 </div>
-                                <p className="text-xs text-[#E8EDF5]/55 leading-relaxed">{event.description}</p>
+                                {event.description && (
+                                  <p className="text-xs text-[#E8EDF5]/55 leading-relaxed">{event.description}</p>
+                                )}
 
                                 {isExpanded && (
                                   <div className="mt-3 pt-3 border-t border-[rgba(255,255,255,0.06)] space-y-3">
-                                    {/* Outcome badge */}
-                                    {oConfig && (
-                                      <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: oConfig.color }} />
-                                        <span className="text-xs font-semibold" style={{ color: oConfig.color, fontFamily: "'JetBrains Mono', monospace" }}>{oConfig.label.toUpperCase()}</span>
-                                      </div>
-                                    )}
-                                    {/* Tags */}
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {event.tags.map((tag) => (
-                                        <span key={tag} className="text-[10px] px-2 py-0.5 rounded bg-[rgba(255,255,255,0.05)] text-[#E8EDF5]/50 border border-[rgba(255,255,255,0.08)]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                                          #{tag}
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: sigConfig.color }} />
+                                        <span className="text-xs font-semibold" style={{ color: sigConfig.color, fontFamily: "'JetBrains Mono', monospace" }}>
+                                          {sigConfig.label.toUpperCase()}
                                         </span>
-                                      ))}
-                                    </div>
-                                    {/* Source provenance */}
-                                    <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[rgba(0,212,200,0.04)] border border-[rgba(0,212,200,0.1)]">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-[#00D4C8] mt-1 shrink-0" />
-                                      <div>
-                                        <div className="text-[10px] font-bold text-[#00D4C8] mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>DATA SOURCE</div>
-                                        <div className="text-[10px] text-[#E8EDF5]/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{event.ghlSource}</div>
-                                        <div className="text-[10px] text-[#E8EDF5]/30 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Read-only · Approved signal type · Not stored</div>
                                       </div>
-                                    </div>
+                                    {event.businessImpact && (
+                                      <p className="text-xs text-[#E8EDF5]/50 leading-relaxed">{event.businessImpact}</p>
+                                    )}
+                                    <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[rgba(0,212,200,0.04)] border border-[rgba(0,212,200,0.1)]">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#00D4C8] mt-1 shrink-0" />
+                                        <div>
+                                          <div className="text-[10px] font-bold text-[#00D4C8] mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>EVENT TYPE</div>
+                                          <div className="text-[10px] text-[#E8EDF5]/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{event.eventType}</div>
+                                          <div className="text-[10px] text-[#E8EDF5]/30 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>GoHighLevel · Read-only</div>
+                                        </div>
+                                      </div>
                                   </div>
                                 )}
                               </div>
                               <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                {event.value && (
-                                  <span className="text-sm font-bold" style={{ color: oConfig?.color || "#E8EDF5", fontFamily: "'Space Grotesk', sans-serif" }}>
-                                    {event.value}
+                                {metadata?.value != null && (
+                                  <span className="text-sm font-bold text-[#10B981]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                                    {typeof metadata.value === "number" ? `$${(metadata.value as number).toLocaleString()}` : String(metadata.value as string | number)}
                                   </span>
                                 )}
                                 <div className="flex items-center gap-1 text-[10px] text-[#E8EDF5]/30">
                                   <Clock className="w-3 h-3" />
-                                  <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{event.time}</span>
+                                  <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{formatTime(event.occurredAt)}</span>
                                 </div>
-                                {oConfig && (
-                                  <div className="w-2 h-2 rounded-full" style={{ background: oConfig.color }} title={oConfig.label} />
-                                )}
+                                <div className="w-2 h-2 rounded-full" style={{ background: sigConfig.color }} title={sigConfig.label} />
                               </div>
                             </div>
                           </button>
@@ -365,17 +364,17 @@ export default function ExecutiveTimeline() {
             </div>
           ))}
 
-          {/* Empty State */}
-          {filtered.length === 0 && (
+          {/* No filter results */}
+          {!isLoading && events.length > 0 && filtered.length === 0 && (
             <AnimatedSection>
               <div className="text-center py-20 glass-card rounded-2xl">
                 <Calendar className="w-12 h-12 text-[#E8EDF5]/20 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-[#E8EDF5]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>No events in this category</h3>
-                <p className="text-sm text-[#E8EDF5]/30">Connect GoHighLevel to populate your timeline with real business events.</p>
-                <Link href="/connect-ghl" className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  <Zap className="w-4 h-4" />
-                  Connect GoHighLevel
-                </Link>
+                <h3 className="text-lg font-semibold text-[#E8EDF5]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  No events in this category
+                </h3>
+                <button onClick={() => setActiveFilter("all")} className="mt-3 text-xs text-[#00D4C8] hover:text-[#00E8DB] transition-colors" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  Show all →
+                </button>
               </div>
             </AnimatedSection>
           )}
