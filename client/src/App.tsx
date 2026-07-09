@@ -28,6 +28,13 @@ import LiveStatus from "./pages/LiveStatus";
 import ConnectedApps from "./pages/ConnectedApps";
 import SystemHealth from "./pages/SystemHealth";
 import Notifications from "./pages/Notifications";
+// Sprint 13 — Executive Intelligence Pages
+import BusinessHealth from "./pages/BusinessHealth";
+import AIRecommendations from "./pages/AIRecommendations";
+import LiveSignals from "./pages/LiveSignals";
+import IntegrationStatus from "./pages/IntegrationStatus";
+import ExecutiveTimeline from "./pages/ExecutiveTimeline";
+import KnowledgeGraphPreview from "./pages/KnowledgeGraphPreview";
 
 function Router() {
   return (
@@ -56,6 +63,13 @@ function Router() {
       <Route path="/connected-apps" component={ConnectedApps} />
       <Route path="/system-health" component={SystemHealth} />
       <Route path="/notifications" component={Notifications} />
+      {/* Sprint 13 — Executive Intelligence Pages */}
+      <Route path="/business-health" component={BusinessHealth} />
+      <Route path="/ai-recommendations" component={AIRecommendations} />
+      <Route path="/live-signals" component={LiveSignals} />
+      <Route path="/integration-status" component={IntegrationStatus} />
+      <Route path="/executive-timeline" component={ExecutiveTimeline} />
+      <Route path="/knowledge-graph" component={KnowledgeGraphPreview} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

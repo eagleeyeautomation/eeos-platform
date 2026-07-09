@@ -36,6 +36,12 @@ const NAV_LINKS = [
     href: "#",
     children: [
       { label: "Executive Home", href: "/executive-home" },
+      { label: "Business Health", href: "/business-health" },
+      { label: "AI Recommendations", href: "/ai-recommendations" },
+      { label: "Live Signals", href: "/live-signals" },
+      { label: "Integration Status", href: "/integration-status" },
+      { label: "Executive Timeline", href: "/executive-timeline" },
+      { label: "Knowledge Graph", href: "/knowledge-graph" },
       { label: "System Health", href: "/system-health" },
       { label: "Notifications", href: "/notifications" },
     ],
@@ -256,9 +262,10 @@ export default function Navigation() {
               View Integration Health
             </Link>
             <Link
-              href="/demo"
+              href="/executive-home"
               className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#E8EDF5]/70 hover:text-[#E8EDF5] transition-all"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              aria-label="Open Executive Dashboard"
             >
               Open Executive Dashboard
               <ArrowRight className="w-4 h-4" />

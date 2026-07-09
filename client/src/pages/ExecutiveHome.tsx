@@ -502,9 +502,10 @@ export default function ExecutiveHome() {
                 </div>
               </div>
               <Link
-                href="/demo"
+                href="/ai-recommendations"
                 className="flex items-center gap-1 text-xs text-[#00D4C8] hover:text-[#00E8DB] transition-colors"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                aria-label="View all AI recommendations"
               >
                 View all <ArrowRight className="w-3 h-3" />
               </Link>
@@ -566,11 +567,15 @@ export default function ExecutiveHome() {
               <div className="section-label mb-4">Quick Actions</div>
               <div className="space-y-2">
                 {[
-                  { label: "Open Executive Dashboard", href: "/demo", icon: Eye, primary: true },
+                  { label: "Connect GoHighLevel", href: "/connect-ghl", icon: Plug, primary: true },
+                  { label: "Open Executive Dashboard", href: "/demo", icon: Eye, primary: false },
                   { label: "View Integration Health", href: "/integration-health", icon: Activity, primary: false },
-                  { label: "Connect GoHighLevel", href: "/connect-ghl", icon: Plug, primary: false },
+                  { label: "Business Health", href: "/business-health", icon: BarChart3, primary: false },
+                  { label: "AI Recommendations", href: "/ai-recommendations", icon: Brain, primary: false },
+                  { label: "Live Signals", href: "/live-signals", icon: Zap, primary: false },
+                  { label: "Executive Timeline", href: "/executive-timeline", icon: Clock, primary: false },
+                  { label: "Knowledge Graph", href: "/knowledge-graph", icon: Globe, primary: false },
                   { label: "Review Notifications", href: "/notifications", icon: Bell, primary: false },
-                  { label: "Connected Apps", href: "/connected-apps", icon: Database, primary: false },
                 ].map((action) => (
                   <Link
                     key={action.href}
@@ -638,6 +643,7 @@ export default function ExecutiveHome() {
                 href="/connect-ghl"
                 className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(0,212,200,0.35)]"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                aria-label="Connect GoHighLevel to activate live EEOS intelligence"
               >
                 <Plug className="w-4 h-4" />
                 Connect GoHighLevel
