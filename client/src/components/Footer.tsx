@@ -57,12 +57,15 @@ export default function Footer() {
                   className="text-[#00D4C8] text-[9px] tracking-[0.15em] uppercase mt-0.5"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 >
-                  EEOS — AI for Service Businesses
+                  EEOS · Don't Build More. Build Accurate.
                 </div>
               </div>
             </div>
-            <p className="text-[#E8EDF5]/55 text-sm leading-relaxed max-w-xs mb-5">
+            <p className="text-[#E8EDF5]/55 text-sm leading-relaxed max-w-xs mb-3">
               Eagle Eye Automation builds AI software that helps service businesses grow. EEOS connects to your business systems, reads approved signals, and turns them into executive recommendations.
+            </p>
+            <p className="text-[#00D4C8]/70 text-xs italic mb-5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              “Transcend Your Business. Stop Managing. Start Leading.”
             </p>
             <div
               className="flex items-center gap-2 text-xs text-[#E8EDF5]/35"

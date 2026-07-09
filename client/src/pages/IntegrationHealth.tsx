@@ -121,6 +121,20 @@ export default function IntegrationHealth() {
                 <p className="text-[#E8EDF5]/55 mt-2">
                   Real-time health monitoring for all connected business systems.
                 </p>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <div className="flex items-center gap-1.5 text-[10px] text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                    EEOS reads only approved signal types
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#00D4C8]" />
+                    No data stored — signals processed in transit
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
+                    You control which systems connect
+                  </div>
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -153,7 +167,7 @@ export default function IntegrationHealth() {
               { label: "Active Integrations", value: `${healthyCount}/${INTEGRATIONS.length}`, icon: Plug, color: "#00D4C8" },
               { label: "Signals Today", value: totalSignals.toLocaleString(), icon: Activity, color: "#10B981" },
               { label: "System Uptime", value: "99.8%", icon: TrendingUp, color: "#00D4C8" },
-              { label: "Data Retention", value: "Zero", icon: Database, color: "#10B981" },
+              { label: "Data Retention", value: "Zero", icon: Database, color: "#10B981", note: "Signals processed in transit only" },
             ].map((metric, i) => (
               <AnimatedSection key={metric.label} delay={i * 60}>
                 <div className="metric-card rounded-xl p-5">
@@ -165,6 +179,9 @@ export default function IntegrationHealth() {
                   <div className="text-2xl font-bold" style={{ color: metric.color, fontFamily: "'Space Grotesk', sans-serif" }}>
                     {metric.value}
                   </div>
+                  {'note' in metric && (
+                    <div className="text-[9px] text-[#E8EDF5]/30 mt-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{(metric as any).note}</div>
+                  )}
                 </div>
               </AnimatedSection>
             ))}

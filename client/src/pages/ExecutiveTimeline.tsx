@@ -312,7 +312,15 @@ export default function ExecutiveTimeline() {
                                 <p className="text-xs text-[#E8EDF5]/55 leading-relaxed">{event.description}</p>
 
                                 {isExpanded && (
-                                  <div className="mt-3 pt-3 border-t border-[rgba(255,255,255,0.06)] space-y-2">
+                                  <div className="mt-3 pt-3 border-t border-[rgba(255,255,255,0.06)] space-y-3">
+                                    {/* Outcome badge */}
+                                    {oConfig && (
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: oConfig.color }} />
+                                        <span className="text-xs font-semibold" style={{ color: oConfig.color, fontFamily: "'JetBrains Mono', monospace" }}>{oConfig.label.toUpperCase()}</span>
+                                      </div>
+                                    )}
+                                    {/* Tags */}
                                     <div className="flex flex-wrap gap-1.5">
                                       {event.tags.map((tag) => (
                                         <span key={tag} className="text-[10px] px-2 py-0.5 rounded bg-[rgba(255,255,255,0.05)] text-[#E8EDF5]/50 border border-[rgba(255,255,255,0.08)]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
@@ -320,8 +328,14 @@ export default function ExecutiveTimeline() {
                                         </span>
                                       ))}
                                     </div>
-                                    <div className="text-[10px] text-[#E8EDF5]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                                      GHL SOURCE: {event.ghlSource}
+                                    {/* Source provenance */}
+                                    <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[rgba(0,212,200,0.04)] border border-[rgba(0,212,200,0.1)]">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-[#00D4C8] mt-1 shrink-0" />
+                                      <div>
+                                        <div className="text-[10px] font-bold text-[#00D4C8] mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>DATA SOURCE</div>
+                                        <div className="text-[10px] text-[#E8EDF5]/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{event.ghlSource}</div>
+                                        <div className="text-[10px] text-[#E8EDF5]/30 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Read-only · Approved signal type · Not stored</div>
+                                      </div>
                                     </div>
                                   </div>
                                 )}

@@ -219,13 +219,16 @@ export default function BusinessHealth() {
                       <TrendingUp className="w-3 h-3 text-[#10B981]" />
                       <span className="text-xs text-[#10B981]">{HEALTH_SCORE.change} this month</span>
                     </div>
+                    <div className="mt-2 text-[10px] text-[#E8EDF5]/35 leading-relaxed max-w-[180px]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      Weighted composite of 5 GHL signal categories. Updated on each sync.
+                    </div>
                   </div>
                 </div>
 
                 {/* Component Scores */}
                 <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 w-full">
                   {HEALTH_SCORE.components.map((comp) => (
-                    <div key={comp.label} className="bg-[rgba(255,255,255,0.03)] rounded-xl p-3 border border-[rgba(255,255,255,0.05)]">
+                    <div key={comp.label} className="bg-[rgba(255,255,255,0.03)] rounded-xl p-3 border border-[rgba(255,255,255,0.05)] hover:border-[rgba(0,212,200,0.2)] transition-colors duration-200">
                       <div className="text-[10px] text-[#E8EDF5]/45 mb-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                         {comp.label.toUpperCase()}
                       </div>
@@ -233,15 +236,21 @@ export default function BusinessHealth() {
                         <span className="text-xl font-bold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                           {comp.score}
                         </span>
-                        {comp.trend === "up" && <TrendingUp className="w-3 h-3 text-[#10B981]" />}
-                        {comp.trend === "down" && <TrendingDown className="w-3 h-3 text-[#EF4444]" />}
-                        {comp.trend === "neutral" && <Minus className="w-3 h-3 text-[#F59E0B]" />}
+                        <div className="flex flex-col items-end gap-0.5">
+                          {comp.trend === "up" && <TrendingUp className="w-3 h-3 text-[#10B981]" />}
+                          {comp.trend === "down" && <TrendingDown className="w-3 h-3 text-[#EF4444]" />}
+                          {comp.trend === "neutral" && <Minus className="w-3 h-3 text-[#F59E0B]" />}
+                          <span className="text-[9px]" style={{ color: scoreColor(comp.score), fontFamily: "'JetBrains Mono', monospace" }}>{scoreLabel(comp.score)}</span>
+                        </div>
                       </div>
-                      <div className="h-1.5 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden mb-1.5">
                         <div
                           className="h-full rounded-full transition-all duration-1000"
                           style={{ width: `${comp.score}%`, background: scoreColor(comp.score) }}
                         />
+                      </div>
+                      <div className="text-[9px] text-[#E8EDF5]/25" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        Weight: {Math.round(comp.weight * 100)}% of score
                       </div>
                     </div>
                   ))}

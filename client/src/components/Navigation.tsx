@@ -104,7 +104,7 @@ export default function Navigation() {
                   className="text-[#00D4C8] text-[9px] tracking-[0.15em] uppercase font-medium hidden sm:block mt-0.5"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 >
-                  EEOS — AI for Service Businesses
+                  EEOS · Don't Build More. Build Accurate.
                 </span>
               </div>
             </Link>

@@ -48,12 +48,19 @@ const AI_RECOMMENDATIONS = [
   {
     id: "rec-1",
     priority: "Critical",
+    riskLevel: "critical" as const,
     category: "Revenue",
-    title: "Accelerate Q3 close — 3 enterprise deals at risk",
-    insight: "GoHighLevel pipeline data shows 3 deals ($2.1M combined) have been stalled for 14+ days. Competitor activity detected in 2 accounts. Recommend executive outreach within 48 hours.",
-    action: "Schedule executive calls",
-    impact: "$2.1M revenue at risk",
+    title: "3 Enterprise Deals Stalled — $2.1M at Risk",
+    whyThisMatters: "GoHighLevel pipeline shows 3 deals ($2.1M combined) stalled for 14+ days. Win probability drops 40% after day 14 and below 30% after day 21.",
+    urgencyReason: "Two of three prospects have not opened the proposal in 7 days. Competitor activity detected in 2 accounts this week.",
+    businessImpact: "$2.1M revenue at risk. At current close rate, these 3 deals represent 29% of Q3 target.",
+    riskIfIgnored: "Proposals expire from active consideration. Competitors who follow up consistently win 68% of stalled deals in this segment.",
+    action: "Schedule executive outreach within 48 hours. Reference each prospect's stated pain point — not a generic follow-up.",
+    actionDeadline: "Within 48 hours",
     confidence: 94,
+    confidenceNote: "Based on pipeline stage duration, document engagement, and 1,200+ historical deal patterns.",
+    signals: ["opportunity.stage: Proposal 14+ days", "opportunity.last_stage_change_date", "proposal_open_count_7d: 0"],
+    estimatedValue: "$2.1M",
     source: "GoHighLevel CRM",
     time: "2 min ago",
     icon: DollarSign,
@@ -62,12 +69,19 @@ const AI_RECOMMENDATIONS = [
   {
     id: "rec-2",
     priority: "High",
+    riskLevel: "high" as const,
     category: "Operations",
-    title: "Staffing utilization below threshold in 2 regions",
-    insight: "Southeast and Midwest regions showing 67% utilization vs. 82% target. 14 available placements unfilled. Reallocation opportunity identified across 3 client accounts.",
-    action: "Review regional allocation",
-    impact: "+$340K monthly revenue opportunity",
+    title: "Staffing Utilization Below Threshold — 2 Regions",
+    whyThisMatters: "Southeast and Midwest regions at 67% utilization vs. 82% target. 14 available placements unfilled across 3 client accounts.",
+    urgencyReason: "Unfilled placements for 7+ days trigger SLA review clauses in 2 contracts. Client satisfaction scores drop measurably after day 10.",
+    businessImpact: "$340K monthly revenue opportunity from reallocation. SLA breach risk on 2 active contracts.",
+    riskIfIgnored: "Client escalation likely within 5 days. SLA breach triggers penalty clauses and increases churn probability by 34%.",
+    action: "Reallocate 14 available placements from low-utilization recruiters to Southeast and Midwest accounts today.",
+    actionDeadline: "Today",
     confidence: 87,
+    confidenceNote: "Based on utilization tracking, SLA contract terms, and historical churn correlation data.",
+    signals: ["user.task_count: below threshold", "calendar.booked_slots: 67%", "contact.assigned_to: 14 unassigned"],
+    estimatedValue: "$340K",
     source: "Workforce Management",
     time: "18 min ago",
     icon: Users,
@@ -76,12 +90,19 @@ const AI_RECOMMENDATIONS = [
   {
     id: "rec-3",
     priority: "High",
+    riskLevel: "high" as const,
     category: "Growth",
-    title: "Healthcare vertical showing 40% faster conversion",
-    insight: "Analysis of last 90 days shows healthcare clients converting 40% faster than average. Current pipeline has 8 healthcare prospects. Recommend prioritizing dedicated outreach sequence.",
-    action: "Launch healthcare campaign",
-    impact: "Estimated 2.3x pipeline velocity",
+    title: "Healthcare Vertical Converting at 2.3x Average Rate",
+    whyThisMatters: "Healthcare contacts convert at 11.2% vs. 4.8% overall. Email open rates are 3.1x higher. Only 18% of pipeline is healthcare despite superior economics.",
+    urgencyReason: "Q3 healthcare budget cycles open in 30 days. Decisions made now determine Q4 contract awards.",
+    businessImpact: "Reallocating 30% of outbound to healthcare could generate $180K–$240K additional annual revenue.",
+    riskIfIgnored: "Missing Q3 budget cycle means waiting until Q1 next year. Competitors with healthcare focus are actively prospecting.",
+    action: "Reallocate 30% of outbound to healthcare-tagged contacts. Launch dedicated sequence to 47 nurture-stage healthcare contacts.",
+    actionDeadline: "Next 30 days",
     confidence: 91,
+    confidenceNote: "Based on 6-month conversion analysis, email engagement data, and Q3 budget cycle timing patterns.",
+    signals: ["email.open_rate: 68% healthcare vs 22% avg", "opportunity.source: healthcare 11.2% close rate", "contact.industry: 18% concentration"],
+    estimatedValue: "$180K–$240K",
     source: "EEOS Pattern Analysis",
     time: "1 hr ago",
     icon: TrendingUp,
@@ -90,12 +111,19 @@ const AI_RECOMMENDATIONS = [
   {
     id: "rec-4",
     priority: "Medium",
+    riskLevel: "medium" as const,
     category: "Finance",
-    title: "Cash flow optimization — 3 invoices overdue",
-    insight: "3 client invoices totaling $187K are 30+ days overdue. Automated reminders sent with no response. Direct account manager escalation recommended before end of week.",
-    action: "Escalate collections",
-    impact: "$187K outstanding",
+    title: "$187K Overdue — Cash Flow Gap Projected",
+    whyThisMatters: "3 client invoices totaling $187K are 30+ days overdue. Automated reminders sent with no response. Combined with Q3 payroll cycle, a gap is projected.",
+    urgencyReason: "Payroll is a fixed obligation. The current window is sufficient to resolve through collections if action begins today.",
+    businessImpact: "$187K outstanding. If financing is required, cost is $3,100–$4,800 in interest at current rates.",
+    riskIfIgnored: "Cash flow gap grows. Short-term financing required. Repeated gaps increase operational risk score.",
+    action: "Initiate direct account manager escalation on all 3 overdue accounts before end of week. Offer 2% early payment discount.",
+    actionDeadline: "This week",
     confidence: 99,
+    confidenceNote: "Based on invoice aging data, payment history, and payroll cycle timing. Highest-confidence recommendation.",
+    signals: ["invoice.status: 30+ days overdue", "invoice.due_date: oldest 47 days", "payment.received_date: 31 days ago"],
+    estimatedValue: "$187K",
     source: "Financial Systems",
     time: "3 hr ago",
     icon: AlertTriangle,
@@ -257,24 +285,69 @@ function RecommendationCard({ rec, index }: { rec: typeof AI_RECOMMENDATIONS[0];
             {rec.title}
           </h4>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-[#E8EDF5]/40">{rec.impact}</span>
+            <span className="text-xs font-semibold text-[#10B981]">{rec.estimatedValue}</span>
             <span className="text-[10px] text-[#E8EDF5]/25">·</span>
             <span className="text-[10px] text-[#E8EDF5]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               via {rec.source}
             </span>
+            <span className="text-[10px] text-[#E8EDF5]/25">·</span>
+            <span className="text-[10px] text-[#F59E0B]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{rec.actionDeadline}</span>
           </div>
 
           {expanded && (
-            <div className="mt-3 pt-3 border-t border-[rgba(0,212,200,0.08)]">
-              <p className="text-xs text-[#E8EDF5]/60 leading-relaxed mb-3">{rec.insight}</p>
-              <button
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#050C1A] bg-[#00D4C8] rounded-md hover:bg-[#00E8DB] transition-all duration-200"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Zap className="w-3 h-3" />
-                {rec.action}
-              </button>
+            <div className="mt-4 pt-4 border-t border-[rgba(0,212,200,0.08)] space-y-3">
+              {/* Why This Matters */}
+              <div>
+                <div className="text-[10px] font-bold text-[#F59E0B] uppercase tracking-wider mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Why This Matters</div>
+                <p className="text-xs text-[#E8EDF5]/65 leading-relaxed">{rec.whyThisMatters}</p>
+              </div>
+              {/* Why Now */}
+              <div>
+                <div className="text-[10px] font-bold text-[#EF4444] uppercase tracking-wider mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Why Now</div>
+                <p className="text-xs text-[#E8EDF5]/65 leading-relaxed">{rec.urgencyReason}</p>
+              </div>
+              {/* Business Impact */}
+              <div>
+                <div className="text-[10px] font-bold text-[#10B981] uppercase tracking-wider mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Business Impact</div>
+                <p className="text-xs text-[#E8EDF5]/65 leading-relaxed">{rec.businessImpact}</p>
+              </div>
+              {/* Risk If Ignored */}
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: rec.color, fontFamily: "'JetBrains Mono', monospace" }}>Risk If Ignored</div>
+                <p className="text-xs text-[#E8EDF5]/65 leading-relaxed">{rec.riskIfIgnored}</p>
+              </div>
+              {/* Signals */}
+              <div>
+                <div className="text-[10px] font-bold text-[#00D4C8] uppercase tracking-wider mb-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Supporting Signals</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {rec.signals.map((s: string, i: number) => (
+                    <span key={i} className="text-[10px] px-2 py-0.5 rounded bg-[rgba(0,212,200,0.08)] border border-[rgba(0,212,200,0.15)] text-[#00D4C8]/70" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s}</span>
+                  ))}
+                </div>
+              </div>
+              {/* Confidence */}
+              <div className="pt-1">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-[10px] font-bold text-[#E8EDF5]/40 uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Confidence</div>
+                  <div className="text-[10px] font-bold" style={{ color: rec.confidence >= 85 ? "#10B981" : "#F59E0B", fontFamily: "'JetBrains Mono', monospace" }}>{rec.confidence}%</div>
+                </div>
+                <div className="h-1 rounded-full bg-[rgba(255,255,255,0.06)] overflow-hidden mb-1">
+                  <div className="h-full rounded-full" style={{ width: `${rec.confidence}%`, background: rec.confidence >= 85 ? "#10B981" : "#F59E0B" }} />
+                </div>
+                <p className="text-[10px] text-[#E8EDF5]/35 italic" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{rec.confidenceNote}</p>
+              </div>
+              {/* Action */}
+              <div className="flex flex-wrap items-center gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
+                <Link
+                  href="/ai-recommendations"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#050C1A] bg-[#00D4C8] rounded-md hover:bg-[#00E8DB] transition-all duration-200"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  <Zap className="w-3 h-3" />
+                  Take Action
+                </Link>
+                <span className="text-[10px] text-[#F59E0B]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Deadline: {rec.actionDeadline}</span>
+              </div>
             </div>
           )}
         </div>
