@@ -15,9 +15,9 @@ Every executive recommendation must include:
 - Business Reasoning
 - Supporting Business Signals
 - Expected Business Impact
-- Potential Risk
+- Risk Level
 - Recommended Next Action
-- Estimated Confidence Improvement after action
+- Measurement Plan
 
 ## Accuracy Gate
 

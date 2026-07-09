@@ -26,6 +26,7 @@ describe("GoHighLevel production integration internals", () => {
     expect(goHighLevelInternals.buildDiagnosticPath("conversations", locationId)).toContain("locationId=loc_123");
     expect(goHighLevelInternals.buildDiagnosticPath("customFields", locationId)).toBe("/locations/loc_123/customFields");
     expect(goHighLevelInternals.buildDiagnosticPath("pipelines", locationId)).toContain("locationId=loc_123");
+    expect(goHighLevelInternals.buildDiagnosticPath("tags", locationId)).toBe("/locations/loc_123/tags");
     expect(goHighLevelInternals.buildDiagnosticPath("locations", locationId)).toBe("/locations/loc_123");
   });
 
@@ -55,6 +56,7 @@ describe("GoHighLevel production integration internals", () => {
         assignedUserId: "user_123",
         source: "Referral",
         monetaryValue: 25000,
+        tags: ["client", "urgent-staffing"],
         occurredAt: "2026-07-09T12:00:00.000Z",
       },
       tenant,
@@ -73,10 +75,14 @@ describe("GoHighLevel production integration internals", () => {
     expect(receipt.businessReasoning.length).toBeGreaterThanOrEqual(2);
     expect(receipt.supportingBusinessSignals.length).toBeGreaterThanOrEqual(5);
     expect(receipt.expectedBusinessImpact).toContain("conversion");
+    expect(receipt.riskLevel.level).toBe("High");
     expect(receipt.potentialRisk).toContain("opportunity");
     expect(receipt.recommendedNextAction).toContain("Assign");
+    expect(receipt.measurementPlan.primaryMetric).toContain("Opportunity conversion");
+    expect(receipt.measurementPlan.successSignal).toContain("Opportunity");
     expect(receipt.estimatedConfidenceImprovementAfterAction).toBeGreaterThan(0);
     expect(receipt.businessSignalCorrelation.length).toBeGreaterThanOrEqual(3);
+    expect(receipt.businessSignalCorrelation.join(" ")).toContain("Tag signal");
     expect(receipt.executivePriority.level).toBe("Critical");
     expect(receipt.expectedOutcome).toContain("opportunity");
     expect(receipt.prediction.expectedMetricMovement).toContain("conversion");

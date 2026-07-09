@@ -35,8 +35,10 @@ type EeosReceipt = {
   supportingBusinessSignals: string[];
   expectedOutcome: string;
   potentialRisk: string;
+  riskLevel: RiskLevel;
   expectedBusinessImpact: string;
   recommendedNextAction: string;
+  measurementPlan: MeasurementPlan;
   estimatedConfidenceImprovementAfterAction: number;
   businessSignalCorrelation: string[];
   executivePriority: ExecutivePriority;
@@ -60,6 +62,18 @@ type RecommendationQualityGate = {
   missingRequirements: string[];
 };
 
+type RiskLevel = {
+  level: "Critical" | "High" | "Medium" | "Low";
+  reason: string;
+};
+
+type MeasurementPlan = {
+  primaryMetric: string;
+  targetMovement: string;
+  verificationWindow: "Same Day" | "24 Hours" | "7 Days";
+  successSignal: string;
+};
+
 type PredictionSummary = {
   horizon: "Immediate" | "Short Term";
   expectedSignal: string;
@@ -80,6 +94,7 @@ type EventContext = {
   contactEmail?: string;
   contactPhone?: string;
   opportunityValue?: number;
+  tags: string[];
 };
 
 type RecommendationInsight = {
@@ -89,8 +104,10 @@ type RecommendationInsight = {
   supportingBusinessSignals: string[];
   expectedOutcome: string;
   potentialRisk: string;
+  riskLevel: RiskLevel;
   expectedBusinessImpact: string;
   recommendedNextAction: string;
+  measurementPlan: MeasurementPlan;
   estimatedConfidenceImprovementAfterAction: number;
   businessSignalCorrelation: string[];
   executivePriority: ExecutivePriority;
@@ -117,6 +134,7 @@ type GhlDiagnosticTarget =
   | "conversations"
   | "customFields"
   | "pipelines"
+  | "tags"
   | "locations";
 
 type GhlDiagnosticResult = {
@@ -168,6 +186,7 @@ const diagnosticTargets: GhlDiagnosticTarget[] = [
   "conversations",
   "customFields",
   "pipelines",
+  "tags",
   "locations",
 ];
 
@@ -302,8 +321,10 @@ export function registerGoHighLevelRoutes(app: Express) {
         businessReasoning: receipt.businessReasoning,
         supportingBusinessSignals: receipt.supportingBusinessSignals,
         expectedBusinessImpact: receipt.expectedBusinessImpact,
+        riskLevel: receipt.riskLevel,
         potentialRisk: receipt.potentialRisk,
         recommendedNextAction: receipt.recommendedNextAction,
+        measurementPlan: receipt.measurementPlan,
         estimatedConfidenceImprovementAfterAction: receipt.estimatedConfidenceImprovementAfterAction,
         businessSignalCorrelation: receipt.businessSignalCorrelation,
         executivePriority: receipt.executivePriority,
@@ -564,6 +585,7 @@ function buildDiagnosticPath(target: GhlDiagnosticTarget, locationId: string) {
     conversations: process.env.GHL_CONVERSATIONS_PATH || `/conversations/search?locationId=${encodeURIComponent(locationId)}&limit=1`,
     customFields: process.env.GHL_CUSTOM_FIELDS_PATH || `/locations/${encodeURIComponent(locationId)}/customFields`,
     pipelines: process.env.GHL_PIPELINES_PATH || `/opportunities/pipelines?locationId=${encodeURIComponent(locationId)}`,
+    tags: process.env.GHL_TAGS_PATH || `/locations/${encodeURIComponent(locationId)}/tags`,
     locations: process.env.GHL_LOCATIONS_PATH || `/locations/${encodeURIComponent(locationId)}`,
   };
 
@@ -717,8 +739,10 @@ function processGhlEvent(payload: Record<string, unknown>, tenant: TenantResolut
     supportingBusinessSignals: insight.supportingBusinessSignals,
     expectedOutcome: insight.expectedOutcome,
     potentialRisk: insight.potentialRisk,
+    riskLevel: insight.riskLevel,
     expectedBusinessImpact: insight.expectedBusinessImpact,
     recommendedNextAction: insight.recommendedNextAction,
+    measurementPlan: insight.measurementPlan,
     estimatedConfidenceImprovementAfterAction: insight.estimatedConfidenceImprovementAfterAction,
     businessSignalCorrelation: insight.businessSignalCorrelation,
     executivePriority: insight.executivePriority,
@@ -752,8 +776,10 @@ function writeAuditRecord(payload: Record<string, unknown>, tenant: TenantResolu
     supportingBusinessSignals: receipt.supportingBusinessSignals,
     businessSignalCorrelation: receipt.businessSignalCorrelation,
     expectedBusinessImpact: receipt.expectedBusinessImpact,
+    riskLevel: receipt.riskLevel,
     potentialRisk: receipt.potentialRisk,
     recommendedNextAction: receipt.recommendedNextAction,
+    measurementPlan: receipt.measurementPlan,
     estimatedConfidenceImprovementAfterAction: receipt.estimatedConfidenceImprovementAfterAction,
     executivePriority: receipt.executivePriority,
     payloadFingerprint: fingerprintPayload(payload),
@@ -781,8 +807,10 @@ function writeBusinessMemoryRecord(payload: Record<string, unknown>, tenant: Ten
     businessSignalCorrelation: receipt.businessSignalCorrelation,
     expectedOutcome: receipt.expectedOutcome,
     expectedBusinessImpact: receipt.expectedBusinessImpact,
+    riskLevel: receipt.riskLevel,
     potentialRisk: receipt.potentialRisk,
     recommendedNextAction: receipt.recommendedNextAction,
+    measurementPlan: receipt.measurementPlan,
     estimatedConfidenceImprovementAfterAction: receipt.estimatedConfidenceImprovementAfterAction,
     executivePriority: receipt.executivePriority,
     payloadFingerprint: fingerprintPayload(payload),
@@ -869,6 +897,7 @@ function buildEventContext(payload: Record<string, unknown>, tenant: TenantResol
     contactEmail: readString(payload.email) || readString(contact.email),
     contactPhone: readString(payload.phone) || readString(contact.phone),
     opportunityValue: readNumber(payload.monetaryValue) || readNumber(opportunity.monetaryValue) || readNumber(opportunity.value),
+    tags: readTags(payload.tags) || readTags(contact.tags) || readTags(opportunity.tags) || [],
   };
 }
 
@@ -876,6 +905,8 @@ function buildRecommendationInsight(eventType: string, tenant: TenantResolution,
   const supportingBusinessSignals = buildSupportingBusinessSignals(eventType, tenant, context);
   const businessSignalCorrelation = buildBusinessSignalCorrelation(eventType, context);
   const executivePriority = prioritizeExecutiveSignal(eventType, context);
+  const riskLevel = assessRiskLevel(eventType, context, executivePriority);
+  const estimatedConfidenceImprovementAfterAction = estimateConfidenceImprovementAfterAction(eventType, context);
   const reasonPrefix = `${prnBusinessDna.industry} depends on ${prnBusinessDna.executivePriorities.slice(0, 3).join(", ")}.`;
 
   if (eventType.includes("Opportunity")) {
@@ -894,9 +925,11 @@ function buildRecommendationInsight(eventType: string, tenant: TenantResolution,
       businessSignalCorrelation,
       expectedOutcome: "Improve opportunity conversion discipline and keep follow-up latency inside the active pipeline KPI window.",
       potentialRisk: "If the opportunity is not reviewed, staffing demand may drift without ownership or a measurable next action.",
+      riskLevel,
       expectedBusinessImpact: "Protects conversion rate, revenue forecast quality, and staffing coverage planning.",
       recommendedNextAction: nextAction,
-      estimatedConfidenceImprovementAfterAction: estimateConfidenceImprovementAfterAction(eventType, context),
+      measurementPlan: buildMeasurementPlan(eventType),
+      estimatedConfidenceImprovementAfterAction,
       executivePriority,
       prediction: {
         horizon: "Short Term",
@@ -923,9 +956,11 @@ function buildRecommendationInsight(eventType: string, tenant: TenantResolution,
       businessSignalCorrelation,
       expectedOutcome: "Increase appointment show readiness and reduce scheduling friction before it reaches the client.",
       potentialRisk: "If coverage is not confirmed, PRN Staffers may lose response speed or create scheduling rework.",
+      riskLevel,
       expectedBusinessImpact: "Improves appointment show rate, staffing coverage confidence, and client follow-up latency.",
       recommendedNextAction: nextAction,
-      estimatedConfidenceImprovementAfterAction: estimateConfidenceImprovementAfterAction(eventType, context),
+      measurementPlan: buildMeasurementPlan(eventType),
+      estimatedConfidenceImprovementAfterAction,
       executivePriority,
       prediction: {
         horizon: "Immediate",
@@ -952,9 +987,11 @@ function buildRecommendationInsight(eventType: string, tenant: TenantResolution,
       businessSignalCorrelation,
       expectedOutcome: "Shorten response latency and preserve conversion intent while the conversation is active.",
       potentialRisk: "If no owner responds, the lead or client may disengage before PRN Staffers can qualify the need.",
+      riskLevel,
       expectedBusinessImpact: "Improves lead response time, conversion opportunity, and client retention signals.",
       recommendedNextAction: nextAction,
-      estimatedConfidenceImprovementAfterAction: estimateConfidenceImprovementAfterAction(eventType, context),
+      measurementPlan: buildMeasurementPlan(eventType),
+      estimatedConfidenceImprovementAfterAction,
       executivePriority,
       prediction: {
         horizon: "Immediate",
@@ -980,9 +1017,11 @@ function buildRecommendationInsight(eventType: string, tenant: TenantResolution,
     businessSignalCorrelation,
     expectedOutcome: "Move the contact from raw intake to qualified next action with measurable owner accountability.",
     potentialRisk: "If qualification is delayed, PRN Staffers may lose conversion momentum or miss a staffing coverage signal.",
+    riskLevel,
     expectedBusinessImpact: "Improves lead response time, qualification quality, and downstream opportunity conversion.",
     recommendedNextAction: nextAction,
-    estimatedConfidenceImprovementAfterAction: estimateConfidenceImprovementAfterAction(eventType, context),
+    measurementPlan: buildMeasurementPlan(eventType),
+    estimatedConfidenceImprovementAfterAction,
     executivePriority,
     prediction: {
       horizon: "Immediate",
@@ -1007,6 +1046,7 @@ function buildSupportingBusinessSignals(eventType: string, tenant: TenantResolut
   if (context.lifecycleStage) signals.push(`Lifecycle stage/status: ${context.lifecycleStage}`);
   if (context.source) signals.push(`Source/channel: ${context.source}`);
   if (context.pipelineId) signals.push(`Pipeline ID: ${context.pipelineId}`);
+  if (context.tags.length > 0) signals.push(`Tags: ${context.tags.join(", ")}`);
   if (context.assignedUserId) signals.push(`Assigned owner: ${context.assignedUserId}`);
   if (context.contactName) signals.push(`Contact name: ${context.contactName}`);
   if (context.contactEmail || context.contactPhone) signals.push("Contactability: email or phone present");
@@ -1053,6 +1093,10 @@ function buildBusinessSignalCorrelation(eventType: string, context: EventContext
 
   if (context.contactEmail || context.contactPhone) {
     correlations.push("Contactability signal increases confidence that the recommended action can be completed.");
+  }
+
+  if (context.tags.length > 0) {
+    correlations.push("Tag signal validates segmentation and improves follow-up routing accuracy.");
   }
 
   return correlations;
@@ -1109,8 +1153,70 @@ function estimateConfidenceImprovementAfterAction(eventType: string, context: Ev
   if (!context.lifecycleStage) improvement += 3;
   if (!context.contactEmail && !context.contactPhone) improvement += 2;
   if (eventType.includes("Opportunity") && context.opportunityValue === undefined) improvement += 2;
+  if (context.tags.length === 0) improvement += 1;
 
   return Math.max(3, Math.min(18, improvement));
+}
+
+function assessRiskLevel(eventType: string, context: EventContext, priority: ExecutivePriority): RiskLevel {
+  const reasons = [priority.reason];
+  let score = priority.score;
+
+  if (!context.assignedUserId) {
+    score += 6;
+    reasons.push("No assigned owner is present.");
+  }
+
+  if (!context.lifecycleStage && eventType.includes("Opportunity")) {
+    score += 5;
+    reasons.push("Opportunity stage is missing.");
+  }
+
+  if (context.tags.length === 0) {
+    score += 2;
+    reasons.push("No tags are available to validate routing or segmentation.");
+  }
+
+  return {
+    level: score >= 92 ? "Critical" : score >= 78 ? "High" : score >= 60 ? "Medium" : "Low",
+    reason: reasons.join(" "),
+  };
+}
+
+function buildMeasurementPlan(eventType: string): MeasurementPlan {
+  if (eventType.includes("Opportunity")) {
+    return {
+      primaryMetric: "Opportunity conversion and client follow-up latency",
+      targetMovement: "Confirm owner and next step, then reduce follow-up latency on the next opportunity touch.",
+      verificationWindow: "24 Hours",
+      successSignal: "Opportunity has owner, stage confirmation, and scheduled next action.",
+    };
+  }
+
+  if (eventType.includes("Appointment") || eventType.includes("Calendar")) {
+    return {
+      primaryMetric: "Appointment show rate and staffing coverage",
+      targetMovement: "Increase coverage readiness before the scheduled interaction.",
+      verificationWindow: "Same Day",
+      successSignal: "Appointment has owner confirmation and follow-up readiness.",
+    };
+  }
+
+  if (eventType.includes("Conversation")) {
+    return {
+      primaryMetric: "Lead response time and client follow-up latency",
+      targetMovement: "Reduce active response latency and capture disposition.",
+      verificationWindow: "Same Day",
+      successSignal: "Conversation has owner response or qualified disposition.",
+    };
+  }
+
+  return {
+    primaryMetric: "Lead response time and opportunity conversion",
+    targetMovement: "Move contact from raw intake to qualified next action.",
+    verificationWindow: "24 Hours",
+    successSignal: "Contact has owner assignment, qualification status, or booked next step.",
+  };
 }
 
 function evaluateRecommendationQuality(
@@ -1134,6 +1240,8 @@ function evaluateRecommendationQuality(
       insight.expectedBusinessImpact &&
       insight.prediction.measurableMetric &&
       insight.prediction.expectedMetricMovement &&
+      insight.measurementPlan.primaryMetric &&
+      insight.measurementPlan.successSignal &&
       insight.estimatedConfidenceImprovementAfterAction > 0,
   );
   const checks = { accurate, explainable, actionable, measurable };
@@ -1243,6 +1351,7 @@ function confidenceFor(eventType: string, payload: Record<string, unknown> = {},
   if (context.assignedUserId) score += 2;
   if (context.contactEmail || context.contactPhone) score += 3;
   if (context.pipelineId) score += 2;
+  if (context.tags.length > 0) score += 2;
   if (context.opportunityValue !== undefined) score += 2;
   if (!context.entityId || !tenant.locationId) score -= 12;
 
@@ -1519,6 +1628,18 @@ function readNumber(value: unknown) {
   const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
 
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function readTags(value: unknown) {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const tags = value
+    .map((tag) => (typeof tag === "string" ? tag : readString(readRecord(tag).name) || readString(readRecord(tag).id)))
+    .filter((tag): tag is string => Boolean(tag));
+
+  return tags.length > 0 ? tags : undefined;
 }
 
 function readQuery(req: Request, key: string) {
