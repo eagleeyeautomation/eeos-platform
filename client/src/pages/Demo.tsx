@@ -25,8 +25,41 @@ const MODULES = [
   { id: "knowledge-graph", label: "Knowledge Graph", icon: Network },
 ];
 
+type ConnectorHealth = {
+  connectionStatus: string;
+  authenticationStatus: string;
+  connectedLocationId: string | null;
+  webhookStatus: string;
+  failedEvents: number;
+  retryQueueDepth: number;
+  liveEventVerification: Record<string, boolean>;
+};
+
 // ── DASHBOARD MODULE ──
 function DashboardModule() {
+  const [connectorHealth, setConnectorHealth] = useState<ConnectorHealth | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch("/api/integrations/gohighlevel/health")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (active) {
+          setConnectorHealth(data as ConnectorHealth | null);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setConnectorHealth(null);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -80,6 +113,45 @@ function DashboardModule() {
             </ResponsiveContainer>
           </div>
         ))}
+      </div>
+
+      <div className="glass-card rounded-xl p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-xs text-[#00D4C8] mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              GOHIGHLEVEL CONNECTOR · PRN STAFFERS
+            </div>
+            <h4 className="text-sm font-semibold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              Live integration health
+            </h4>
+            <p className="mt-1 text-xs text-[#E8EDF5]/50">
+              {connectorHealth?.connectedLocationId
+                ? `Location ${connectorHealth.connectedLocationId}`
+                : "Awaiting production OAuth authorization"}
+            </p>
+          </div>
+          <div className="text-right">
+            <div className={`text-xs font-semibold ${connectorHealth?.connectionStatus === "Connected" ? "text-[#10B981]" : "text-[#F59E0B]"}`}>
+              {connectorHealth?.connectionStatus || "Checking"}
+            </div>
+            <div className="mt-1 text-[10px] text-[#E8EDF5]/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              OAuth {connectorHealth?.authenticationStatus || "unknown"}
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            ["Webhook", connectorHealth?.webhookStatus || "Checking"],
+            ["Failures", String(connectorHealth?.failedEvents ?? 0)],
+            ["Retry Queue", String(connectorHealth?.retryQueueDepth ?? 0)],
+            ["Live Events", String(Object.values(connectorHealth?.liveEventVerification || {}).filter(Boolean).length)],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-lg border border-[rgba(0,212,200,0.1)] bg-[rgba(0,212,200,0.03)] p-3">
+              <div className="text-[10px] text-[#E8EDF5]/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{label}</div>
+              <div className="mt-1 text-sm font-semibold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{value}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Quick Priorities */}

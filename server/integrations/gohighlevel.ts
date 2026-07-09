@@ -53,6 +53,7 @@ const supportedWebhookEvents = [
   "Contact Updated",
   "Opportunity Created",
   "Opportunity Updated",
+  "Appointment Created",
   "Appointment Booked",
   "Calendar Event Created",
 ] as const;
@@ -61,7 +62,7 @@ const auditLog: Array<Record<string, unknown>> = [];
 const retryQueue: Array<Record<string, unknown>> = [];
 
 export function registerGoHighLevelRoutes(app: Express) {
-  app.get("/api/integrations/gohighlevel/oauth/start", (_req, res) => {
+  app.get("/api/integrations/gohighlevel/oauth/start", (req, res) => {
     try {
       const state = signOAuthState({
         tenantId: "tenant-prn-staffers",
@@ -69,7 +70,7 @@ export function registerGoHighLevelRoutes(app: Express) {
         issuedAt: new Date().toISOString(),
       });
 
-      res.redirect(buildAuthorizationUrl(state));
+      res.redirect(buildAuthorizationUrl(state, req));
     } catch (error) {
       res.status(500).json({ connected: false, reason: readError(error) });
     }
@@ -79,6 +80,7 @@ export function registerGoHighLevelRoutes(app: Express) {
     try {
       const code = readQuery(req, "code");
       const state = readQuery(req, "state");
+      const runtimeUrls = getRuntimeUrls(req);
 
       if (!code || !state) {
         res.status(400).json({ connected: false, reason: "Missing GoHighLevel OAuth code or state." });
@@ -86,7 +88,7 @@ export function registerGoHighLevelRoutes(app: Express) {
       }
 
       const statePayload = verifyOAuthState(state);
-      const tokenSet = await exchangeAuthorizationCode(code);
+      const tokenSet = await exchangeAuthorizationCode(code, runtimeUrls.oauthCallbackUrl);
       const locationId = tokenSet.locationId || process.env.GHL_PRN_LOCATION_ID || process.env.GHL_LOCATION_ID || "";
 
       if (!locationId) {
@@ -95,12 +97,15 @@ export function registerGoHighLevelRoutes(app: Express) {
       }
 
       await writeTokenSet({ ...tokenSet, locationId });
-      const registration = await registerWebhook({ ...tokenSet, locationId });
+      const registration = await registerWebhook({ ...tokenSet, locationId }, runtimeUrls.webhookUrl);
 
       res.json({
         connected: true,
         tenantId: statePayload.tenantId,
         locationId,
+        productionUrl: runtimeUrls.productionUrl,
+        oauthCallbackUrl: runtimeUrls.oauthCallbackUrl,
+        webhookUrl: runtimeUrls.webhookUrl,
         credentialsStored: "Secure Token Vault",
         webhookStatus: registration.status,
         frontendExposure: "Blocked",
@@ -110,12 +115,17 @@ export function registerGoHighLevelRoutes(app: Express) {
     }
   });
 
-  app.post("/api/integrations/gohighlevel/webhook/register", async (_req, res) => {
+  app.post("/api/integrations/gohighlevel/webhook/register", async (req, res) => {
     try {
       const tokenSet = await getValidTokenSet();
-      const registration = await registerWebhook(tokenSet);
+      const runtimeUrls = getRuntimeUrls(req);
+      const registration = await registerWebhook(tokenSet, runtimeUrls.webhookUrl);
 
-      res.json(registration);
+      res.json({
+        ...registration,
+        productionUrl: runtimeUrls.productionUrl,
+        oauthCallbackUrl: runtimeUrls.oauthCallbackUrl,
+      });
     } catch (error) {
       res.status(400).json({ registered: false, reason: readError(error) });
     }
@@ -161,29 +171,63 @@ export function registerGoHighLevelRoutes(app: Express) {
     }
   });
 
-  app.get("/api/integrations/gohighlevel/health", async (_req, res) => {
+  app.get("/api/integrations/gohighlevel/health", async (req, res) => {
     const tokenStatus = await readTokenStatus();
+    const tokenSet = await readOptionalTokenSet();
+    const runtimeUrls = getRuntimeUrls(req);
     const locationConfigured = Boolean(process.env.GHL_PRN_LOCATION_ID || process.env.GHL_LOCATION_ID);
+    const connectedLocationId = tokenSet?.locationId || process.env.GHL_PRN_LOCATION_ID || process.env.GHL_LOCATION_ID || null;
+    const contactCreated = hasAuditEvent("Contact Created");
+    const contactUpdated = hasAuditEvent("Contact Updated");
+    const opportunityCreated = hasAuditEvent("Opportunity Created");
+    const opportunityUpdated = hasAuditEvent("Opportunity Updated");
+    const appointmentCreated = hasAuditEvent("Appointment Created") || hasAuditEvent("Appointment Booked");
 
     res.json({
       integration: "GoHighLevel",
       tenantId: "tenant-prn-staffers",
       connectionStatus: tokenStatus === "Ready" && locationConfigured ? "Connected" : "Waiting",
       authenticationStatus: tokenStatus,
-      webhookStatus: process.env.GHL_WEBHOOK_URL ? "Configured" : "Missing",
-      apiStatus: process.env.GHL_BASE_URL ? "Configured" : "Default",
+      productionUrl: runtimeUrls.productionUrl,
+      oauthCallbackUrl: runtimeUrls.oauthCallbackUrl,
+      webhookUrl: runtimeUrls.webhookUrl,
+      connectedLocationId,
+      webhookStatus: runtimeUrls.webhookUrl ? "Configured" : "Missing",
+      apiStatus: getGhlBaseUrl(),
       locationIdDetection: locationConfigured ? "Configured" : "Waiting",
       failedEvents: retryQueue.length,
       retryQueueDepth: retryQueue.length,
       auditRecords: auditLog.length,
       lastAuditAt: auditLog.at(-1)?.receivedAt ?? null,
+      liveEventVerification: {
+        contactCreated,
+        contactUpdated,
+        opportunityCreated,
+        opportunityUpdated,
+        appointmentCreated,
+      },
+    });
+  });
+
+  app.get("/api/integrations/gohighlevel/runtime", (req, res) => {
+    res.json({
+      integration: "GoHighLevel",
+      tenantId: "tenant-prn-staffers",
+      ...getRuntimeUrls(req),
+      configured: {
+        oauthClientId: Boolean(process.env.GHL_OAUTH_CLIENT_ID),
+        oauthClientSecret: Boolean(process.env.GHL_OAUTH_CLIENT_SECRET),
+        oauthStateSecret: Boolean(process.env.GHL_OAUTH_STATE_SECRET),
+        tokenVaultKey: Boolean(process.env.EEOS_TOKEN_VAULT_KEY),
+        locationId: Boolean(process.env.GHL_PRN_LOCATION_ID || process.env.GHL_LOCATION_ID),
+      },
     });
   });
 }
 
-function buildAuthorizationUrl(state: string) {
+function buildAuthorizationUrl(state: string, req: Request) {
   const clientId = requireEnv("GHL_OAUTH_CLIENT_ID");
-  const redirectUri = requireEnv("GHL_OAUTH_REDIRECT_URI");
+  const redirectUri = process.env.GHL_OAUTH_REDIRECT_URI || getRuntimeUrls(req).oauthCallbackUrl;
   const scopes = readScopes().join(" ");
   const url = new URL("https://marketplace.gohighlevel.com/oauth/chooselocation");
 
@@ -196,12 +240,12 @@ function buildAuthorizationUrl(state: string) {
   return url.toString();
 }
 
-async function exchangeAuthorizationCode(code: string): Promise<GhlTokenSet> {
+async function exchangeAuthorizationCode(code: string, redirectUri: string): Promise<GhlTokenSet> {
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     client_id: requireEnv("GHL_OAUTH_CLIENT_ID"),
     client_secret: requireEnv("GHL_OAUTH_CLIENT_SECRET"),
-    redirect_uri: requireEnv("GHL_OAUTH_REDIRECT_URI"),
+    redirect_uri: process.env.GHL_OAUTH_REDIRECT_URI || redirectUri,
     code,
   });
 
@@ -253,8 +297,13 @@ async function getValidTokenSet() {
   return tokenSet;
 }
 
-async function registerWebhook(tokenSet: GhlTokenSet) {
-  const webhookUrl = requireEnv("GHL_WEBHOOK_URL");
+async function registerWebhook(tokenSet: GhlTokenSet, runtimeWebhookUrl?: string) {
+  const webhookUrl = process.env.GHL_WEBHOOK_URL || runtimeWebhookUrl;
+
+  if (!webhookUrl) {
+    throw new Error("GHL_WEBHOOK_URL or runtime webhook URL is required for PRN Staffers GoHighLevel live integration.");
+  }
+
   const response = await fetch(`${getGhlBaseUrl()}${process.env.GHL_WEBHOOK_REGISTRATION_PATH || "/webhooks/"}`, {
     method: "POST",
     headers: {
@@ -347,6 +396,7 @@ function normalizeEventType(value = "Contact Created") {
     "opportunity created": "Opportunity Created",
     "opportunity update": "Opportunity Updated",
     "opportunity updated": "Opportunity Updated",
+    "appointment created": "Appointment Created",
     "appointment booked": "Appointment Booked",
     "calendar event created": "Calendar Event Created",
   };
@@ -440,6 +490,18 @@ async function readTokenStatus() {
   }
 }
 
+async function readOptionalTokenSet(): Promise<GhlTokenSet | null> {
+  try {
+    return await readTokenSet();
+  } catch {
+    return null;
+  }
+}
+
+function hasAuditEvent(eventType: string) {
+  return auditLog.some((event) => event.eventType === eventType);
+}
+
 function encryptJson(value: unknown) {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", getVaultKey(), iv);
@@ -492,6 +554,41 @@ function getVaultFile() {
 
 function getGhlBaseUrl() {
   return process.env.GHL_BASE_URL || "https://services.leadconnectorhq.com";
+}
+
+function getRuntimeUrls(req: Request) {
+  const productionUrl = getProductionUrl(req);
+
+  return {
+    productionUrl,
+    oauthCallbackUrl: `${productionUrl}/api/integrations/gohighlevel/oauth/callback`,
+    webhookUrl: process.env.GHL_WEBHOOK_URL || `${productionUrl}/api/integrations/gohighlevel/webhook`,
+  };
+}
+
+function getProductionUrl(req: Request) {
+  const configuredUrl = process.env.EEOS_APP_BASE_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+
+  if (configuredUrl) {
+    return normalizeBaseUrl(configuredUrl);
+  }
+
+  const forwardedHost = req.header("x-forwarded-host");
+  const forwardedProto = req.header("x-forwarded-proto");
+  const host = forwardedHost || req.header("host") || "localhost:3000";
+  const protocol = forwardedProto || (host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https");
+
+  return `${protocol}://${host}`.replace(/\/$/, "");
+}
+
+function normalizeBaseUrl(value: string) {
+  const trimmed = value.trim().replace(/\/$/, "");
+
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
 }
 
 function readScopes() {

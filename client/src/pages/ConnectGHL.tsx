@@ -153,21 +153,21 @@ export default function ConnectGHL() {
                     </div>
                     <div className="text-sm font-semibold text-[#E8EDF5]"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                      Live Signal Feed
+                      Production Connector
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-                    <span className="text-[10px] text-[#10B981]"
-                      style={{ fontFamily: "'JetBrains Mono', monospace" }}>ACTIVE</span>
+                    <div className="w-2 h-2 rounded-full bg-[#F59E0B] animate-pulse" />
+                    <span className="text-[10px] text-[#F59E0B]"
+                      style={{ fontFamily: "'JetBrains Mono', monospace" }}>OAUTH</span>
                   </div>
                 </div>
                 <div className="p-5 space-y-4">
                   {[
-                    { label: "Pipeline Value", value: "$2.4M", delta: "+18%", up: true },
-                    { label: "Lead Conversion", value: "23.7%", delta: "+4.2pts", up: true },
-                    { label: "Campaign ROI", value: "340%", delta: "+12%", up: true },
-                    { label: "Churn Risk", value: "Medium", delta: "2 accounts", up: false },
+                    { label: "OAuth Authorization", value: "Required", delta: "Secure redirect", up: false },
+                    { label: "Token Storage", value: "Vault", delta: "Server-side", up: true },
+                    { label: "Webhook Receiver", value: "Ready", delta: "Runtime URL", up: true },
+                    { label: "Tenant Boundary", value: "PRN", delta: "Isolated", up: true },
                   ].map((metric) => (
                     <div key={metric.label} className="flex items-center justify-between">
                       <span className="text-xs text-[#E8EDF5]/50"
@@ -189,7 +189,7 @@ export default function ConnectGHL() {
                 <div className="px-5 py-3 bg-[rgba(0,212,200,0.04)] border-t border-[rgba(0,212,200,0.1)]">
                   <div className="text-[10px] text-[#E8EDF5]/35 text-center"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    Demonstration data only · Read-only connection
+                    Production OAuth · Read-only connection
                   </div>
                 </div>
               </div>

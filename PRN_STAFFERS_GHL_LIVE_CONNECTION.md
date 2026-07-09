@@ -21,20 +21,24 @@
 
 ## OAuth Callback URL
 
-`https://<production-domain>/api/integrations/gohighlevel/oauth/callback`
+Runtime generated from `EEOS_APP_BASE_URL`, `VERCEL_PROJECT_PRODUCTION_URL`, `VERCEL_URL`, or the incoming request host:
+
+`<production-url>/api/integrations/gohighlevel/oauth/callback`
 
 ## Webhook URL
 
-`https://<production-domain>/api/integrations/gohighlevel/webhook`
+Runtime generated from `GHL_WEBHOOK_URL` when provided, otherwise the production URL:
+
+`<production-url>/api/integrations/gohighlevel/webhook`
 
 ## Setup Steps
 
-1. Configure the EEOS HighLevel Marketplace app with the OAuth callback URL.
+1. Configure the EEOS HighLevel Marketplace app with the OAuth callback URL returned by `/api/integrations/gohighlevel/runtime`.
 2. Add the Marketplace client ID and client secret to the production environment.
 3. Add a long random `GHL_OAUTH_STATE_SECRET`.
 4. Add a long random `EEOS_TOKEN_VAULT_KEY`.
-5. Set `EEOS_APP_BASE_URL` to the production domain.
-6. Set `GHL_WEBHOOK_URL` to the webhook URL above.
+5. Set `EEOS_APP_BASE_URL` to the production domain, or deploy on Vercel with `VERCEL_PROJECT_PRODUCTION_URL`.
+6. Set `GHL_WEBHOOK_URL` to the webhook URL above, or allow EEOS to derive it from the runtime production URL.
 7. Set `GHL_WEBHOOK_SECRET` and configure GoHighLevel webhook delivery to send the same shared secret header.
 8. Deploy EEOS.
 9. Open `/connect-ghl`.
@@ -57,7 +61,7 @@
 - Webhook receiver: implemented at `/api/integrations/gohighlevel/webhook`.
 - Contact event processing: `Contact Created` and `Contact Updated`.
 - Opportunity event processing: `Opportunity Created` and `Opportunity Updated`.
-- Calendar event processing: `Appointment Booked` and `Calendar Event Created`.
+- Calendar event processing: `Appointment Created`, `Appointment Booked`, and `Calendar Event Created`.
 - Integration health status: implemented at `/api/integrations/gohighlevel/health`.
 - Audit logging: every accepted event writes an audit record in the live receiver.
 - Retry handling: rejected webhook deliveries are queued with a next retry timestamp.
