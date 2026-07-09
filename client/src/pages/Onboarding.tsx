@@ -465,7 +465,7 @@ export default function Onboarding() {
       {/* Split-screen layout */}
       <div className="flex min-h-screen pt-16">
         {/* LEFT — Form Panel */}
-        <div className="flex-1 flex flex-col px-6 sm:px-10 lg:px-16 py-12 max-w-2xl">
+        <div className="flex-1 flex flex-col px-4 sm:px-8 lg:px-16 py-8 sm:py-12 w-full lg:max-w-2xl">
           {/* Header */}
           <div className="mb-8">
             <div className="section-label mb-2">Activation Wizard</div>
@@ -973,7 +973,7 @@ export default function Onboarding() {
         </div>
 
         {/* RIGHT — Live Preview Panel */}
-        <div className="hidden lg:flex w-80 xl:w-96 flex-col bg-[#0A1628] border-l border-[rgba(0,212,200,0.1)] px-6 py-12 overflow-y-auto">
+        <div className="hidden lg:flex w-80 xl:w-96 flex-col bg-[#0A1628] border-l border-[rgba(0,212,200,0.1)] px-6 py-12 overflow-y-auto sticky top-16 self-start h-[calc(100vh-4rem)]">
           {/* Panel header */}
           <div className="flex items-center gap-2 mb-6">
             <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />

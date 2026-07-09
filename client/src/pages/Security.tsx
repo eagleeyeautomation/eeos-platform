@@ -1,7 +1,7 @@
 // EEOS Security Page — Sovereign Night Design System
 
 import { Link } from "wouter";
-import { ArrowRight, Shield, Lock, Eye, Server, Key, FileCheck, Globe, AlertTriangle } from "lucide-react";
+import { ArrowRight, Shield, Lock, Eye, Server, Key, FileCheck, Globe, AlertTriangle, Zap } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
@@ -261,26 +261,50 @@ export default function Security() {
       </section>
 
       {/* CTA */}
-      <section className="bg-[#0A1628] py-20">
-        <div className="max-w-3xl mx-auto px-4 text-center">
+      <section className="bg-[#0A1628] border-t border-[rgba(0,212,200,0.1)] py-20 sm:py-28">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
-            <h2
-              className="text-3xl font-bold text-[#E8EDF5] tracking-tight mb-4"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              Security questions? Talk to our team.
-            </h2>
-            <p className="text-[#E8EDF5]/60 mb-8">
-              Our security team is available for detailed technical briefings, penetration test results, and custom compliance reviews.
-            </p>
-            <Link
-              href="/contact"
-              className="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200 shadow-[0_0_24px_rgba(0,212,200,0.4)]"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              Request Security Briefing
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+            <div className="flex flex-col lg:flex-row items-start lg:items-center gap-10 lg:gap-20">
+              <div className="flex-1">
+                <div className="section-label mb-3">Trusted Security</div>
+                <h2
+                  className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight mb-4 leading-tight"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  Security questions?
+                  <br />
+                  <span className="gradient-text">Talk to our team.</span>
+                </h2>
+                <p className="text-[#E8EDF5]/58 max-w-lg text-sm sm:text-base leading-relaxed">
+                  EEOS connects to your business systems, reads approved signals, and turns them into executive recommendations — without storing your data. Our security team is available for detailed technical briefings, penetration test results, and custom compliance reviews.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 w-full sm:w-auto shrink-0">
+                <Link
+                  href="/connect-ghl"
+                  className="flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#050C1A] bg-[#00D4C8] rounded-xl hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_28px_rgba(0,212,200,0.45)]"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  <Zap className="w-4 h-4" />
+                  Start Private Beta
+                </Link>
+                <Link
+                  href="/demo"
+                  className="flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-xl hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  Request Demo
+                </Link>
+                <Link
+                  href="/contact"
+                  className="flex items-center justify-center gap-2 px-8 py-3 text-sm font-semibold text-[#E8EDF5]/55 hover:text-[#E8EDF5]/80 transition-all duration-200"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  Request Security Briefing
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
           </AnimatedSection>
         </div>
       </section>

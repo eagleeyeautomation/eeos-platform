@@ -1,7 +1,7 @@
 // EEOS Pricing Page — Sovereign Night Design System
 
 import { Link } from "wouter";
-import { ArrowRight, CheckCircle2, HelpCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, HelpCircle, Zap } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
@@ -147,15 +147,16 @@ export default function Pricing() {
                   </ul>
 
                   <Link
-                    href="/contact"
-                    className={`w-full text-center block px-6 py-3.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    href={tier.highlight ? "/connect-ghl" : "/contact"}
+                    className={`w-full text-center flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg text-sm font-semibold active:scale-[0.97] transition-all duration-200 ${
                       tier.highlight
                         ? "bg-[#00D4C8] text-[#050C1A] hover:bg-[#00E8DB] shadow-[0_0_20px_rgba(0,212,200,0.35)]"
                         : "border border-[rgba(0,212,200,0.35)] text-[#00D4C8] hover:bg-[rgba(0,212,200,0.08)]"
                     }`}
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
-                    {tier.cta}
+                    {tier.highlight && <Zap className="w-3.5 h-3.5" />}
+                    {tier.highlight ? "Start Private Beta" : tier.cta}
                   </Link>
                 </div>
               </AnimatedSection>
@@ -203,14 +204,23 @@ export default function Pricing() {
                   </div>
                 ))}
               </div>
-              <Link
-                href="/contact"
-                className="inline-flex items-center gap-2 px-8 py-3.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200 shadow-[0_0_20px_rgba(0,212,200,0.35)]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                Request a Custom ROI Analysis
-                <ArrowRight className="w-4 h-4" />
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link
+                  href="/connect-ghl"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-3.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(0,212,200,0.35)]"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  <Zap className="w-4 h-4" />
+                  Start Private Beta
+                </Link>
+                <Link
+                  href="/demo"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-3.5 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  Request Demo
+                </Link>
+              </div>
             </div>
           </AnimatedSection>
         </div>

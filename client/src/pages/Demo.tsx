@@ -677,32 +677,35 @@ export default function Demo() {
           </div>
 
           {/* CTA */}
-          <div className="mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 border-t border-[rgba(0,212,200,0.1)] pt-8">
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-[#E8EDF5]/80 mb-0.5"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                Activate EEOS for your organization.
-              </p>
-              <p className="text-xs text-[#E8EDF5]/40">
-                Full deployment in 6 weeks. No data stored. Read-only connectors.
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link
-                href="/onboarding"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200 shadow-[0_0_20px_rgba(0,212,200,0.35)]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                Begin Activation
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link
-                href="/contact"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] transition-all duration-200"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                Request Live Briefing
-              </Link>
+          <div className="mt-10 border-t border-[rgba(0,212,200,0.1)] pt-8">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6 lg:gap-12">
+              <div className="flex-1">
+                <p className="text-base font-semibold text-[#E8EDF5] mb-1"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Ready to activate EEOS for your organization?
+                </p>
+                <p className="text-sm text-[#E8EDF5]/50 leading-relaxed">
+                  EEOS connects to your business systems, reads approved signals, and turns them into executive recommendations. Full deployment in 6 weeks.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+                <Link
+                  href="/connect-ghl"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(0,212,200,0.35)]"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  <Zap className="w-4 h-4" />
+                  Start Private Beta
+                </Link>
+                <Link
+                  href="/onboarding"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  Connect Your Business
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
             </div>
           </div>
         </div>

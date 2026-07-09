@@ -15,6 +15,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Onboarding from "./pages/Onboarding";
 import Integrations from "./pages/Integrations";
+import ConnectGHL from "./pages/ConnectGHL";
 
 function Router() {
   return (
@@ -30,6 +31,7 @@ function Router() {
       <Route path="/contact" component={Contact} />
       <Route path="/onboarding" component={Onboarding} />
       <Route path="/integrations" component={Integrations} />
+      <Route path="/connect-ghl" component={ConnectGHL} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
