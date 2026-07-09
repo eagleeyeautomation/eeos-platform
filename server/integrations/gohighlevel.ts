@@ -30,11 +30,16 @@ type EeosReceipt = {
   recommendationStatus: "Presented" | "Suppressed";
   decision: string;
   confidenceScore: number;
+  whyThisMatters: string;
   businessReasoning: string[];
   supportingBusinessSignals: string[];
   expectedOutcome: string;
   potentialRisk: string;
   expectedBusinessImpact: string;
+  recommendedNextAction: string;
+  estimatedConfidenceImprovementAfterAction: number;
+  businessSignalCorrelation: string[];
+  executivePriority: ExecutivePriority;
   qualityGate: RecommendationQualityGate;
   prediction: PredictionSummary;
   recommendationId: string;
@@ -59,6 +64,7 @@ type PredictionSummary = {
   horizon: "Immediate" | "Short Term";
   expectedSignal: string;
   measurableMetric: string;
+  expectedMetricMovement: string;
 };
 
 type EventContext = {
@@ -78,12 +84,23 @@ type EventContext = {
 
 type RecommendationInsight = {
   action: string;
+  whyThisMatters: string;
   businessReasoning: string[];
   supportingBusinessSignals: string[];
   expectedOutcome: string;
   potentialRisk: string;
   expectedBusinessImpact: string;
+  recommendedNextAction: string;
+  estimatedConfidenceImprovementAfterAction: number;
+  businessSignalCorrelation: string[];
+  executivePriority: ExecutivePriority;
   prediction: PredictionSummary;
+};
+
+type ExecutivePriority = {
+  level: "Critical" | "High" | "Medium";
+  score: number;
+  reason: string;
 };
 
 type KnowledgeGraphRelationship = {
@@ -166,6 +183,9 @@ const prnBusinessDna = {
   mission: "Place qualified healthcare staff quickly while protecting compliance and continuity of care.",
   executivePriorities: ["speed-to-lead", "qualified placement", "client retention", "schedule coverage", "compliance readiness"],
   kpis: ["lead response time", "opportunity conversion", "appointment show rate", "staffing coverage", "client follow-up latency"],
+  revenueDrivers: ["qualified leads", "client opportunities", "filled shifts", "repeat facility demand"],
+  costCenters: ["recruiter time", "scheduling rework", "unfilled shift exposure"],
+  complianceRequirements: ["credential readiness", "care continuity", "accurate client communication"],
   riskTolerance: "Measured growth with low tolerance for compliance or service-quality drift.",
 };
 
@@ -278,11 +298,16 @@ export function registerGoHighLevelRoutes(app: Express) {
         eventType: receipt.eventType,
         recommendationId: receipt.recommendationId,
         confidenceScore: receipt.confidenceScore,
+        whyThisMatters: receipt.whyThisMatters,
         businessReasoning: receipt.businessReasoning,
         supportingBusinessSignals: receipt.supportingBusinessSignals,
-        expectedOutcome: receipt.expectedOutcome,
-        potentialRisk: receipt.potentialRisk,
         expectedBusinessImpact: receipt.expectedBusinessImpact,
+        potentialRisk: receipt.potentialRisk,
+        recommendedNextAction: receipt.recommendedNextAction,
+        estimatedConfidenceImprovementAfterAction: receipt.estimatedConfidenceImprovementAfterAction,
+        businessSignalCorrelation: receipt.businessSignalCorrelation,
+        executivePriority: receipt.executivePriority,
+        expectedOutcome: receipt.expectedOutcome,
         recommendationStatus: receipt.recommendationStatus,
         qualityGate: receipt.qualityGate,
         prediction: receipt.prediction,
@@ -687,11 +712,16 @@ function processGhlEvent(payload: Record<string, unknown>, tenant: TenantResolut
       ? insight.action
       : `Recommendation suppressed because it is missing: ${qualityGate.missingRequirements.join(", ")}.`,
     confidenceScore: confidenceFor(eventType, payload, tenant),
+    whyThisMatters: insight.whyThisMatters,
     businessReasoning: insight.businessReasoning,
     supportingBusinessSignals: insight.supportingBusinessSignals,
     expectedOutcome: insight.expectedOutcome,
     potentialRisk: insight.potentialRisk,
     expectedBusinessImpact: insight.expectedBusinessImpact,
+    recommendedNextAction: insight.recommendedNextAction,
+    estimatedConfidenceImprovementAfterAction: insight.estimatedConfidenceImprovementAfterAction,
+    businessSignalCorrelation: insight.businessSignalCorrelation,
+    executivePriority: insight.executivePriority,
     qualityGate,
     prediction: insight.prediction,
     recommendationId,
@@ -717,9 +747,15 @@ function writeAuditRecord(payload: Record<string, unknown>, tenant: TenantResolu
     recommendationId: receipt.recommendationId,
     recommendationStatus: receipt.recommendationStatus,
     confidenceScore: receipt.confidenceScore,
+    whyThisMatters: receipt.whyThisMatters,
     qualityGate: receipt.qualityGate,
     supportingBusinessSignals: receipt.supportingBusinessSignals,
+    businessSignalCorrelation: receipt.businessSignalCorrelation,
     expectedBusinessImpact: receipt.expectedBusinessImpact,
+    potentialRisk: receipt.potentialRisk,
+    recommendedNextAction: receipt.recommendedNextAction,
+    estimatedConfidenceImprovementAfterAction: receipt.estimatedConfidenceImprovementAfterAction,
+    executivePriority: receipt.executivePriority,
     payloadFingerprint: fingerprintPayload(payload),
     persistedTo: ["Timeline", "Audit", "Knowledge Graph", "Business Memory"],
   };
@@ -739,10 +775,16 @@ function writeBusinessMemoryRecord(payload: Record<string, unknown>, tenant: Ten
     correlationId: receipt.correlationId,
     confidenceScore: receipt.confidenceScore,
     recommendationStatus: receipt.recommendationStatus,
+    whyThisMatters: receipt.whyThisMatters,
     businessReasoning: receipt.businessReasoning,
     supportingBusinessSignals: receipt.supportingBusinessSignals,
+    businessSignalCorrelation: receipt.businessSignalCorrelation,
     expectedOutcome: receipt.expectedOutcome,
     expectedBusinessImpact: receipt.expectedBusinessImpact,
+    potentialRisk: receipt.potentialRisk,
+    recommendedNextAction: receipt.recommendedNextAction,
+    estimatedConfidenceImprovementAfterAction: receipt.estimatedConfidenceImprovementAfterAction,
+    executivePriority: receipt.executivePriority,
     payloadFingerprint: fingerprintPayload(payload),
   };
 
@@ -832,83 +874,121 @@ function buildEventContext(payload: Record<string, unknown>, tenant: TenantResol
 
 function buildRecommendationInsight(eventType: string, tenant: TenantResolution, context: EventContext): RecommendationInsight {
   const supportingBusinessSignals = buildSupportingBusinessSignals(eventType, tenant, context);
+  const businessSignalCorrelation = buildBusinessSignalCorrelation(eventType, context);
+  const executivePriority = prioritizeExecutiveSignal(eventType, context);
   const reasonPrefix = `${prnBusinessDna.industry} depends on ${prnBusinessDna.executivePriorities.slice(0, 3).join(", ")}.`;
 
   if (eventType.includes("Opportunity")) {
+    const nextAction = "Assign an executive owner, confirm the opportunity stage, and schedule the next client follow-up within the active pipeline window.";
+
     return {
-      action: "Review pipeline impact, assign ownership, and confirm the next client follow-up step before the opportunity ages.",
+      action: nextAction,
+      whyThisMatters:
+        "Opportunity movement is the strongest current signal of future staffing demand, revenue visibility, and client-retention risk.",
       businessReasoning: [
         reasonPrefix,
         "Opportunity movement changes near-term staffing demand and revenue visibility for PRN Staffers.",
         "Business DNA prioritizes qualified placement and client retention, so unattended pipeline changes carry operational risk.",
       ],
       supportingBusinessSignals,
+      businessSignalCorrelation,
       expectedOutcome: "Improve opportunity conversion discipline and keep follow-up latency inside the active pipeline KPI window.",
       potentialRisk: "If the opportunity is not reviewed, staffing demand may drift without ownership or a measurable next action.",
       expectedBusinessImpact: "Protects conversion rate, revenue forecast quality, and staffing coverage planning.",
+      recommendedNextAction: nextAction,
+      estimatedConfidenceImprovementAfterAction: estimateConfidenceImprovementAfterAction(eventType, context),
+      executivePriority,
       prediction: {
         horizon: "Short Term",
         expectedSignal: "Pipeline stage stability and owner follow-up should improve on the next opportunity touch.",
         measurableMetric: "Opportunity conversion and client follow-up latency",
+        expectedMetricMovement: "Higher conversion probability and shorter follow-up latency after owner confirmation.",
       },
     };
   }
 
   if (eventType.includes("Appointment") || eventType.includes("Calendar")) {
+    const nextAction = "Confirm coverage ownership, appointment purpose, and follow-up readiness before the scheduled interaction.";
+
     return {
-      action: "Confirm appointment coverage, owner readiness, and the next-best follow-up before the scheduled interaction.",
+      action: nextAction,
+      whyThisMatters:
+        "Appointments convert pipeline intent into operational commitments, so weak readiness can create scheduling rework or client-friction.",
       businessReasoning: [
         reasonPrefix,
         "Appointments are operational commitments that affect schedule coverage and client experience.",
         "Business DNA has low tolerance for service-quality drift, making missed or underprepared meetings a measurable risk.",
       ],
       supportingBusinessSignals,
+      businessSignalCorrelation,
       expectedOutcome: "Increase appointment show readiness and reduce scheduling friction before it reaches the client.",
       potentialRisk: "If coverage is not confirmed, PRN Staffers may lose response speed or create scheduling rework.",
       expectedBusinessImpact: "Improves appointment show rate, staffing coverage confidence, and client follow-up latency.",
+      recommendedNextAction: nextAction,
+      estimatedConfidenceImprovementAfterAction: estimateConfidenceImprovementAfterAction(eventType, context),
+      executivePriority,
       prediction: {
         horizon: "Immediate",
         expectedSignal: "Appointment readiness should become visible through owner confirmation or calendar completion.",
         measurableMetric: "Appointment show rate and staffing coverage",
+        expectedMetricMovement: "Higher show readiness and lower scheduling rework after ownership confirmation.",
       },
     };
   }
 
   if (eventType.includes("Conversation")) {
+    const nextAction = "Classify intent, assign the right owner, and send a response or disposition before the lead-response window closes.";
+
     return {
-      action: "Classify conversation intent, assign the owner, and respond within the lead response target.",
+      action: nextAction,
+      whyThisMatters:
+        "Conversation activity is a live intent signal; delayed response directly weakens speed-to-lead and client-retention confidence.",
       businessReasoning: [
         reasonPrefix,
         "Conversation activity is a direct signal of buyer or clinician intent.",
         "Business DNA prioritizes speed-to-lead, so response latency should be managed before demand cools.",
       ],
       supportingBusinessSignals,
+      businessSignalCorrelation,
       expectedOutcome: "Shorten response latency and preserve conversion intent while the conversation is active.",
       potentialRisk: "If no owner responds, the lead or client may disengage before PRN Staffers can qualify the need.",
       expectedBusinessImpact: "Improves lead response time, conversion opportunity, and client retention signals.",
+      recommendedNextAction: nextAction,
+      estimatedConfidenceImprovementAfterAction: estimateConfidenceImprovementAfterAction(eventType, context),
+      executivePriority,
       prediction: {
         horizon: "Immediate",
         expectedSignal: "A timely owner response should produce a qualified next step or disposition.",
         measurableMetric: "Lead response time and client follow-up latency",
+        expectedMetricMovement: "Lower response latency and higher qualification confidence after owner disposition.",
       },
     };
   }
 
+  const nextAction = "Qualify the contact, assign an owner, and capture the measurable next step within the speed-to-lead window.";
+
   return {
-    action: "Qualify the contact, assign the owner, and set a measurable next step within the speed-to-lead window.",
+    action: nextAction,
+    whyThisMatters:
+      "Contact changes are the earliest signal of new demand, supply, or relationship movement for PRN Staffers.",
     businessReasoning: [
       reasonPrefix,
       "New or updated contacts are intake signals for staffing demand, clinician supply, or client relationship health.",
       "Business DNA prioritizes speed-to-lead and qualified placement, so contact records need owner accountability.",
     ],
     supportingBusinessSignals,
+    businessSignalCorrelation,
     expectedOutcome: "Move the contact from raw intake to qualified next action with measurable owner accountability.",
     potentialRisk: "If qualification is delayed, PRN Staffers may lose conversion momentum or miss a staffing coverage signal.",
     expectedBusinessImpact: "Improves lead response time, qualification quality, and downstream opportunity conversion.",
+    recommendedNextAction: nextAction,
+    estimatedConfidenceImprovementAfterAction: estimateConfidenceImprovementAfterAction(eventType, context),
+    executivePriority,
     prediction: {
       horizon: "Immediate",
       expectedSignal: "Contact should receive owner assignment, qualification status, or a booked next step.",
       measurableMetric: "Lead response time and opportunity conversion",
+      expectedMetricMovement: "Shorter lead response time and stronger qualification confidence after owner assignment.",
     },
   };
 }
@@ -936,6 +1016,103 @@ function buildSupportingBusinessSignals(eventType: string, tenant: TenantResolut
   return signals;
 }
 
+function buildBusinessSignalCorrelation(eventType: string, context: EventContext) {
+  const correlations = [
+    `Business DNA priority '${prnBusinessDna.executivePriorities[0]}' is connected to KPI '${prnBusinessDna.kpis[0]}'.`,
+  ];
+
+  if (eventType.includes("Opportunity")) {
+    correlations.push(
+      `Revenue driver '${prnBusinessDna.revenueDrivers[1]}' is connected to KPI '${prnBusinessDna.kpis[1]}'.`,
+      `Cost exposure '${prnBusinessDna.costCenters[2]}' rises when opportunity ownership or stage data is incomplete.`,
+    );
+  } else if (eventType.includes("Appointment") || eventType.includes("Calendar")) {
+    correlations.push(
+      `Revenue driver '${prnBusinessDna.revenueDrivers[2]}' is connected to KPI '${prnBusinessDna.kpis[3]}'.`,
+      `Cost exposure '${prnBusinessDna.costCenters[1]}' rises when appointment readiness is not confirmed.`,
+    );
+  } else if (eventType.includes("Conversation")) {
+    correlations.push(
+      `Revenue driver '${prnBusinessDna.revenueDrivers[0]}' is connected to KPI '${prnBusinessDna.kpis[4]}'.`,
+      `Compliance requirement '${prnBusinessDna.complianceRequirements[2]}' depends on timely, accurate client communication.`,
+    );
+  } else {
+    correlations.push(
+      `Revenue driver '${prnBusinessDna.revenueDrivers[0]}' is connected to KPI '${prnBusinessDna.kpis[1]}'.`,
+      `Cost exposure '${prnBusinessDna.costCenters[0]}' increases when contact qualification lacks ownership.`,
+    );
+  }
+
+  if (context.assignedUserId) {
+    correlations.push("Assigned owner signal reduces execution ambiguity.");
+  }
+
+  if (context.lifecycleStage) {
+    correlations.push("Lifecycle stage signal improves prediction quality for the next action.");
+  }
+
+  if (context.contactEmail || context.contactPhone) {
+    correlations.push("Contactability signal increases confidence that the recommended action can be completed.");
+  }
+
+  return correlations;
+}
+
+function prioritizeExecutiveSignal(eventType: string, context: EventContext): ExecutivePriority {
+  let score = 60;
+  const reasons = [`Base priority set by event class: ${eventType}.`];
+
+  if (eventType.includes("Opportunity")) {
+    score += 20;
+    reasons.push("Opportunity events affect revenue visibility and staffing demand.");
+  }
+
+  if (eventType.includes("Appointment") || eventType.includes("Calendar")) {
+    score += 14;
+    reasons.push("Calendar events affect coverage readiness and client experience.");
+  }
+
+  if (eventType.includes("Conversation")) {
+    score += 12;
+    reasons.push("Conversation events affect response latency and retention risk.");
+  }
+
+  if (context.opportunityValue && context.opportunityValue >= 10_000) {
+    score += 8;
+    reasons.push("Opportunity value is material enough for executive visibility.");
+  }
+
+  if (!context.assignedUserId) {
+    score += 6;
+    reasons.push("Missing owner raises execution risk.");
+  }
+
+  if (!context.lifecycleStage) {
+    score += 4;
+    reasons.push("Missing lifecycle stage reduces forecast clarity.");
+  }
+
+  const boundedScore = Math.max(1, Math.min(100, score));
+  const level = boundedScore >= 85 ? "Critical" : boundedScore >= 70 ? "High" : "Medium";
+
+  return {
+    level,
+    score: boundedScore,
+    reason: reasons.join(" "),
+  };
+}
+
+function estimateConfidenceImprovementAfterAction(eventType: string, context: EventContext) {
+  let improvement = eventType.includes("Opportunity") ? 8 : eventType.includes("Conversation") ? 7 : 6;
+
+  if (!context.assignedUserId) improvement += 4;
+  if (!context.lifecycleStage) improvement += 3;
+  if (!context.contactEmail && !context.contactPhone) improvement += 2;
+  if (eventType.includes("Opportunity") && context.opportunityValue === undefined) improvement += 2;
+
+  return Math.max(3, Math.min(18, improvement));
+}
+
 function evaluateRecommendationQuality(
   eventType: string,
   tenant: TenantResolution,
@@ -943,9 +1120,22 @@ function evaluateRecommendationQuality(
   insight: RecommendationInsight,
 ): RecommendationQualityGate {
   const accurate = supportedWebhookEvents.includes(eventType as (typeof supportedWebhookEvents)[number]) && Boolean(tenant.locationId && context.entityId);
-  const explainable = insight.businessReasoning.length >= 2 && insight.supportingBusinessSignals.length >= 5;
-  const actionable = insight.action.length > 0 && !insight.action.toLowerCase().includes("review only");
-  const measurable = Boolean(insight.expectedOutcome && insight.expectedBusinessImpact && insight.prediction.measurableMetric);
+  const explainable =
+    Boolean(insight.whyThisMatters) &&
+    insight.businessReasoning.length >= 2 &&
+    insight.supportingBusinessSignals.length >= 5 &&
+    insight.businessSignalCorrelation.length >= 3;
+  const actionable =
+    insight.recommendedNextAction.length > 0 &&
+    !insight.recommendedNextAction.toLowerCase().includes("review only") &&
+    insight.executivePriority.score > 0;
+  const measurable = Boolean(
+    insight.expectedOutcome &&
+      insight.expectedBusinessImpact &&
+      insight.prediction.measurableMetric &&
+      insight.prediction.expectedMetricMovement &&
+      insight.estimatedConfidenceImprovementAfterAction > 0,
+  );
   const checks = { accurate, explainable, actionable, measurable };
   const missingRequirements = Object.entries(checks)
     .filter(([, passed]) => !passed)
@@ -995,6 +1185,24 @@ function buildKnowledgeGraphRelationships(
       to: insight.prediction.measurableMetric,
       relationship: "measured_by",
       evidence: insight.expectedOutcome,
+    },
+    {
+      from: recommendationId,
+      to: insight.executivePriority.level,
+      relationship: "prioritized_as",
+      evidence: insight.executivePriority.reason,
+    },
+    {
+      from: recommendationId,
+      to: insight.businessSignalCorrelation[0],
+      relationship: "correlates_business_signal",
+      evidence: insight.whyThisMatters,
+    },
+    {
+      from: recommendationId,
+      to: insight.prediction.expectedMetricMovement,
+      relationship: "predicts_metric_movement",
+      evidence: `Estimated confidence improvement after action: ${insight.estimatedConfidenceImprovementAfterAction} points.`,
     },
   ];
 }

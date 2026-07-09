@@ -68,12 +68,19 @@ describe("GoHighLevel production integration internals", () => {
       measurable: true,
       passed: true,
     });
+    expect(receipt.confidenceScore).toBeGreaterThan(80);
+    expect(receipt.whyThisMatters).toContain("staffing demand");
     expect(receipt.businessReasoning.length).toBeGreaterThanOrEqual(2);
     expect(receipt.supportingBusinessSignals.length).toBeGreaterThanOrEqual(5);
-    expect(receipt.expectedOutcome).toContain("opportunity");
-    expect(receipt.potentialRisk).toContain("opportunity");
     expect(receipt.expectedBusinessImpact).toContain("conversion");
-    expect(receipt.knowledgeGraphRelationships.length).toBeGreaterThanOrEqual(5);
+    expect(receipt.potentialRisk).toContain("opportunity");
+    expect(receipt.recommendedNextAction).toContain("Assign");
+    expect(receipt.estimatedConfidenceImprovementAfterAction).toBeGreaterThan(0);
+    expect(receipt.businessSignalCorrelation.length).toBeGreaterThanOrEqual(3);
+    expect(receipt.executivePriority.level).toBe("Critical");
+    expect(receipt.expectedOutcome).toContain("opportunity");
+    expect(receipt.prediction.expectedMetricMovement).toContain("conversion");
+    expect(receipt.knowledgeGraphRelationships.length).toBeGreaterThanOrEqual(8);
   });
 
   it("suppresses recommendations that cannot satisfy the accuracy gate", () => {
@@ -84,6 +91,9 @@ describe("GoHighLevel production integration internals", () => {
     expect(receipt.qualityGate.passed).toBe(false);
     expect(receipt.qualityGate.missingRequirements).toContain("accurate");
     expect(receipt.decision).toContain("Recommendation suppressed");
+    expect(receipt.whyThisMatters).toContain("earliest signal");
+    expect(receipt.recommendedNextAction).toContain("Qualify");
+    expect(receipt.estimatedConfidenceImprovementAfterAction).toBeGreaterThan(0);
   });
 
   it("raises confidence when payload evidence is stronger", () => {
@@ -101,5 +111,28 @@ describe("GoHighLevel production integration internals", () => {
     );
 
     expect(complete).toBeGreaterThan(sparse);
+  });
+
+  it("correlates business signals into executive priority and predicted metric movement", () => {
+    const receipt = goHighLevelInternals.processGhlEvent(
+      {
+        eventType: "Conversation Created",
+        conversationId: "conv_123",
+        channel: "SMS",
+        assignedUserId: "user_123",
+        contact: {
+          id: "contact_123",
+          email: "client@example.com",
+        },
+        occurredAt: "2026-07-09T12:05:00.000Z",
+      },
+      tenant,
+    );
+
+    expect(receipt.recommendationStatus).toBe("Presented");
+    expect(receipt.businessSignalCorrelation.join(" ")).toContain("client communication");
+    expect(receipt.executivePriority.score).toBeGreaterThanOrEqual(70);
+    expect(receipt.prediction.measurableMetric).toContain("Lead response time");
+    expect(receipt.prediction.expectedMetricMovement).toContain("response latency");
   });
 });

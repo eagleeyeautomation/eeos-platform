@@ -11,11 +11,13 @@ EEOS earns executive trust by making fewer, better recommendations. A recommenda
 Every executive recommendation must include:
 
 - Confidence Score
+- Why This Matters
 - Business Reasoning
 - Supporting Business Signals
-- Expected Outcome
-- Potential Risk
 - Expected Business Impact
+- Potential Risk
+- Recommended Next Action
+- Estimated Confidence Improvement after action
 
 ## Accuracy Gate
 
@@ -25,6 +27,10 @@ Before EEOS presents a recommendation, the existing pipeline must verify:
 - Explainable: the recommendation cites Business DNA and concrete business signals.
 - Actionable: the recommendation gives an owner-ready next step.
 - Measurable: the recommendation identifies an expected outcome and the metric it should affect.
+
+## Executive Intelligence Standard
+
+The Executive Brain should prioritize signal quality over volume. It should correlate GoHighLevel events with Business DNA priorities, Business Memory, Knowledge Graph relationships, and measurable KPI movement before recommending action. Higher priority does not mean louder presentation; it means clearer evidence, sharper reasoning, and a more measurable next step.
 
 ## Operating Rule
 
