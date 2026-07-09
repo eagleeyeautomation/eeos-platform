@@ -155,8 +155,8 @@ export default function BusinessHealth() {
                 >
                   Business Health Overview
                 </h1>
-                <p className="text-sm text-[#E8EDF5]/50 mt-1">
-                  Eagle Eye Automation · EEOS · {DATA_SOURCE.source === "ghl" ? "Live GoHighLevel data" : "Demonstration data — connect GoHighLevel to see your real metrics"}
+                <p className="text-sm text-[#E8EDF5]/50 mt-1 max-w-xl">
+                  EEOS transforms business data into accurate executive intelligence. {DATA_SOURCE.source === "ghl" ? "Showing live GoHighLevel data." : "Showing demonstration data — connect GoHighLevel to see your real business health score."}
                 </p>
               </div>
               <div className="flex items-center gap-3 shrink-0">

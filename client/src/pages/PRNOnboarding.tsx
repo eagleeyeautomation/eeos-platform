@@ -297,7 +297,7 @@ export default function PRNOnboarding() {
               {STEPS[step - 1].title}
             </h1>
             <p className="text-[#E8EDF5]/50 mt-1 text-sm">
-              Step {step} of {STEPS.length} — Configuring EEOS intelligence for PRN Staffers
+              Step {step} of {STEPS.length} — Configuring EEOS to transform PRN Staffers data into accurate executive intelligence
             </p>
           </div>
 

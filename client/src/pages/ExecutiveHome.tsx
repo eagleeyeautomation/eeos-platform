@@ -61,6 +61,7 @@ const AI_RECOMMENDATIONS = [
     confidenceNote: "Based on pipeline stage duration, document engagement, and 1,200+ historical deal patterns.",
     signals: ["opportunity.stage: Proposal 14+ days", "opportunity.last_stage_change_date", "proposal_open_count_7d: 0"],
     estimatedValue: "$2.1M",
+    measurementPlan: "Monitor pipeline stage changes in GoHighLevel daily. Success = at least 2 of 3 deals advance to negotiation within 10 days. Track proposal document open rates as a leading indicator.",
     source: "GoHighLevel CRM",
     time: "2 min ago",
     icon: DollarSign,
@@ -82,6 +83,7 @@ const AI_RECOMMENDATIONS = [
     confidenceNote: "Based on utilization tracking, SLA contract terms, and historical churn correlation data.",
     signals: ["user.task_count: below threshold", "calendar.booked_slots: 67%", "contact.assigned_to: 14 unassigned"],
     estimatedValue: "$340K",
+    measurementPlan: "Track utilization rates in GoHighLevel daily. Success = Southeast and Midwest regions reach 80%+ utilization within 5 days. All 14 placements assigned and confirmed by end of week.",
     source: "Workforce Management",
     time: "18 min ago",
     icon: Users,
@@ -103,6 +105,7 @@ const AI_RECOMMENDATIONS = [
     confidenceNote: "Based on 6-month conversion analysis, email engagement data, and Q3 budget cycle timing patterns.",
     signals: ["email.open_rate: 68% healthcare vs 22% avg", "opportunity.source: healthcare 11.2% close rate", "contact.industry: 18% concentration"],
     estimatedValue: "$180K–$240K",
+    measurementPlan: "Track healthcare pipeline concentration weekly. Success = healthcare contacts reach 30% of active pipeline within 60 days. Review email open rates and conversion rates at Q3 pipeline audit.",
     source: "EEOS Pattern Analysis",
     time: "1 hr ago",
     icon: TrendingUp,
@@ -124,6 +127,7 @@ const AI_RECOMMENDATIONS = [
     confidenceNote: "Based on invoice aging data, payment history, and payroll cycle timing. Highest-confidence recommendation.",
     signals: ["invoice.status: 30+ days overdue", "invoice.due_date: oldest 47 days", "payment.received_date: 31 days ago"],
     estimatedValue: "$187K",
+    measurementPlan: "Monitor GoHighLevel Payments daily. Success = at least $187K collected before end of week. Track invoice status changes. If collections fall short by day 3, initiate financing process immediately.",
     source: "Financial Systems",
     time: "3 hr ago",
     icon: AlertTriangle,
@@ -335,6 +339,11 @@ function RecommendationCard({ rec, index }: { rec: typeof AI_RECOMMENDATIONS[0];
                   <div className="h-full rounded-full" style={{ width: `${rec.confidence}%`, background: rec.confidence >= 85 ? "#10B981" : "#F59E0B" }} />
                 </div>
                 <p className="text-[10px] text-[#E8EDF5]/35 italic" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{rec.confidenceNote}</p>
+              </div>
+              {/* Measurement Plan */}
+              <div className="p-3 rounded-lg border border-[rgba(99,102,241,0.2)] bg-[rgba(99,102,241,0.05)]">
+                <div className="text-[10px] font-bold text-[#6366F1] uppercase tracking-wider mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Measurement Plan</div>
+                <p className="text-[11px] text-[#E8EDF5]/60 leading-relaxed">{rec.measurementPlan}</p>
               </div>
               {/* Action */}
               <div className="flex flex-wrap items-center gap-2 pt-1" onClick={(e) => e.stopPropagation()}>

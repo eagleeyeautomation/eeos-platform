@@ -255,8 +255,8 @@ export default function LiveSignals() {
                 >
                   Live Signal Feed
                 </h1>
-                <p className="text-sm text-[#E8EDF5]/50 mt-1">
-                  Real-time events from GoHighLevel — contacts, pipeline, conversations, payments, and appointments.
+                <p className="text-sm text-[#E8EDF5]/50 mt-1 max-w-xl">
+                  EEOS transforms business data into accurate executive intelligence. Every signal below is a raw input — processed in transit, never stored, turned into executive recommendations.
                 </p>
               </div>
               <div className="flex items-center gap-3 shrink-0">

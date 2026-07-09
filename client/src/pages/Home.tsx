@@ -164,9 +164,9 @@ export default function Home() {
 
             {/* The core explanation */}
             <div className="mb-8 animate-fade-up" style={{ animationDelay: "200ms" }}>
-              <p className="text-base sm:text-lg text-[#E8EDF5]/65 leading-relaxed max-w-2xl mb-5">
-                Eagle Eye Automation builds AI software that helps service businesses grow. Our flagship product, <span className="text-[#00D4C8] font-semibold">EEOS</span>, helps business owners move beyond reacting to today's problems and begin making tomorrow's decisions with confidence.
-              </p>
+                <p className="text-base sm:text-lg text-[#E8EDF5]/65 leading-relaxed max-w-2xl mb-5">
+                  Eagle Eye Automation builds AI software that helps service businesses grow. Our flagship product, <span className="text-[#00D4C8] font-semibold">EEOS</span>, transforms your business data into accurate executive intelligence — helping leaders move beyond reacting to today's problems and begin making tomorrow's decisions with confidence.
+                </p>
               <div className="flex items-start gap-3 p-4 rounded-xl border border-[rgba(0,212,200,0.2)] bg-[rgba(0,212,200,0.04)]">
                 <Lock className="w-4 h-4 text-[#00D4C8] mt-0.5 shrink-0" />
                 <p className="text-sm text-[#E8EDF5]/75 leading-relaxed">

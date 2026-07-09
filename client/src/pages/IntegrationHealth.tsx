@@ -118,8 +118,8 @@ export default function IntegrationHealth() {
                 >
                   System Status
                 </h1>
-                <p className="text-[#E8EDF5]/55 mt-2">
-                  Real-time health monitoring for all connected business systems.
+                <p className="text-[#E8EDF5]/55 mt-2 max-w-xl">
+                  EEOS transforms business data into accurate executive intelligence. This panel shows the live health of every approved signal source.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-3">
                   <div className="flex items-center gap-1.5 text-[10px] text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>

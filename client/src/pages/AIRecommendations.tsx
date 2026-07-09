@@ -11,20 +11,21 @@ import {
   AlertTriangle, CheckCircle2, Clock, DollarSign, Users,
   ArrowRight, Zap, ChevronDown, ChevronUp, Shield,
   TrendingUp, TrendingDown, Activity, BarChart3, Brain,
-  XCircle, Target, Eye, Lightbulb, Database
+  XCircle, Target, Eye, Lightbulb, Database, ClipboardCheck
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
 
 // ── TRUST ANATOMY DATA SHAPE ───────────────────────────────────────────────
-// Every recommendation answers six executive questions:
+// Every recommendation answers SEVEN executive questions:
 // 1. Why?            → whyThisMatters
 // 2. Why now?        → urgencyReason
 // 3. Why trust this? → confidence + signals
 // 4. What's at stake? → businessImpact + riskIfIgnored
 // 5. What do I do?   → recommendedAction
 // 6. What signals?   → supportingSignals
+// 7. How will I know it worked? → measurementPlan
 
 type RiskLevel = "critical" | "high" | "medium" | "low";
 type Category = "revenue" | "retention" | "operations" | "growth" | "risk";
@@ -52,6 +53,7 @@ interface TrustRecommendation {
   confidence: number;
   confidenceRationale: string;
   supportingSignals: Signal[];
+  measurementPlan: string;  // How the executive will know the action worked
   // Meta
   createdAt: string;
   status: "new" | "in-progress" | "dismissed" | "completed";
@@ -78,6 +80,7 @@ const RECOMMENDATIONS: TrustRecommendation[] = [
       { source: "GoHighLevel Pipeline", field: "opportunity.status", value: "No open opportunities", interpretation: "Zero open opportunities. Healthy accounts typically have 1–3 active opportunities at any time." },
       { source: "EEOS Pattern Engine", field: "churn_risk_score", value: "0.84", interpretation: "84% historical match to pre-churn behavioral pattern across comparable accounts." },
     ],
+    measurementPlan: "Track Cascade Partners contact activity in GoHighLevel over the next 14 days. Success = at least 2 meaningful conversations logged and one open opportunity created. If no response within 5 days of the check-in call, escalate to executive sponsorship.",
     createdAt: "2 hours ago",
     status: "new",
   },
@@ -101,6 +104,7 @@ const RECOMMENDATIONS: TrustRecommendation[] = [
       { source: "GoHighLevel Pipeline", field: "opportunity.monetary_value", value: "$128K + $96K + $116K", interpretation: "Combined value of $340K represents 23% of current annual pipeline." },
       { source: "EEOS Engagement Model", field: "proposal_open_count_7d", value: "0 opens (2 of 3 prospects)", interpretation: "Two prospects have not opened the proposal document in 7 days, indicating low active consideration." },
     ],
+    measurementPlan: "Monitor pipeline stage changes in GoHighLevel daily. Success = at least 2 of 3 proposals advance to negotiation stage within 10 days. Track proposal document open rates as a leading indicator of re-engagement.",
     createdAt: "4 hours ago",
     status: "new",
   },
@@ -124,6 +128,7 @@ const RECOMMENDATIONS: TrustRecommendation[] = [
       { source: "GoHighLevel CRM", field: "contact.assigned_to", value: "4 unassigned requisitions", interpretation: "4 new client requisitions have no recruiter assigned. Each requires 3–5 days to fill." },
       { source: "EEOS SLA Engine", field: "sla_breach_probability", value: "0.88 in 6 days", interpretation: "88% probability of SLA breach within 6 days at current capacity and throughput." },
     ],
+    measurementPlan: "Monitor GoHighLevel task queue depth and calendar availability daily. Success = task load drops below 7 per recruiter within 5 days and all 4 pending requisitions are assigned. SLA compliance confirmed at next weekly operations review.",
     createdAt: "6 hours ago",
     status: "new",
   },
@@ -147,6 +152,7 @@ const RECOMMENDATIONS: TrustRecommendation[] = [
       { source: "GoHighLevel Pipeline", field: "opportunity.source + contact.industry", value: "11.2% healthcare close rate vs. 4.8% overall", interpretation: "Healthcare opportunities close at more than double the overall rate." },
       { source: "EEOS Vertical Engine", field: "vertical_concentration", value: "18% healthcare (47 contacts)", interpretation: "Healthcare is underrepresented relative to its conversion performance." },
     ],
+    measurementPlan: "Track healthcare pipeline concentration weekly in GoHighLevel. Success = healthcare contacts reach 30% of active pipeline within 60 days. Monitor email open rates and conversion rates for the healthcare nurture sequence. Review at Q3 pipeline audit.",
     createdAt: "1 day ago",
     status: "new",
   },
@@ -170,6 +176,7 @@ const RECOMMENDATIONS: TrustRecommendation[] = [
       { source: "GoHighLevel Payments", field: "payment.received_date", value: "Last payment: 31 days ago", interpretation: "No payments received in 31 days against a typical 14-day payment cycle." },
       { source: "EEOS Cash Flow Model", field: "projected_gap_18d", value: "$62,000 shortfall", interpretation: "Projection accounts for Q3 payroll ($156K), pending collections ($94K), and confirmed incoming payments ($48K)." },
     ],
+    measurementPlan: "Monitor GoHighLevel Payments daily for the next 18 days. Success = at least $62K collected before payroll cycle opens. Track invoice status changes as leading indicators. If collections fall short by day 12, initiate financing process immediately.",
     createdAt: "2 days ago",
     status: "in-progress",
   },
@@ -391,6 +398,17 @@ function RecommendationCard({ rec }: { rec: TrustRecommendation }) {
                     <SignalRow key={i} signal={signal} />
                   ))}
                 </div>
+              </div>
+
+              {/* Measurement Plan */}
+              <div className="p-4 rounded-xl border border-[rgba(99,102,241,0.2)] bg-[rgba(99,102,241,0.05)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <ClipboardCheck className="w-4 h-4 text-[#6366F1]" />
+                  <span className="text-xs font-bold text-[#6366F1] uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Measurement Plan</span>
+                </div>
+                <p className="text-xs text-[#E8EDF5]/65 leading-relaxed" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  {rec.measurementPlan}
+                </p>
               </div>
             </div>
           </div>
