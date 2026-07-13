@@ -92,6 +92,27 @@ type LiveRec = {
   createdAt: Date;
 };
 
+type PrnLiveDashboard = {
+  ok: boolean;
+  source: string;
+  division: string;
+  lastSync: string;
+  location?: {
+    name?: string;
+    city?: string;
+    state?: string;
+  };
+  metrics: {
+    totalContacts: number;
+    users: number;
+    opportunities: number;
+    openOpportunities: number;
+    pipelineValue: number;
+    healthScore: number;
+  };
+  endpointHealth: Record<string, { ok: boolean; status: number; responseTimeMs: number }>;
+};
+
 const RISK_COLOR: Record<string, string> = {
   critical: "#EF4444",
   high: "#F59E0B",
@@ -243,6 +264,8 @@ export default function ExecutiveHome() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [showSubaccountPicker, setShowSubaccountPicker] = useState(false);
+  const [prnLiveData, setPrnLiveData] = useState<PrnLiveDashboard | null>(null);
+  const [prnLiveLoading, setPrnLiveLoading] = useState(true);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -297,15 +320,92 @@ export default function ExecutiveHome() {
     { enabled: !!tenantId }
   );
 
+  useEffect(() => {
+    let active = true;
+
+    setPrnLiveLoading(true);
+    fetch("/api/prn/gohighlevel/live-dashboard")
+      .then(async (response) => {
+        const payload = await response.json() as PrnLiveDashboard;
+        if (active && response.ok && payload.ok) {
+          setPrnLiveData(payload);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setPrnLiveData(null);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setPrnLiveLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const generateMutation = trpc.recommendations.generate.useMutation({
     onSuccess: () => refetchRecs(),
   });
 
   // ── Derived KPIs from Business Memory ──
-  const healthScore = memory?.healthScore ?? 0;
-  const healthComponents = (memory?.healthScoreComponents as Array<{ label: string; score: number; color: string }> | null) ?? [];
+  const liveMetrics = prnLiveData?.metrics;
+  const healthScore = liveMetrics?.healthScore ?? memory?.healthScore ?? 0;
+  const healthComponents = liveMetrics
+    ? [
+      { label: "Location", score: prnLiveData?.endpointHealth.location?.ok ? 100 : 0, color: "#10B981" },
+      { label: "Users", score: prnLiveData?.endpointHealth.users?.ok ? 100 : 0, color: "#00D4C8" },
+      { label: "Contacts", score: Math.min(100, liveMetrics.totalContacts > 0 ? 85 : 0), color: "#6366F1" },
+      { label: "Pipeline", score: Math.min(100, liveMetrics.openOpportunities > 0 ? 90 : 0), color: "#F59E0B" },
+    ]
+    : (memory?.healthScoreComponents as Array<{ label: string; score: number; color: string }> | null) ?? [];
 
   const kpiCards = useMemo(() => {
+    if (liveMetrics) {
+      return [
+        {
+          id: "k1", label: "Pipeline Value", value: `$${((liveMetrics.pipelineValue ?? 0) / 1000000).toFixed(1)}M`,
+          delta: "Live", trend: "up" as const, sub: `${liveMetrics.openOpportunities} open opportunities`,
+          color: "#10B981", icon: Target,
+          sparkline: [0, 0, 0, 0, 0, 0, 0, liveMetrics.pipelineValue ?? 0],
+        },
+        {
+          id: "k2", label: "Total Contacts", value: liveMetrics.totalContacts.toLocaleString(),
+          delta: "Live", trend: "up" as const, sub: "PRN Staffers South Carolina",
+          color: "#00D4C8", icon: Users,
+          sparkline: [0, 0, 0, 0, 0, 0, 0, liveMetrics.totalContacts],
+        },
+        {
+          id: "k3", label: "GHL Users", value: liveMetrics.users.toString(),
+          delta: "Live", trend: "up" as const, sub: prnLiveData?.location?.name ?? prnLiveData?.division ?? "South Carolina",
+          color: "#00D4C8", icon: Shield,
+          sparkline: [0, 0, 0, 0, 0, 0, 0, liveMetrics.users],
+        },
+        {
+          id: "k4", label: "Opportunities", value: liveMetrics.opportunities.toString(),
+          delta: "", trend: "up" as const, sub: `${liveMetrics.openOpportunities} open`,
+          color: "#10B981", icon: Star,
+          sparkline: [0, 0, 0, 0, 0, 0, 0, liveMetrics.opportunities],
+        },
+        {
+          id: "k5", label: "Data Source", value: "Live",
+          delta: "", trend: "up" as const, sub: "Private GHL integration",
+          color: "#6366F1", icon: Activity,
+          sparkline: [0, 1, 1, 1, 1, 1, 1, 1],
+        },
+        {
+          id: "k6", label: "Health Score", value: `${liveMetrics.healthScore}/100`,
+          delta: "Live", trend: "up" as const,
+          sub: "PRN composite score", color: liveMetrics.healthScore >= 70 ? "#10B981" : liveMetrics.healthScore >= 50 ? "#F59E0B" : "#EF4444",
+          icon: Brain,
+          sparkline: [0, 0, 0, 0, 0, 0, 0, liveMetrics.healthScore],
+        },
+      ];
+    }
+
     if (!memory) return [];
     return [
       {
@@ -347,9 +447,9 @@ export default function ExecutiveHome() {
         sparkline: [0, 0, 0, 0, 0, 0, 0, healthScore],
       },
     ];
-  }, [memory, healthScore]);
+  }, [memory, healthScore, liveMetrics, prnLiveData]);
 
-  const isConnected = ghlStatus?.connected ?? false;
+  const isConnected = Boolean(prnLiveData?.ok) || (ghlStatus?.connected ?? false);
   const criticalCount = recommendations.filter(r => r.riskLevel === "critical").length;
 
   const userInitials = user?.name
@@ -514,7 +614,7 @@ export default function ExecutiveHome() {
               {/* Business Score Card */}
               <div className="lg:col-span-1 glass-card rounded-2xl p-6 flex flex-col items-center text-center">
                 <div className="section-label mb-4">Business Score</div>
-                {memoryLoading ? (
+                {memoryLoading || prnLiveLoading ? (
                   <div className="w-[140px] h-[140px] rounded-full bg-[rgba(0,212,200,0.05)] animate-pulse" />
                 ) : (
                   <>
