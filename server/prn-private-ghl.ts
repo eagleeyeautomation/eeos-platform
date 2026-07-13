@@ -64,6 +64,32 @@ export type ExecutiveRecommendation = {
   dataTimestamp: string;
 };
 
+type B2BEvidence = Array<{
+  metric: string;
+  value: string;
+  source: "GoHighLevel";
+  recordIds?: string[];
+}>;
+
+type B2BInsight = {
+  id: string;
+  label: string;
+  observation: string;
+  evidence: B2BEvidence;
+};
+
+export type B2BIntelligence = {
+  summary: string;
+  sourcePerformance: B2BInsight[];
+  stalledOpportunities: B2BInsight[];
+  highValueOpportunities: B2BInsight[];
+  referralInsights: B2BInsight[];
+  territoryInsights: B2BInsight[];
+  recommendedActions: B2BInsight[];
+  confidence: number;
+  dataTimestamp: string;
+};
+
 const ghlBaseUrl = "https://services.leadconnectorhq.com";
 
 export function registerPrnPrivateGhlRoutes(app: Express) {
@@ -115,6 +141,41 @@ export function registerPrnPrivateGhlRoutes(app: Express) {
         ok: false,
         source: "Live PRN Staffers GoHighLevel",
         error: "Unable to generate executive recommendations from live PRN Staffers GoHighLevel data.",
+      });
+    }
+  });
+
+  app.get("/api/prn/b2b-intelligence", async (_req, res) => {
+    try {
+      const liveData = await loadPrnLiveData();
+      const b2bIntelligence = buildB2BIntelligence(liveData);
+
+      res.status(liveData.ok ? 200 : 207).json({
+        ok: liveData.ok,
+        source: liveData.source,
+        division: liveData.division,
+        endpointHealth: liveData.endpointHealth,
+        ...b2bIntelligence,
+      });
+    } catch (error) {
+      console.error(JSON.stringify({
+        level: "error",
+        component: "prn_private_ghl",
+        event: "b2b_intelligence.failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      }));
+      res.status(502).json({
+        ok: false,
+        summary: "Insufficient data.",
+        sourcePerformance: [],
+        stalledOpportunities: [],
+        highValueOpportunities: [],
+        referralInsights: [],
+        territoryInsights: [],
+        recommendedActions: [],
+        confidence: 0,
+        dataTimestamp: new Date().toISOString(),
+        error: "Unable to generate B2B intelligence from live PRN Staffers GoHighLevel data.",
       });
     }
   });
@@ -477,6 +538,211 @@ export function calculateRecommendationConfidence(liveData: Pick<PrnLiveData, "m
   return Math.round((endpointScore * 0.5 + completenessScore * 0.35 + freshnessScore * 0.15) * 100);
 }
 
+export function buildB2BIntelligence(liveData: Pick<PrnLiveData, "metrics" | "endpointHealth" | "lastSync" | "records" | "location">): B2BIntelligence {
+  const opportunities = liveData.records.opportunities;
+  const contacts = liveData.records.contacts;
+  const confidence = calculateB2BConfidence(liveData);
+  const sourcePerformance = buildSourcePerformance(opportunities);
+  const highValueOpportunities = buildHighValueOpportunities(opportunities);
+  const stalledOpportunities = buildStalledOpportunities(opportunities);
+  const referralInsights = buildReferralInsights(opportunities, contacts);
+  const territoryInsights = buildTerritoryInsights(opportunities, contacts, liveData.location);
+  const recommendedActions = buildB2BActions({
+    sourcePerformance,
+    highValueOpportunities,
+    stalledOpportunities,
+    referralInsights,
+    territoryInsights,
+    opportunities,
+  });
+
+  return {
+    summary: opportunities.length > 0
+      ? `B2B intelligence is based on ${opportunities.length} verified GoHighLevel opportunities and ${contacts.length} contacts.`
+      : "Insufficient data.",
+    sourcePerformance,
+    stalledOpportunities,
+    highValueOpportunities,
+    referralInsights,
+    territoryInsights,
+    recommendedActions,
+    confidence,
+    dataTimestamp: liveData.lastSync,
+  };
+}
+
+export function calculateB2BConfidence(liveData: Pick<PrnLiveData, "metrics" | "endpointHealth" | "lastSync" | "records">) {
+  const baseConfidence = calculateRecommendationConfidence(liveData);
+  const opportunities = liveData.records.opportunities;
+  if (opportunities.length === 0) return Math.min(baseConfidence, 40);
+
+  const fieldChecks = [
+    opportunities.some(readOpportunitySource),
+    opportunities.some((record) => readMoney(record) > 0),
+    opportunities.some(readOpportunityDate),
+    opportunities.some(readOwner),
+    opportunities.some(readPipelineStage),
+  ];
+  const fieldCompleteness = fieldChecks.filter(Boolean).length / fieldChecks.length;
+
+  return Math.round(baseConfidence * 0.65 + fieldCompleteness * 35);
+}
+
+function buildSourcePerformance(opportunities: GhlRecord[]): B2BInsight[] {
+  const groups = groupByValue(opportunities, readOpportunitySource);
+  if (groups.size === 0) {
+    return [insufficientInsight("source-performance-insufficient", "Best-performing lead source", "Opportunity source data is unavailable.")];
+  }
+
+  return Array.from(groups.entries())
+    .map(([source, records]) => {
+      const value = records.reduce((sum, record) => sum + readMoney(record), 0);
+      return {
+        id: `source-${slugify(source)}`,
+        label: source,
+        observation: `Fact: ${source} is tied to ${records.length} opportunity record${records.length === 1 ? "" : "s"} and ${formatUsd(value)} in verified opportunity value.`,
+        evidence: [
+          b2bEvidence("Opportunity source", source, records),
+          b2bEvidence("Opportunity count", records.length, records),
+          b2bEvidence("Verified opportunity value", value > 0 ? formatUsd(value) : "Insufficient data", records),
+        ],
+      };
+    })
+    .sort((a, b) => numericEvidenceValue(b, "Opportunity count") - numericEvidenceValue(a, "Opportunity count"));
+}
+
+function buildHighValueOpportunities(opportunities: GhlRecord[]): B2BInsight[] {
+  const valued = opportunities
+    .map((record) => ({ record, value: readMoney(record), id: readRecordId(record) }))
+    .filter((item) => item.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
+
+  if (valued.length === 0) {
+    return [insufficientInsight("high-value-insufficient", "Highest-value opportunity source", "Verified opportunity value data is unavailable.")];
+  }
+
+  return valued.map(({ record, value, id }) => {
+    const source = readOpportunitySource(record) || "Insufficient data";
+    return {
+      id: `high-value-${id}`,
+      label: readString(record.name) || readString(record.title) || `Opportunity ${id}`,
+      observation: `Fact: this opportunity has ${formatUsd(value)} in verified value. Source: ${source}.`,
+      evidence: [
+        b2bEvidence("Opportunity value", formatUsd(value), [record]),
+        b2bEvidence("Opportunity source", source, [record]),
+        b2bEvidence("Pipeline stage", readPipelineStage(record) || "Insufficient data", [record]),
+      ],
+    };
+  });
+}
+
+function buildStalledOpportunities(opportunities: GhlRecord[]): B2BInsight[] {
+  const aged = opportunities
+    .filter((record) => !isClosedOpportunity(record))
+    .map((record) => ({ record, age: calculateOpportunityAgeDays(record), id: readRecordId(record) }))
+    .filter((item): item is { record: GhlRecord; age: number; id: string } => typeof item.age === "number" && item.age >= 30)
+    .sort((a, b) => b.age - a.age)
+    .slice(0, 5);
+
+  if (aged.length === 0) {
+    return [insufficientInsight("stalled-insufficient", "Stalled B2B opportunities", "Opportunity age data is unavailable or no open opportunity is at least 30 days old.")];
+  }
+
+  return aged.map(({ record, age, id }) => ({
+    id: `stalled-${id}`,
+    label: readString(record.name) || readString(record.title) || `Opportunity ${id}`,
+    observation: `Fact: this open opportunity is ${age} days old based on available GoHighLevel date fields.`,
+    evidence: [
+      b2bEvidence("Opportunity age", `${age} days`, [record]),
+      b2bEvidence("Assigned owner", readOwner(record) || "Insufficient data", [record]),
+      b2bEvidence("Pipeline stage", readPipelineStage(record) || "Insufficient data", [record]),
+    ],
+  }));
+}
+
+function buildReferralInsights(opportunities: GhlRecord[], contacts: GhlRecord[]): B2BInsight[] {
+  const referralOpportunities = opportunities.filter((record) => containsReferralSignal(readOpportunitySource(record)) || containsReferralSignal(readTags(record).join(" ")));
+  const referralContacts = contacts.filter((record) => containsReferralSignal(readTags(record).join(" ")) || containsReferralSignal(readString(record.source)));
+
+  if (referralOpportunities.length === 0 && referralContacts.length === 0) {
+    return [insufficientInsight("referral-insufficient", "Referral pipeline health", "Referral source or referral tag data is unavailable.")];
+  }
+
+  const referralValue = referralOpportunities.reduce((sum, record) => sum + readMoney(record), 0);
+  return [{
+    id: "referral-pipeline-health",
+    label: "Referral pipeline health",
+    observation: referralOpportunities.length > 0
+      ? `Fact: referral-labeled data appears on ${referralOpportunities.length} opportunity record${referralOpportunities.length === 1 ? "" : "s"}.`
+      : `Fact: referral-labeled data appears on ${referralContacts.length} contact record${referralContacts.length === 1 ? "" : "s"}, but not on opportunity records.`,
+    evidence: [
+      b2bEvidence("Referral opportunity count", referralOpportunities.length, referralOpportunities),
+      b2bEvidence("Referral contact count", referralContacts.length, referralContacts),
+      b2bEvidence("Verified referral opportunity value", referralValue > 0 ? formatUsd(referralValue) : "Insufficient data", referralOpportunities),
+    ],
+  }];
+}
+
+function buildTerritoryInsights(opportunities: GhlRecord[], contacts: GhlRecord[], location: PrnLiveData["location"]): B2BInsight[] {
+  const locationGroups = groupByValue([...opportunities, ...contacts], readLocationLabel);
+  if (locationGroups.size === 0) {
+    return [insufficientInsight("territory-insufficient", "Territory insights", "Contact or opportunity territory data is unavailable.")];
+  }
+
+  return Array.from(locationGroups.entries())
+    .map(([territory, records]) => ({
+      id: `territory-${slugify(territory)}`,
+      label: territory,
+      observation: `Fact: ${records.length} GoHighLevel record${records.length === 1 ? "" : "s"} include location data for ${territory}.`,
+      evidence: [
+        b2bEvidence("Territory", territory, records),
+        b2bEvidence("Record count", records.length, records),
+        b2bEvidence("Connected location", [location.name, location.city, location.state].filter(Boolean).join(", ") || "Insufficient data"),
+      ],
+    }))
+    .sort((a, b) => numericEvidenceValue(b, "Record count") - numericEvidenceValue(a, "Record count"))
+    .slice(0, 5);
+}
+
+function buildB2BActions(input: {
+  sourcePerformance: B2BInsight[];
+  highValueOpportunities: B2BInsight[];
+  stalledOpportunities: B2BInsight[];
+  referralInsights: B2BInsight[];
+  territoryInsights: B2BInsight[];
+  opportunities: GhlRecord[];
+}) {
+  const actions: B2BInsight[] = [];
+  const ownershipGaps = input.opportunities.filter((record) => !isClosedOpportunity(record) && !readOwner(record));
+
+  if (ownershipGaps.length > 0) {
+    actions.push({
+      id: "action-assign-open-opportunity-owners",
+      label: "Ownership gaps",
+      observation: `Fact: ${ownershipGaps.length} open opportunit${ownershipGaps.length === 1 ? "y has" : "ies have"} insufficient owner data.`,
+      evidence: [
+        b2bEvidence("Open opportunities without owner", ownershipGaps.length, ownershipGaps),
+      ],
+    });
+  }
+
+  const bestSource = input.sourcePerformance.find((item) => !item.id.endsWith("insufficient"));
+  if (bestSource) {
+    actions.push({
+      id: "action-review-best-source-follow-up",
+      label: "Recommended next business-development action",
+      observation: `Recommendation: review follow-up coverage for ${bestSource.label}, the best-supported source in current GoHighLevel opportunity data.`,
+      evidence: bestSource.evidence,
+    });
+  } else {
+    actions.push(insufficientInsight("action-source-data-needed", "Recommended next business-development action", "Insufficient data: add source values to opportunities before choosing a source-based action."));
+  }
+
+  return actions;
+}
+
+
 function summarizeExecutiveRecommendations(recommendations: ExecutiveRecommendation[]) {
   const topDecision = recommendations.find((item) => item.priority === "critical")
     || recommendations.find((item) => item.priority === "high")
@@ -558,6 +824,118 @@ function readOpportunityDate(record: GhlRecord) {
     if (!Number.isNaN(date.getTime())) return date;
   }
   return null;
+}
+
+function calculateOpportunityAgeDays(record: GhlRecord) {
+  const date = readOpportunityDate(record);
+  if (!date) return null;
+  return Math.max(0, Math.floor((Date.now() - date.getTime()) / 86_400_000));
+}
+
+function readOpportunitySource(record: GhlRecord) {
+  for (const key of ["source", "contactSource", "opportunitySource", "leadSource", "attributionSource", "sourceName"]) {
+    const value = readString(record[key]);
+    if (value) return value;
+  }
+
+  const attribution = record.attributionSource || record.attribution;
+  if (isRecord(attribution)) {
+    for (const key of ["source", "utmSource", "medium", "campaign"]) {
+      const value = readString(attribution[key]);
+      if (value) return value;
+    }
+  }
+
+  return "";
+}
+
+function readOwner(record: GhlRecord) {
+  for (const key of ["assignedTo", "assignedUserId", "ownerId", "userId", "assignedToName", "ownerName"]) {
+    const value = readString(record[key]);
+    if (value) return value;
+  }
+
+  const owner = record.owner || record.assignedUser || record.user;
+  if (isRecord(owner)) {
+    return readString(owner.name) || readString(owner.id) || readString(owner.email);
+  }
+
+  return "";
+}
+
+function readPipelineStage(record: GhlRecord) {
+  for (const key of ["pipelineStageName", "stageName", "status", "pipelineStageId", "stageId"]) {
+    const value = readString(record[key]);
+    if (value) return value;
+  }
+  return "";
+}
+
+function readTags(record: GhlRecord) {
+  const tags = record.tags;
+  if (Array.isArray(tags)) {
+    return tags.map((tag) => {
+      if (typeof tag === "string") return tag;
+      if (isRecord(tag)) return readString(tag.name) || readString(tag.id);
+      return "";
+    }).filter(Boolean);
+  }
+  return [];
+}
+
+function readLocationLabel(record: GhlRecord) {
+  const city = readString(record.city) || readString(record.contactCity);
+  const state = readString(record.state) || readString(record.contactState);
+  const postalCode = readString(record.postalCode) || readString(record.zip) || readString(record.contactPostalCode);
+  const location = [city, state].filter(Boolean).join(", ");
+  return location || postalCode;
+}
+
+function readRecordId(record: GhlRecord) {
+  return readString(record.id) || readString(record.contactId) || readString(record.opportunityId) || slugify(JSON.stringify(record).slice(0, 48));
+}
+
+function groupByValue(records: GhlRecord[], readValue: (record: GhlRecord) => string) {
+  const groups = new Map<string, GhlRecord[]>();
+  for (const record of records) {
+    const value = readValue(record);
+    if (!value) continue;
+    const existing = groups.get(value) || [];
+    existing.push(record);
+    groups.set(value, existing);
+  }
+  return groups;
+}
+
+function containsReferralSignal(value: string) {
+  return /\b(referral|referred|partner|word of mouth)\b/i.test(value);
+}
+
+function b2bEvidence(metric: string, value: string | number, records: GhlRecord[] = []): B2BEvidence[number] {
+  return {
+    metric,
+    value: String(value),
+    source: "GoHighLevel",
+    recordIds: records.map(readRecordId).filter(Boolean).slice(0, 10),
+  };
+}
+
+function insufficientInsight(id: string, label: string, observation: string): B2BInsight {
+  return {
+    id,
+    label,
+    observation: `Insufficient data: ${observation}`,
+    evidence: [b2bEvidence("Available evidence", "Insufficient data")],
+  };
+}
+
+function numericEvidenceValue(insight: B2BInsight, metric: string) {
+  const value = insight.evidence.find((item) => item.metric === metric)?.value || "0";
+  return Number(value.replace(/[$,]/g, "")) || 0;
+}
+
+function slugify(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "unknown";
 }
 
 function formatUsd(value: number) {

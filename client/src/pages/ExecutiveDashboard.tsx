@@ -109,25 +109,56 @@ type ExecutiveRecommendationResponse = {
   error?: string;
 };
 
+type B2BInsight = {
+  id: string;
+  label: string;
+  observation: string;
+  evidence: Array<{
+    metric: string;
+    value: string;
+    source: "GoHighLevel";
+    recordIds?: string[];
+  }>;
+};
+
+type B2BIntelligenceResponse = {
+  ok: boolean;
+  summary: string;
+  sourcePerformance: B2BInsight[];
+  stalledOpportunities: B2BInsight[];
+  highValueOpportunities: B2BInsight[];
+  referralInsights: B2BInsight[];
+  territoryInsights: B2BInsight[];
+  recommendedActions: B2BInsight[];
+  confidence: number;
+  dataTimestamp: string;
+  error?: string;
+};
+
 export default function ExecutiveDashboard() {
   const [data, setData] = useState<PrnDashboardResponse | null>(null);
   const [recommendationData, setRecommendationData] = useState<ExecutiveRecommendationResponse | null>(null);
+  const [b2bData, setB2bData] = useState<B2BIntelligenceResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [recommendationError, setRecommendationError] = useState<string | null>(null);
+  const [b2bError, setB2bError] = useState<string | null>(null);
 
   async function loadDashboard() {
     setLoading(true);
     setError(null);
     setRecommendationError(null);
+    setB2bError(null);
 
     try {
-      const [dashboardResponse, recommendationResponse] = await Promise.all([
+      const [dashboardResponse, recommendationResponse, b2bResponse] = await Promise.all([
         fetch("/api/prn/gohighlevel/live-dashboard", { headers: { Accept: "application/json" } }),
         fetch("/api/prn/executive-recommendations", { headers: { Accept: "application/json" } }),
+        fetch("/api/prn/b2b-intelligence", { headers: { Accept: "application/json" } }),
       ]);
       const payload = (await dashboardResponse.json()) as PrnDashboardResponse;
       const recommendationPayload = (await recommendationResponse.json()) as ExecutiveRecommendationResponse;
+      const b2bPayload = (await b2bResponse.json()) as B2BIntelligenceResponse;
 
       if (!dashboardResponse.ok) {
         throw new Error(payload.error || `Dashboard request failed with HTTP ${dashboardResponse.status}`);
@@ -140,10 +171,17 @@ export default function ExecutiveDashboard() {
         setRecommendationData(null);
         setRecommendationError(recommendationPayload.error || `Recommendation request failed with HTTP ${recommendationResponse.status}`);
       }
+      if (b2bResponse.ok || b2bResponse.status === 207) {
+        setB2bData(b2bPayload);
+      } else {
+        setB2bData(null);
+        setB2bError(b2bPayload.error || `B2B intelligence request failed with HTTP ${b2bResponse.status}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load live PRN Staffers data.");
       setData(null);
       setRecommendationData(null);
+      setB2bData(null);
     } finally {
       setLoading(false);
     }
@@ -233,6 +271,8 @@ export default function ExecutiveDashboard() {
               error={recommendationError}
               onRefresh={() => void loadDashboard()}
             />
+
+            <B2BIntelligenceSection response={b2bData} error={b2bError} />
 
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {cards.map((card) => (
@@ -425,6 +465,95 @@ function PriorityBadge({ priority, compact = false }: { priority: Recommendation
 
 function toDisplayPriority(priority: ExecutiveRecommendation["priority"]): RecommendationPriority {
   return priority.charAt(0).toUpperCase() + priority.slice(1) as RecommendationPriority;
+}
+
+function B2BIntelligenceSection({ response, error }: {
+  response: B2BIntelligenceResponse | null;
+  error: string | null;
+}) {
+  const bestSource = response?.sourcePerformance.find((item) => !item.observation.startsWith("Insufficient data"));
+  const highestValue = response?.highValueOpportunities.find((item) => !item.observation.startsWith("Insufficient data"));
+  const stalled = response?.stalledOpportunities[0];
+  const referral = response?.referralInsights[0];
+  const ownership = response?.recommendedActions.find((item) => item.label === "Ownership gaps");
+  const nextAction = response?.recommendedActions.find((item) => item.label === "Recommended next business-development action") || response?.recommendedActions[0];
+  const items = response ? [
+    { label: "Best-performing lead source", insight: bestSource || response.sourcePerformance[0], icon: TrendingUp },
+    { label: "Highest-value opportunity source", insight: highestValue || response.highValueOpportunities[0], icon: DollarSign },
+    { label: "Stalled B2B opportunities", insight: stalled, icon: Clock },
+    { label: "Referral pipeline health", insight: referral, icon: Users },
+    { label: "Ownership gaps", insight: ownership || insufficientB2BInsight("Ownership gaps"), icon: ShieldCheck },
+    { label: "Recommended next business-development action", insight: nextAction, icon: Target },
+  ] : [];
+
+  return (
+    <section className="rounded-lg border border-[#0EA5E9]/30 bg-[#061527] p-5 shadow-[0_24px_80px_rgba(14,165,233,0.06)]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#38BDF8]/35 bg-[#08233D] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#7DD3FC]">
+            <Database className="h-3.5 w-3.5" />
+            B2B Intelligence
+          </div>
+          <h2 className="mt-3 text-2xl font-semibold text-white">GoHighLevel Business Development Signals</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#B7C5D8]">
+            {response?.summary || "Insufficient data."}
+          </p>
+        </div>
+        {response ? (
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#38BDF8]/35 bg-[#08233D] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#7DD3FC]">
+            Confidence {response.confidence}/100
+          </span>
+        ) : null}
+      </div>
+
+      {error ? (
+        <div className="mt-5 rounded-md border border-[#F59E0B]/35 bg-[#2A1C05] p-4 text-sm text-[#FBBF24]">{error}</div>
+      ) : !response ? (
+        <div className="mt-5 rounded-md border border-[#12314D] bg-[#050F1D] p-4 text-sm text-[#B7C5D8]">No B2B intelligence data available. Insufficient data.</div>
+      ) : (
+        <div className="mt-5 grid gap-3 lg:grid-cols-3">
+          {items.map((item) => (
+            <B2BInsightCard key={item.label} label={item.label} insight={item.insight} icon={item.icon} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function B2BInsightCard({ label, insight, icon: Icon }: {
+  label: string;
+  insight?: B2BInsight;
+  icon: typeof Database;
+}) {
+  const displayInsight = insight || insufficientB2BInsight(label);
+
+  return (
+    <div className="rounded-md border border-[#12314D] bg-[#050F1D] p-4">
+      <div className="flex items-center gap-2 text-[#38BDF8]">
+        <Icon className="h-4 w-4" />
+        <p className="text-xs font-semibold uppercase tracking-[0.14em]">{label}</p>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-[#D7E6F8]">{displayInsight.observation}</p>
+      <div className="mt-4 border-t border-[#12314D] pt-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#86A6C8]">Evidence</p>
+        <ul className="mt-1 space-y-1 text-xs leading-5 text-[#B7C5D8]">
+          {displayInsight.evidence.map((item) => (
+            <li key={`${item.metric}-${item.value}`}>{item.metric}: {item.value}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function insufficientB2BInsight(label: string): B2BInsight {
+  return {
+    id: `insufficient-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    label,
+    observation: "Insufficient data.",
+    evidence: [{ metric: "Available evidence", value: "Insufficient data", source: "GoHighLevel" }],
+  };
 }
 
 function MetricCard({ label, value, detail, icon: Icon }: {

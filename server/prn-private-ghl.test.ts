@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildExecutiveRecommendations, calculateRecommendationConfidence, isStale } from "./prn-private-ghl";
+import { buildB2BIntelligence, buildExecutiveRecommendations, calculateB2BConfidence, calculateRecommendationConfidence, isStale } from "./prn-private-ghl";
 
 function liveData(overrides: Record<string, unknown> = {}) {
   const lastSync = new Date().toISOString();
@@ -97,5 +97,100 @@ describe("PRN executive recommendations", () => {
 
     expect(revenueRecommendation?.expectedImpact).toContain("Insufficient data");
     expect(revenueRecommendation?.expectedImpact).not.toMatch(/\$\d|%|percent/i);
+  });
+});
+
+describe("PRN B2B intelligence", () => {
+  it("aggregates opportunity sources with supporting evidence", () => {
+    const intelligence = buildB2BIntelligence(liveData({
+      records: {
+        contacts: [],
+        users: [],
+        opportunities: [
+          { id: "opp-1", source: "Referral", monetaryValue: 5000, createdAt: new Date().toISOString(), status: "open" },
+          { id: "opp-2", source: "Referral", monetaryValue: 2500, createdAt: new Date().toISOString(), status: "open" },
+          { id: "opp-3", source: "Website", monetaryValue: 1000, createdAt: new Date().toISOString(), status: "open" },
+        ],
+      },
+      location: { id: "loc-1", name: "PRN Staffers CSC", city: "Beaufort", state: "SC" },
+    }));
+
+    expect(intelligence.sourcePerformance[0]?.label).toBe("Referral");
+    expect(intelligence.sourcePerformance[0]?.evidence.some((item) => item.metric === "Opportunity count" && item.value === "2")).toBe(true);
+  });
+
+  it("identifies opportunity aging from available date fields", () => {
+    const oldDate = new Date(Date.now() - 45 * 86_400_000).toISOString();
+    const intelligence = buildB2BIntelligence(liveData({
+      records: {
+        contacts: [],
+        users: [],
+        opportunities: [{ id: "opp-old", source: "Referral", monetaryValue: 5000, createdAt: oldDate, status: "open" }],
+      },
+      location: { id: "loc-1", name: "PRN Staffers CSC", city: "Beaufort", state: "SC" },
+    }));
+
+    expect(intelligence.stalledOpportunities[0]?.id).toBe("stalled-opp-old");
+    expect(intelligence.stalledOpportunities[0]?.evidence.some((item) => item.value.includes("days"))).toBe(true);
+  });
+
+  it("marks missing source data as insufficient data", () => {
+    const intelligence = buildB2BIntelligence(liveData({
+      records: {
+        contacts: [],
+        users: [],
+        opportunities: [{ id: "opp-1", monetaryValue: 5000, createdAt: new Date().toISOString(), status: "open" }],
+      },
+      location: { id: "loc-1", name: "PRN Staffers CSC", city: "Beaufort", state: "SC" },
+    }));
+
+    expect(intelligence.sourcePerformance[0]?.observation).toContain("Insufficient data");
+  });
+
+  it("marks missing value data as insufficient data", () => {
+    const intelligence = buildB2BIntelligence(liveData({
+      records: {
+        contacts: [],
+        users: [],
+        opportunities: [{ id: "opp-1", source: "Referral", createdAt: new Date().toISOString(), status: "open" }],
+      },
+      location: { id: "loc-1", name: "PRN Staffers CSC", city: "Beaufort", state: "SC" },
+    }));
+
+    expect(intelligence.highValueOpportunities[0]?.observation).toContain("Insufficient data");
+  });
+
+  it("does not fabricate territory claims without location data", () => {
+    const intelligence = buildB2BIntelligence(liveData({
+      records: {
+        contacts: [{ id: "contact-1", tags: ["Referral"] }],
+        users: [],
+        opportunities: [{ id: "opp-1", source: "Referral", monetaryValue: 5000, createdAt: new Date().toISOString(), status: "open" }],
+      },
+      location: { id: "loc-1", name: "PRN Staffers CSC", city: "Beaufort", state: "SC" },
+    }));
+
+    expect(intelligence.territoryInsights[0]?.observation).toContain("Insufficient data");
+  });
+
+  it("calculates B2B confidence from endpoint health and field completeness", () => {
+    const complete = calculateB2BConfidence(liveData({
+      records: {
+        contacts: [],
+        users: [],
+        opportunities: [{ id: "opp-1", source: "Referral", monetaryValue: 5000, createdAt: new Date().toISOString(), status: "open", assignedTo: "owner-1", pipelineStageName: "New" }],
+      },
+      location: { id: "loc-1", name: "PRN Staffers CSC", city: "Beaufort", state: "SC" },
+    }));
+    const incomplete = calculateB2BConfidence(liveData({
+      records: {
+        contacts: [],
+        users: [],
+        opportunities: [{ id: "opp-1", status: "open" }],
+      },
+      location: { id: "loc-1", name: "PRN Staffers CSC", city: "Beaufort", state: "SC" },
+    }));
+
+    expect(complete).toBeGreaterThan(incomplete);
   });
 });
