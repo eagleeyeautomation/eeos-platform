@@ -92,7 +92,8 @@ export function registerOAuthProviderRoutes(app: Express) {
       }
 
       const generated = generateOAuthClientSecret();
-      const clientId = `eeos_${randomBytes(16).toString("hex")}`;
+      const requestedClientId = readString(req.body?.client_id)?.trim();
+      const clientId = requestedClientId || `eeos_${randomBytes(16).toString("hex")}`;
       const normalizedScopes = scopes.length > 0 ? scopes : ["openid", "profile", "email", "ghl.marketplace"];
 
       logOAuthClientRegistration("storage_check_started", { requestId });
@@ -167,28 +168,43 @@ export function registerOAuthProviderRoutes(app: Express) {
         clientId: request.client_id,
         found: Boolean(client),
         redirectUriCount: client?.redirectUris.length || 0,
+        active: Boolean(client),
       });
 
       if (!client) {
         const storedCandidates = await findOAuthClientsByRedirectUri(request.redirect_uri);
+        const marketplaceCandidates = storedCandidates.length === 0 ? await findActiveMarketplaceOAuthClients() : [];
+        const reconciliationCandidates = storedCandidates.length > 0 ? storedCandidates : marketplaceCandidates;
+        const redirectClientId = extractLeadConnectorClientId(request.redirect_uri);
+
         logOAuthAuthorize("client_id_comparison", {
           requestId,
           incomingClientId: request.client_id,
-          storedClientIds: storedCandidates.map((candidate) => candidate.clientId),
+          redirectClientId,
+          storedClientIds: reconciliationCandidates.map((candidate) => candidate.clientId),
           redirectUriMatchCount: storedCandidates.length,
+          marketplaceCandidateCount: marketplaceCandidates.length,
         });
 
-        if (storedCandidates.length === 1) {
+        if (
+          reconciliationCandidates.length === 1 &&
+          (!redirectClientId || redirectClientId === request.client_id) &&
+          isLeadConnectorRedirectUri(request.redirect_uri)
+        ) {
           const reconciledClient = await reconcileOAuthClientId({
-            storedClientId: storedCandidates[0].clientId,
+            storedClientId: reconciliationCandidates[0].clientId,
             incomingClientId: request.client_id,
+            redirectUri: request.redirect_uri,
           });
 
           logOAuthAuthorize("client_id_reconciled", {
             requestId,
             incomingClientId: request.client_id,
-            storedClientId: storedCandidates[0].clientId,
-            reason: "registered_client_id_differed_from_marketplace_authorize_client_id",
+            storedClientId: reconciliationCandidates[0].clientId,
+            reason:
+              storedCandidates.length === 1
+                ? "registered_client_id_differed_from_marketplace_authorize_client_id"
+                : "single_marketplace_client_reconciled_to_authorize_client_id",
           });
 
           await continueAuthorization(req, res, request, reconciledClient, requestId);
@@ -198,8 +214,8 @@ export function registerOAuthProviderRoutes(app: Express) {
         logOAuthAuthorize("rejected", {
           requestId,
           clientId: request.client_id,
-          reason: storedCandidates.length > 1 ? "ambiguous_redirect_uri_match" : "client_not_found",
-          storedClientIds: storedCandidates.map((candidate) => candidate.clientId),
+          reason: reconciliationCandidates.length > 1 ? "ambiguous_client_candidates" : "client_not_found",
+          storedClientIds: reconciliationCandidates.map((candidate) => candidate.clientId),
         });
         res.status(400).json({ error: "invalid_client" });
         return;
@@ -690,7 +706,37 @@ async function findOAuthClientsByRedirectUri(redirectUri: string) {
   });
 }
 
-async function reconcileOAuthClientId(input: { storedClientId: string; incomingClientId: string }) {
+async function findActiveMarketplaceOAuthClients() {
+  return withDatabase(async (db) => {
+    const result = await db.query<{
+      client_id: string;
+      client_secret_hash: string;
+      name: string;
+      redirect_uris: string[];
+      scopes: string[];
+    }>(
+      `
+        select client_id, client_secret_hash, name, redirect_uris, scopes
+        from eeos_oauth_clients
+        where disabled_at is null
+          and name = $1
+        order by updated_at desc
+        limit 5
+      `,
+      ["GoHighLevel Marketplace"],
+    );
+
+    return result.rows.map((row) => ({
+      clientId: row.client_id,
+      clientSecretHash: row.client_secret_hash,
+      name: row.name,
+      redirectUris: row.redirect_uris,
+      scopes: row.scopes,
+    }));
+  });
+}
+
+async function reconcileOAuthClientId(input: { storedClientId: string; incomingClientId: string; redirectUri: string }) {
   return withDatabase(async (db) => {
     const result = await db.query<{
       client_id: string;
@@ -702,12 +748,16 @@ async function reconcileOAuthClientId(input: { storedClientId: string; incomingC
       `
         update eeos_oauth_clients
         set client_id = $1,
+            redirect_uris = case
+              when redirect_uris @> $3::jsonb then redirect_uris
+              else redirect_uris || $3::jsonb
+            end,
             updated_at = now()
         where client_id = $2
           and disabled_at is null
         returning client_id, client_secret_hash, name, redirect_uris, scopes
       `,
-      [input.incomingClientId, input.storedClientId],
+      [input.incomingClientId, input.storedClientId, JSON.stringify([input.redirectUri])],
     );
     const row = result.rows[0];
 
@@ -723,6 +773,30 @@ async function reconcileOAuthClientId(input: { storedClientId: string; incomingC
       scopes: row.scopes,
     };
   });
+}
+
+function isLeadConnectorRedirectUri(redirectUri: string) {
+  try {
+    return new URL(redirectUri).hostname === "services.leadconnectorhq.com";
+  } catch {
+    return false;
+  }
+}
+
+function extractLeadConnectorClientId(redirectUri: string) {
+  try {
+    const url = new URL(redirectUri);
+
+    if (url.hostname !== "services.leadconnectorhq.com") {
+      return null;
+    }
+
+    const match = url.pathname.match(/^\/oauth\/clients\/([^/]+)\/authentication\/callback$/);
+
+    return match?.[1] || null;
+  } catch {
+    return null;
+  }
 }
 
 async function storeAuthorizationCode(input: {
