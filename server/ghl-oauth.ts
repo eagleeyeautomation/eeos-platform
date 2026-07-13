@@ -57,12 +57,31 @@ function redactSecrets(value: string) {
     .replace(/client_secret["'=:\s]+[^"',\s}]+/gi, "client_secret=<redacted>");
 }
 
+function getGhlClientId() {
+  return process.env.GHL_CLIENT_ID || process.env.GHL_OAUTH_CLIENT_ID || ENV.ghlClientId;
+}
+
+function getGhlClientSecret() {
+  return process.env.GHL_CLIENT_SECRET || process.env.GHL_OAUTH_CLIENT_SECRET || ENV.ghlClientSecret;
+}
+
+function getGhlConfigPresence() {
+  return {
+    GHL_CLIENT_ID: Boolean(process.env.GHL_CLIENT_ID),
+    GHL_CLIENT_SECRET: Boolean(process.env.GHL_CLIENT_SECRET),
+    GHL_OAUTH_CLIENT_ID: Boolean(process.env.GHL_OAUTH_CLIENT_ID),
+    GHL_OAUTH_CLIENT_SECRET: Boolean(process.env.GHL_OAUTH_CLIENT_SECRET),
+    GHL_REDIRECT_URI: Boolean(process.env.GHL_REDIRECT_URI),
+    GHL_OAUTH_REDIRECT_URI: Boolean(process.env.GHL_OAUTH_REDIRECT_URI),
+  };
+}
+
 /** Build the GHL OAuth authorization URL */
 function buildGhlAuthUrl(state: string): string {
   const params = new URLSearchParams({
     response_type: "code",
     redirect_uri: getApprovedRedirectUri(),
-    client_id: ENV.ghlClientId,
+    client_id: getGhlClientId(),
     scope: [
       "contacts.readonly",
       "contacts.write",
@@ -84,8 +103,8 @@ function buildGhlAuthUrl(state: string): string {
 /** Exchange authorization code for GHL access + refresh tokens */
 async function exchangeCodeForTokens(code: string, redirectUri: string) {
   const body = new URLSearchParams({
-    client_id: ENV.ghlClientId,
-    client_secret: ENV.ghlClientSecret,
+    client_id: getGhlClientId(),
+    client_secret: getGhlClientSecret(),
     grant_type: "authorization_code",
     code,
     redirect_uri: redirectUri,
@@ -120,7 +139,7 @@ async function exchangeCodeForTokens(code: string, redirectUri: string) {
 }
 
 function getApprovedRedirectUri() {
-  return ENV.ghlRedirectUri || APPROVED_GHL_CALLBACK_URL;
+  return process.env.GHL_REDIRECT_URI || process.env.GHL_OAUTH_REDIRECT_URI || ENV.ghlRedirectUri || APPROVED_GHL_CALLBACK_URL;
 }
 
 function readTokenLocationId(tokenData: Awaited<ReturnType<typeof exchangeCodeForTokens>>) {
@@ -247,8 +266,8 @@ export async function refreshGhlToken(tenantId: string): Promise<boolean> {
 
   try {
     const body = new URLSearchParams({
-      client_id: ENV.ghlClientId,
-      client_secret: ENV.ghlClientSecret,
+      client_id: getGhlClientId(),
+      client_secret: getGhlClientSecret(),
       grant_type: "refresh_token",
       refresh_token: token.refreshToken,
       user_type: "Location",
@@ -310,7 +329,7 @@ export function registerGhlOAuthRoutes(app: Express) {
    * The tenantId (user's openId) is encoded in the state parameter.
    */
   app.get("/api/ghl/auth", async (req: Request, res: Response) => {
-    if (!ENV.ghlClientId) {
+    if (!getGhlClientId()) {
       res.status(503).json({ error: "GHL integration not configured" });
       return;
     }
@@ -380,7 +399,7 @@ export function registerGhlOAuthRoutes(app: Express) {
       });
 
       const redirectUri = getApprovedRedirectUri();
-      logGhlOAuth("token_exchange_started", { tenantId, redirectUri });
+      logGhlOAuth("token_exchange_started", { tenantId, redirectUri, variablesPresent: getGhlConfigPresence() });
       const tokenData = await exchangeCodeForTokens(code, redirectUri);
       logGhlOAuth("token_exchange_succeeded", {
         tenantId,
