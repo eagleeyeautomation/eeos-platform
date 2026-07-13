@@ -37,8 +37,8 @@ export function registerPrnPrivateGhlRoutes(app: Express) {
       const [location, users, contacts, opportunities] = await Promise.all([
         client.getFirstOk([`/locations/${encodeURIComponent(locationId)}`], "location"),
         client.getFirstOk([
-          `/users/?locationId=${encodeURIComponent(locationId)}`,
           `/users/search?locationId=${encodeURIComponent(locationId)}`,
+          `/users/?locationId=${encodeURIComponent(locationId)}`,
         ], "users"),
         client.getFirstOk([`/contacts/?locationId=${encodeURIComponent(locationId)}&limit=100`], "contacts"),
         client.getFirstOk([`/opportunities/search?location_id=${encodeURIComponent(locationId)}&limit=100`], "opportunities"),
