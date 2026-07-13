@@ -7,7 +7,6 @@ import { registerStorageProxy } from "./storageProxy";
 import { registerGhlOAuthRoutes } from "../ghl-oauth";
 import { registerGhlWebhookRoutes } from "../ghl-webhook";
 import { registerGhlPitRoutes } from "../ghl-pit";
-import { registerGoHighLevelRoutes } from "../integrations/gohighlevel";
 import { registerOAuthProviderRoutes, sendOpenIdConfiguration } from "../oauth/provider";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
@@ -28,10 +27,14 @@ async function startServer() {
   // Register all routes
   registerStorageProxy(app);
   registerOAuthRoutes(app);          // Manus OAuth: /api/oauth/callback
+  app.get("/api/integrations/eea/oauth/callback", (req, res) => {
+    const query = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
+
+    res.redirect(307, `/api/ghl/callback${query}`);
+  });
   registerGhlOAuthRoutes(app);       // GHL OAuth: /api/ghl/auth, /api/ghl/callback, /api/ghl/status
   registerGhlPitRoutes(app);         // GHL PIT: /api/ghl/pit/connect, /api/ghl/pit/verify, /api/ghl/pit/disconnect
   registerGhlWebhookRoutes(app);     // GHL Webhooks: /api/webhooks/ghl
-  registerGoHighLevelRoutes(app);    // GHL Integration: /api/integrations/eea/oauth/callback
   registerOAuthProviderRoutes(app);  // EEOS OAuth Provider: /.well-known/*, /oauth/*
 
   app.get("/health", (_req, res) => {
