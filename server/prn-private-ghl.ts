@@ -5,6 +5,7 @@ type GhlFetchResult = {
   status: number;
   path: string;
   data: unknown;
+  errorSummary?: string;
   responseTimeMs: number;
 };
 
@@ -101,13 +102,14 @@ function createPrivateGhlClient(token: string) {
     const startedAt = Date.now();
     const response = await fetch(`${ghlBaseUrl}${path}`, {
       headers: {
-        authorization: `Bearer ${token}`,
-        accept: "application/json",
-        version: process.env.GHL_API_VERSION || "2021-07-28",
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        Version: process.env.GHL_API_VERSION || "2021-07-28",
       },
     });
     const text = await response.text();
     const data = parseJson(text);
+    const errorSummary = response.ok ? undefined : summarizeGhlError(data, text);
 
     console.log(JSON.stringify({
       level: response.ok ? "info" : "warn",
@@ -124,6 +126,7 @@ function createPrivateGhlClient(token: string) {
       status: response.status,
       path,
       data,
+      errorSummary,
       responseTimeMs: Date.now() - startedAt,
     };
   }
@@ -201,8 +204,28 @@ function sanitizeFetchResult(result: GhlFetchResult) {
     ok: result.ok,
     status: result.status,
     path: result.path,
+    errorSummary: result.errorSummary,
     responseTimeMs: result.responseTimeMs,
   };
+}
+
+function summarizeGhlError(data: unknown, rawText: string) {
+  if (isRecord(data)) {
+    for (const key of ["message", "error", "error_description", "msg"]) {
+      const value = data[key];
+      if (typeof value === "string" && value.trim()) {
+        return redactSensitiveText(value);
+      }
+    }
+  }
+
+  return redactSensitiveText(rawText).slice(0, 240);
+}
+
+function redactSensitiveText(value: string) {
+  return value
+    .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED]")
+    .replace(/[A-Za-z0-9._~+/=-]{32,}/g, "[REDACTED]");
 }
 
 function calculateHealthScore(input: {
