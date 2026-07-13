@@ -5,6 +5,37 @@ import { goHighLevelInternals } from "../../server/integrations/gohighlevel";
 describe("GoHighLevel production integration internals", () => {
   const tenant = goHighLevelInternals.resolveTenant({ locationId: "loc_123" });
 
+  it("registers the approved EEOS OAuth callback and legacy redirect route", () => {
+    const routes: Array<{ method: string; path: string }> = [];
+    const app = {
+      get(path: string) {
+        routes.push({ method: "GET", path });
+      },
+      post(path: string) {
+        routes.push({ method: "POST", path });
+      },
+    };
+
+    goHighLevelInternals.registerGoHighLevelRoutes(app as never);
+
+    expect(routes).toContainEqual({ method: "GET", path: "/api/integrations/eea/oauth/callback" });
+    expect(routes).toContainEqual({ method: "GET", path: "/api/integrations/gohighlevel/oauth/callback" });
+  });
+
+  it("validates the approved production OAuth redirect URI", () => {
+    expect(
+      goHighLevelInternals.validateOAuthRedirectUri(
+        "https://eeos-platform-production.up.railway.app/api/integrations/eea/oauth/callback",
+      ),
+    ).toBe("https://eeos-platform-production.up.railway.app/api/integrations/eea/oauth/callback");
+
+    expect(() =>
+      goHighLevelInternals.validateOAuthRedirectUri(
+        "https://eeos-platform-production.up.railway.app/api/integrations/gohighlevel/oauth/callback",
+      ),
+    ).toThrow("GHL_OAUTH_REDIRECT_URI must use the approved EEOS OAuth callback route.");
+  });
+
   it("normalizes supported production event names", () => {
     expect(goHighLevelInternals.normalizeEventType("contact_created")).toBe("Contact Created");
     expect(goHighLevelInternals.normalizeEventType("opportunity-updated")).toBe("Opportunity Updated");
@@ -25,6 +56,22 @@ describe("GoHighLevel production integration internals", () => {
     expect(goHighLevelInternals.buildDiagnosticPath("locations", locationId)).toBe("/locations/loc_123");
   });
 
+  it("builds sync paths for contacts, opportunities, and appointments", () => {
+    const locationId = "loc_123";
+
+    expect(goHighLevelInternals.buildSyncPath("contacts", locationId)).toContain("locationId=loc_123");
+    expect(goHighLevelInternals.buildSyncPath("contacts", locationId)).toContain("limit=100");
+    expect(goHighLevelInternals.buildSyncPath("opportunities", locationId)).toContain("location_id=loc_123");
+    expect(goHighLevelInternals.buildSyncPath("appointments", locationId)).toContain("locationId=loc_123");
+  });
+
+  it("rejects unsupported sync resources", () => {
+    expect(() => goHighLevelInternals.normalizeSyncResource("contacts")).not.toThrow();
+    expect(() => goHighLevelInternals.normalizeSyncResource("opportunities")).not.toThrow();
+    expect(() => goHighLevelInternals.normalizeSyncResource("appointments")).not.toThrow();
+    expect(() => goHighLevelInternals.normalizeSyncResource("users")).toThrow("Unsupported GoHighLevel sync resource.");
+  });
+
   it("models PRN Staffers as a customer membership with operational divisions", () => {
     const membership = goHighLevelInternals.getCustomerMembershipConfig();
 
@@ -36,6 +83,16 @@ describe("GoHighLevel production integration internals", () => {
       "Alabama",
       "Florida",
     ]);
+  });
+
+  it("isolates tenant resolution to configured customer membership and locations", () => {
+    const membership = goHighLevelInternals.getCustomerMembershipConfig();
+    const resolved = goHighLevelInternals.resolveTenant({ locationId: "loc_unknown" });
+
+    expect(resolved.membershipId).toBe(membership.membershipId);
+    expect(resolved.tenantId).toBe(membership.membershipId);
+    expect(resolved.locationId).toBe("loc_unknown");
+    expect(resolved.operationalDivisionId).toBe(membership.operationalDivisions[0].id);
   });
 
   it("verifies sha256 webhook signatures without exposing secrets", () => {

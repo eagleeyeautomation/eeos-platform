@@ -3,6 +3,17 @@ import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
 import type { Express, Request, Response as ExpressResponse } from "express";
+import { getRuntimeStateStorageMode } from "../db/postgres";
+import {
+  consumeOAuthState,
+  disconnectGhlConnection,
+  persistAuditEvent,
+  persistOAuthState,
+  persistWebhookLedgerEvent,
+  readGhlTokenRecord,
+  upsertSyncCheckpoint,
+  upsertGhlTokenRecord,
+} from "../db/runtimePersistence";
 
 type GhlTokenSet = {
   authMode: "oauth" | "private_token";
@@ -181,6 +192,8 @@ type GhlDiagnosticResult = {
   reason?: string;
 };
 
+type GhlSyncResource = "contacts" | "opportunities" | "appointments";
+
 type GhlErrorCode =
   | "CONFIGURATION_ERROR"
   | "OAUTH_ERROR"
@@ -231,6 +244,8 @@ const retryQueue: Array<Record<string, unknown>> = [];
 const businessMemory: Array<Record<string, unknown>> = [];
 const knowledgeGraphRelationships: KnowledgeGraphRelationship[] = [];
 let nextRequestAt = 0;
+const productionOAuthCallbackPath = "/api/integrations/eea/oauth/callback";
+const legacyOAuthCallbackPath = "/api/integrations/gohighlevel/oauth/callback";
 
 const defaultServiceBusinessDna: BusinessDnaProfile = {
   industry: "Healthcare staffing",
@@ -266,17 +281,19 @@ export function registerGoHighLevelRoutes(app: Express) {
   app.get("/api/integrations/gohighlevel/oauth/start", (req, res) => {
     withRouteHandling(res, "oauth.start", async () => {
       const membership = getCustomerMembershipConfig();
-      const state = signOAuthState({
+      const statePayload = {
         tenantId: membership.membershipId,
         nonce: randomBytes(16).toString("hex"),
         issuedAt: new Date().toISOString(),
-      });
+      };
+      const state = signOAuthState(statePayload);
+      await persistOAuthStateIfRequired(state, statePayload);
 
       res.redirect(buildAuthorizationUrl(state, req));
     });
   });
 
-  app.get("/api/integrations/gohighlevel/oauth/callback", (req, res) => {
+  app.get(productionOAuthCallbackPath, (req, res) => {
     withRouteHandling(res, "oauth.callback", async () => {
       const code = readQuery(req, "code");
       const state = readQuery(req, "state");
@@ -287,6 +304,7 @@ export function registerGoHighLevelRoutes(app: Express) {
       }
 
       const statePayload = verifyOAuthState(state);
+      await consumeOAuthStateIfRequired(state);
       const tokenSet = await exchangeAuthorizationCode(code, runtimeUrls.oauthCallbackUrl);
       const membership = getCustomerMembershipConfig();
       const fallbackDivision = membership.operationalDivisions[0];
@@ -326,6 +344,12 @@ export function registerGoHighLevelRoutes(app: Express) {
     });
   });
 
+  app.get(legacyOAuthCallbackPath, (req, res) => {
+    const query = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
+
+    res.redirect(307, `${productionOAuthCallbackPath}${query}`);
+  });
+
   app.post("/api/integrations/gohighlevel/webhook/register", (req, res) => {
     withRouteHandling(res, "webhook.register", async () => {
       const tokenSet = await getPrimaryTokenSet();
@@ -336,6 +360,41 @@ export function registerGoHighLevelRoutes(app: Express) {
         ...registration,
         productionUrl: runtimeUrls.productionUrl,
         oauthCallbackUrl: runtimeUrls.oauthCallbackUrl,
+      });
+    });
+  });
+
+  app.post("/api/integrations/gohighlevel/sync/:resource", (req, res) => {
+    withRouteHandling(res, "sync", async () => {
+      const resource = normalizeSyncResource(req.params.resource);
+      const tokenSet = await getValidTokenSet();
+      const result = await runSyncResource(tokenSet, resource);
+
+      res.status(202).json(result);
+    });
+  });
+
+  app.post("/api/integrations/gohighlevel/disconnect", (_req, res) => {
+    withRouteHandling(res, "disconnect", async () => {
+      const membership = getCustomerMembershipConfig();
+
+      if (getRuntimeStateStorageMode() === "postgres") {
+        await disconnectGhlConnection(membership.membershipId);
+        await persistAuditEvent({
+          organizationId: membership.membershipId,
+          source: "GoHighLevel",
+          eventType: "Integration Disconnected",
+          metadata: {
+            provider: "gohighlevel",
+            disconnectedAt: new Date().toISOString(),
+          },
+        });
+      }
+
+      res.json({
+        disconnected: true,
+        tenantId: membership.membershipId,
+        provider: "GoHighLevel",
       });
     });
   });
@@ -351,6 +410,7 @@ export function registerGoHighLevelRoutes(app: Express) {
       const receipt = processGhlEvent(payload, tenant);
       const memory = writeBusinessMemoryRecord(payload, tenant, receipt, receivedAt);
       const audit = writeAuditRecord(payload, tenant, receipt, receivedAt);
+      await persistWebhookRuntimeState(payload, tenant, receipt, audit);
 
       logIntegration("info", "webhook.accepted", {
         eventType: receipt.eventType,
@@ -468,7 +528,7 @@ async function withRouteHandling(res: ExpressResponse, operation: string, handle
 
 function buildAuthorizationUrl(state: string, req: Request) {
   const clientId = requireEnv("GHL_OAUTH_CLIENT_ID");
-  const redirectUri = process.env.GHL_OAUTH_REDIRECT_URI || getRuntimeUrls(req).oauthCallbackUrl;
+  const redirectUri = getOAuthRedirectUri(req);
   const scopes = readScopes().join(" ");
   const url = new URL("https://marketplace.gohighlevel.com/oauth/chooselocation");
 
@@ -486,7 +546,7 @@ async function exchangeAuthorizationCode(code: string, redirectUri: string): Pro
     grant_type: "authorization_code",
     client_id: requireEnv("GHL_OAUTH_CLIENT_ID"),
     client_secret: requireEnv("GHL_OAUTH_CLIENT_SECRET"),
-    redirect_uri: process.env.GHL_OAUTH_REDIRECT_URI || redirectUri,
+    redirect_uri: validateOAuthRedirectUri(process.env.GHL_OAUTH_REDIRECT_URI || redirectUri),
     code,
   });
 
@@ -681,6 +741,56 @@ function buildDiagnosticPath(target: GhlDiagnosticTarget, locationId: string) {
   };
 
   return paths[target];
+}
+
+function normalizeSyncResource(value = ""): GhlSyncResource {
+  if (value === "contacts" || value === "opportunities" || value === "appointments") {
+    return value;
+  }
+
+  throw new GhlIntegrationError("Unsupported GoHighLevel sync resource.", "DIAGNOSTIC_ERROR", 400, {
+    resource: value,
+  });
+}
+
+function buildSyncPath(resource: GhlSyncResource, locationId: string) {
+  const paths: Record<GhlSyncResource, string> = {
+    contacts: process.env.GHL_CONTACTS_PATH || `/contacts/?locationId=${encodeURIComponent(locationId)}&limit=100`,
+    opportunities: process.env.GHL_OPPORTUNITIES_PATH || `/opportunities/search?location_id=${encodeURIComponent(locationId)}&limit=100`,
+    appointments: process.env.GHL_CALENDARS_PATH || `/calendars/events?locationId=${encodeURIComponent(locationId)}&limit=100`,
+  };
+
+  return paths[resource];
+}
+
+async function runSyncResource(tokenSet: GhlTokenSet, resource: GhlSyncResource) {
+  const path = buildSyncPath(resource, tokenSet.locationId);
+  const response = await ghlApiRequest(tokenSet, path, {
+    method: "GET",
+    operation: `sync.${resource}`,
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (getRuntimeStateStorageMode() === "postgres") {
+    await upsertSyncCheckpoint({
+      organizationId: tokenSet.membershipId,
+      resource,
+      locationId: tokenSet.locationId,
+      checkpoint: {
+        syncedAt: new Date().toISOString(),
+        httpStatus: response.status,
+        payloadFingerprint: stableHash(JSON.stringify(payload)).slice(0, 24),
+      },
+    });
+  }
+
+  return {
+    resource,
+    tenantId: tokenSet.membershipId,
+    locationId: tokenSet.locationId,
+    status: "Synced",
+    httpStatus: response.status,
+  };
 }
 
 async function ghlApiRequest(
@@ -1598,8 +1708,40 @@ function verifyOAuthState(state: string) {
   return JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as { tenantId: string };
 }
 
+async function persistOAuthStateIfRequired(state: string, payload: Record<string, string>) {
+  if (getRuntimeStateStorageMode() !== "postgres") {
+    return;
+  }
+
+  await persistOAuthState(state, payload, new Date(Date.now() + 10 * 60_000));
+}
+
+async function consumeOAuthStateIfRequired(state: string) {
+  if (getRuntimeStateStorageMode() !== "postgres") {
+    return;
+  }
+
+  const consumed = await consumeOAuthState(state);
+
+  if (!consumed) {
+    throw new GhlIntegrationError("GoHighLevel OAuth state is expired, missing, or already used.", "OAUTH_ERROR", 400);
+  }
+}
+
 async function writeTokenSet(tokenSet: GhlTokenSet) {
   try {
+    if (getRuntimeStateStorageMode() === "postgres") {
+      await upsertGhlTokenRecord({
+        membershipId: tokenSet.membershipId,
+        operationalDivisionId: tokenSet.operationalDivisionId,
+        locationId: tokenSet.locationId,
+        encryptedPayload: encryptJson(tokenSet),
+        expiresAt: tokenSet.expiresAt,
+        scopes: tokenSet.scopes,
+      });
+      return;
+    }
+
     const vaultFile = getVaultFile();
     await fs.mkdir(path.dirname(vaultFile), { recursive: true });
     await fs.writeFile(vaultFile, encryptJson(tokenSet), "utf8");
@@ -1612,6 +1754,16 @@ async function writeTokenSet(tokenSet: GhlTokenSet) {
 
 async function readTokenSet(): Promise<GhlTokenSet> {
   try {
+    if (getRuntimeStateStorageMode() === "postgres") {
+      const encrypted = await readGhlTokenRecord(getCustomerMembershipConfig().membershipId);
+
+      if (!encrypted) {
+        throw new Error("No GoHighLevel token record found.");
+      }
+
+      return decryptJson(encrypted) as GhlTokenSet;
+    }
+
     const vaultFile = getVaultFile();
     const encrypted = await fs.readFile(vaultFile, "utf8");
 
@@ -1695,6 +1847,46 @@ function hasAuditEvent(eventType: string) {
   return auditLog.some((event) => event.eventType === eventType);
 }
 
+async function persistWebhookRuntimeState(
+  payload: Record<string, unknown>,
+  tenant: TenantResolution,
+  receipt: EeosReceipt,
+  audit: Record<string, unknown>,
+) {
+  if (getRuntimeStateStorageMode() !== "postgres") {
+    return;
+  }
+
+  const eventContext = buildEventContext(payload, tenant, receipt.eventType);
+  const payloadFingerprint = fingerprintPayload(payload);
+
+  await persistWebhookLedgerEvent({
+    organizationId: tenant.membershipId,
+    providerEventId: eventContext.eventId,
+    eventType: receipt.eventType,
+    locationId: tenant.locationId,
+    payloadFingerprint,
+    status: "accepted",
+    metadata: {
+      correlationId: receipt.correlationId,
+      entityId: eventContext.entityId,
+      entityType: eventContext.entityType,
+      recommendationId: receipt.recommendationId,
+      recommendationStatus: receipt.recommendationStatus,
+    },
+  });
+
+  await persistAuditEvent({
+    organizationId: tenant.membershipId,
+    source: "GoHighLevel",
+    eventType: receipt.eventType,
+    locationId: tenant.locationId,
+    correlationId: receipt.correlationId,
+    payloadFingerprint,
+    metadata: audit,
+  });
+}
+
 function encryptJson(value: unknown) {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", getVaultKey(), iv);
@@ -1757,9 +1949,26 @@ function getRuntimeUrls(req: Request) {
 
   return {
     productionUrl,
-    oauthCallbackUrl: `${productionUrl}/api/integrations/gohighlevel/oauth/callback`,
+    oauthCallbackUrl: validateOAuthRedirectUri(`${productionUrl}${productionOAuthCallbackPath}`),
     webhookUrl: process.env.GHL_WEBHOOK_URL || `${productionUrl}/api/integrations/gohighlevel/webhook`,
   };
+}
+
+function getOAuthRedirectUri(req: Request) {
+  return validateOAuthRedirectUri(process.env.GHL_OAUTH_REDIRECT_URI || getRuntimeUrls(req).oauthCallbackUrl);
+}
+
+function validateOAuthRedirectUri(value: string) {
+  const normalized = normalizeBaseUrl(value);
+  const parsed = new URL(normalized);
+
+  if (parsed.pathname !== productionOAuthCallbackPath) {
+    throw new GhlIntegrationError("GHL_OAUTH_REDIRECT_URI must use the approved EEOS OAuth callback route.", "CONFIGURATION_ERROR", 500, {
+      expectedPath: productionOAuthCallbackPath,
+    });
+  }
+
+  return normalized;
 }
 
 function getProductionUrl(req: Request) {
@@ -1799,6 +2008,7 @@ function getConfigurationStatus() {
     oauthClientSecret: Boolean(process.env.GHL_OAUTH_CLIENT_SECRET),
     oauthStateSecret: Boolean(process.env.GHL_OAUTH_STATE_SECRET),
     tokenVaultKey: Boolean(process.env.EEOS_TOKEN_VAULT_KEY),
+    runtimeStateProvider: getRuntimeStateStorageMode(),
     webhookSecret: Boolean(process.env.GHL_WEBHOOK_SECRET),
     locationId: membership.operationalDivisions.some((division) => division.locationId) || Boolean(process.env.GHL_LOCATION_ID),
   };
@@ -1918,14 +2128,22 @@ export const goHighLevelInternals = {
   buildDiagnosticPath,
   buildEventContext,
   buildRecommendationInsight,
+  buildSyncPath,
   confidenceFor,
   decisionFor,
   evaluateRecommendationQuality,
   getCustomerMembershipConfig,
+  getOAuthRedirectUri,
+  getRuntimeStateStorageMode,
+  legacyOAuthCallbackPath,
   normalizeBaseUrl,
   normalizeEventType,
+  normalizeSyncResource,
+  productionOAuthCallbackPath,
   processGhlEvent,
+  registerGoHighLevelRoutes,
   resolveTenant,
   secureCompare,
+  validateOAuthRedirectUri,
   verifyHmacSignature,
 };
