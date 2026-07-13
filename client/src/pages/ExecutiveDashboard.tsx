@@ -75,40 +75,75 @@ const numberFormatter = new Intl.NumberFormat("en-US");
 
 type RecommendationPriority = "Critical" | "High" | "Medium" | "Low";
 
-type ExecutiveRecommendationSet = {
-  priority: RecommendationPriority;
-  healthBand: "Green" | "Yellow" | "Red";
-  executiveSummary: string;
-  businessHealth: string;
-  topRecommendation: string;
-  revenueInsight: string;
-  salesInsight: string;
-  operationalInsight: string;
+type ExecutiveRecommendation = {
+  id: string;
+  category: "sales" | "revenue" | "operations" | "risk";
+  priority: "critical" | "high" | "medium" | "low";
+  observation: string;
+  evidence: Array<{
+    metric: string;
+    value: string;
+    source: "GoHighLevel";
+  }>;
+  recommendedAction: string;
+  expectedImpact: string;
+  confidence: number;
+  confidenceReason: string;
+  measurement: string;
+  dataTimestamp: string;
+};
+
+type ExecutiveRecommendationResponse = {
+  ok: boolean;
+  dataTimestamp: string;
+  stale: boolean;
+  summary: {
+    executiveSummary: string;
+    topDecision: string;
+    revenueInsight: string;
+    salesInsight: string;
+    operationalInsight: string;
+    riskAlert: string;
+  };
+  recommendations: ExecutiveRecommendation[];
+  error?: string;
 };
 
 export default function ExecutiveDashboard() {
   const [data, setData] = useState<PrnDashboardResponse | null>(null);
+  const [recommendationData, setRecommendationData] = useState<ExecutiveRecommendationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recommendationError, setRecommendationError] = useState<string | null>(null);
 
   async function loadDashboard() {
     setLoading(true);
     setError(null);
+    setRecommendationError(null);
 
     try {
-      const response = await fetch("/api/prn/gohighlevel/live-dashboard", {
-        headers: { Accept: "application/json" },
-      });
-      const payload = (await response.json()) as PrnDashboardResponse;
+      const [dashboardResponse, recommendationResponse] = await Promise.all([
+        fetch("/api/prn/gohighlevel/live-dashboard", { headers: { Accept: "application/json" } }),
+        fetch("/api/prn/executive-recommendations", { headers: { Accept: "application/json" } }),
+      ]);
+      const payload = (await dashboardResponse.json()) as PrnDashboardResponse;
+      const recommendationPayload = (await recommendationResponse.json()) as ExecutiveRecommendationResponse;
 
-      if (!response.ok) {
-        throw new Error(payload.error || `Dashboard request failed with HTTP ${response.status}`);
+      if (!dashboardResponse.ok) {
+        throw new Error(payload.error || `Dashboard request failed with HTTP ${dashboardResponse.status}`);
       }
 
       setData(payload);
+      if (recommendationResponse.ok || recommendationResponse.status === 207) {
+        setRecommendationData(recommendationPayload);
+      } else {
+        setRecommendationData(null);
+        setRecommendationError(recommendationPayload.error || `Recommendation request failed with HTTP ${recommendationResponse.status}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load live PRN Staffers data.");
       setData(null);
+      setRecommendationData(null);
     } finally {
       setLoading(false);
     }
@@ -154,7 +189,6 @@ export default function ExecutiveDashboard() {
   ];
 
   const hasLiveData = Boolean(data?.ok && data.metrics && (metrics.totalContacts > 0 || metrics.users > 0 || metrics.opportunities > 0));
-  const recommendations = useMemo(() => buildExecutiveRecommendations(metrics), [metrics]);
 
   return (
     <div className="min-h-screen bg-[#050B18] text-white">
@@ -194,7 +228,11 @@ export default function ExecutiveDashboard() {
           <StatePanel title="No live records returned" message="The integration responded, but no dashboard records were available." tone="empty" />
         ) : (
           <>
-            <ExecutiveRecommendations recommendations={recommendations} />
+            <ExecutiveRecommendations
+              response={recommendationData}
+              error={recommendationError}
+              onRefresh={() => void loadDashboard()}
+            />
 
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {cards.map((card) => (
@@ -255,47 +293,26 @@ export default function ExecutiveDashboard() {
   );
 }
 
-function buildExecutiveRecommendations(metrics: typeof emptyMetrics): ExecutiveRecommendationSet {
-  const pipelineRuleActive = metrics.openOpportunities > 50;
-  const revenueRuleActive = metrics.pipelineValue > 10000;
-  const contactsRuleActive = metrics.totalContacts > metrics.opportunities;
-  const healthBand = metrics.healthScore >= 90 ? "Green" : metrics.healthScore >= 70 ? "Yellow" : "Red";
-
-  const priority: RecommendationPriority =
-    healthBand === "Red" ? "Critical" :
-      pipelineRuleActive && revenueRuleActive ? "High" :
-        pipelineRuleActive || revenueRuleActive || healthBand === "Yellow" ? "Medium" :
-          "Low";
-
-  return {
-    priority,
-    healthBand,
-    executiveSummary: `EEOS is reading ${numberFormatter.format(metrics.totalContacts)} contacts, ${numberFormatter.format(metrics.openOpportunities)} open opportunities, and ${moneyFormatter.format(metrics.pipelineValue)} in live pipeline value from PRN Staffers GoHighLevel.`,
-    businessHealth: `${healthBand} health status at ${metrics.healthScore}/100. ${healthBand === "Green" ? "Core data signals are strong and operational coverage is healthy." : healthBand === "Yellow" ? "Performance is serviceable, but leadership should review conversion and follow-up discipline." : "Immediate executive attention is recommended before pipeline or follow-up risk compounds."}`,
-    topRecommendation: pipelineRuleActive
-      ? "High opportunity volume detected. Review stalled opportunities and assign follow-up tasks."
-      : "Opportunity volume is controlled. Keep monitoring follow-up ownership and stage movement.",
-    revenueInsight: revenueRuleActive
-      ? "Strong sales pipeline. Focus on increasing conversion rate to maximize revenue."
-      : "Pipeline value is below the V1 revenue trigger. Prioritize qualified opportunity creation.",
-    salesInsight: contactsRuleActive
-      ? "Lead generation is healthy. Improve lead-to-opportunity conversion."
-      : "Contact-to-opportunity balance is tight. Protect lead quality while expanding pipeline coverage.",
-    operationalInsight: metrics.openOpportunities > 0
-      ? `${numberFormatter.format(metrics.openOpportunities)} open opportunities need consistent ownership, next steps, and stage hygiene.`
-      : "No open opportunities are currently visible in the live feed.",
-  };
-}
-
-function ExecutiveRecommendations({ recommendations }: { recommendations: ExecutiveRecommendationSet }) {
-  const items = [
-    { label: "Executive Summary", value: recommendations.executiveSummary, icon: Brain },
-    { label: "Business Health", value: recommendations.businessHealth, icon: ShieldCheck },
-    { label: "Top Recommendation", value: recommendations.topRecommendation, icon: Target },
-    { label: "Revenue Insight", value: recommendations.revenueInsight, icon: DollarSign },
-    { label: "Sales Insight", value: recommendations.salesInsight, icon: TrendingUp },
-    { label: "Operational Insight", value: recommendations.operationalInsight, icon: Activity },
-  ];
+function ExecutiveRecommendations({ response, error, onRefresh }: {
+  response: ExecutiveRecommendationResponse | null;
+  error: string | null;
+  onRefresh: () => void;
+}) {
+  const top = response?.recommendations.find((item) => item.priority === "critical")
+    || response?.recommendations.find((item) => item.priority === "high")
+    || response?.recommendations[0];
+  const revenue = response?.recommendations.find((item) => item.category === "revenue");
+  const sales = response?.recommendations.find((item) => item.category === "sales");
+  const operations = response?.recommendations.find((item) => item.category === "operations");
+  const risk = response?.recommendations.find((item) => item.category === "risk");
+  const items = response ? [
+    { label: "Executive Summary", value: response.summary.executiveSummary, icon: Brain, recommendation: top },
+    { label: "Top Decision", value: response.summary.topDecision, icon: Target, recommendation: top },
+    { label: "Revenue Insight", value: response.summary.revenueInsight, icon: DollarSign, recommendation: revenue },
+    { label: "Sales Insight", value: response.summary.salesInsight, icon: TrendingUp, recommendation: sales },
+    { label: "Operational Insight", value: response.summary.operationalInsight, icon: Activity, recommendation: operations },
+    { label: "Risk Alert", value: response.summary.riskAlert, icon: AlertTriangle, recommendation: risk },
+  ] : [];
 
   return (
     <section className="rounded-lg border border-[#0EA5E9]/35 bg-[#061527] p-5 shadow-[0_24px_80px_rgba(14,165,233,0.08)]">
@@ -307,38 +324,91 @@ function ExecutiveRecommendations({ recommendations }: { recommendations: Execut
           </div>
           <h2 className="mt-3 text-2xl font-semibold text-white">Intelligence Engine V1</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-[#B7C5D8]">
-            Rules-based analysis of live PRN Staffers GoHighLevel metrics. No automatic actions are taken.
+            Rules-based analysis of verified live PRN Staffers GoHighLevel metrics. No automatic actions are taken.
           </p>
         </div>
-        <PriorityBadge priority={recommendations.priority} />
+        <div className="flex flex-wrap gap-2">
+          {top ? <PriorityBadge priority={toDisplayPriority(top.priority)} /> : null}
+          <button
+            type="button"
+            onClick={onRefresh}
+            className="inline-flex h-8 items-center gap-2 rounded-md border border-[#1D4F73] bg-[#08233D] px-3 text-xs font-semibold text-[#DDF7FF] transition hover:border-[#38BDF8] hover:bg-[#0B2D4D]"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Refresh Recommendations
+          </button>
+        </div>
       </div>
 
-      <div className="mt-5 grid gap-3 lg:grid-cols-3">
-        {items.map((item) => (
-          <RecommendationCard key={item.label} {...item} />
-        ))}
-      </div>
+      {error ? (
+        <div className="mt-5 rounded-md border border-[#F59E0B]/35 bg-[#2A1C05] p-4 text-sm text-[#FBBF24]">{error}</div>
+      ) : !response || response.recommendations.length === 0 ? (
+        <div className="mt-5 rounded-md border border-[#12314D] bg-[#050F1D] p-4 text-sm text-[#B7C5D8]">No recommendation data available. Insufficient data.</div>
+      ) : (
+        <>
+          {response.stale ? (
+            <div className="mt-5 rounded-md border border-[#F59E0B]/35 bg-[#2A1C05] p-4 text-sm text-[#FBBF24]">
+              Stale-data warning: last recommendation data is older than 15 minutes.
+            </div>
+          ) : null}
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-3">
+            {items.map((item) => (
+              <RecommendationCard key={item.label} {...item} />
+            ))}
+          </div>
+        </>
+      )}
     </section>
   );
 }
 
-function RecommendationCard({ label, value, icon: Icon }: {
+function RecommendationCard({ label, value, icon: Icon, recommendation }: {
   label: string;
   value: string;
   icon: typeof Brain;
+  recommendation?: ExecutiveRecommendation;
 }) {
   return (
     <div className="rounded-md border border-[#12314D] bg-[#050F1D] p-4">
-      <div className="flex items-center gap-2 text-[#38BDF8]">
-        <Icon className="h-4 w-4" />
-        <p className="text-xs font-semibold uppercase tracking-[0.14em]">{label}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2 text-[#38BDF8]">
+          <Icon className="h-4 w-4" />
+          <p className="text-xs font-semibold uppercase tracking-[0.14em]">{label}</p>
+        </div>
+        {recommendation ? <PriorityBadge priority={toDisplayPriority(recommendation.priority)} compact /> : null}
       </div>
       <p className="mt-3 text-sm leading-6 text-[#D7E6F8]">{value}</p>
+      {recommendation ? (
+        <div className="mt-4 space-y-3 border-t border-[#12314D] pt-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#86A6C8]">Confidence</p>
+            <p className="mt-1 text-sm text-white">{recommendation.confidence}/100</p>
+            <p className="mt-1 text-xs leading-5 text-[#7D91AA]">{recommendation.confidenceReason}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#86A6C8]">Supporting Evidence</p>
+            <ul className="mt-1 space-y-1 text-xs leading-5 text-[#B7C5D8]">
+              {recommendation.evidence.map((item) => (
+                <li key={`${item.metric}-${item.value}`}>{item.metric}: {item.value} ({item.source})</li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#86A6C8]">Recommended Action</p>
+            <p className="mt-1 text-xs leading-5 text-[#D7E6F8]">{recommendation.recommendedAction}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#86A6C8]">How Success Will Be Measured</p>
+            <p className="mt-1 text-xs leading-5 text-[#D7E6F8]">{recommendation.measurement}</p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function PriorityBadge({ priority }: { priority: RecommendationPriority }) {
+function PriorityBadge({ priority, compact = false }: { priority: RecommendationPriority; compact?: boolean }) {
   const styles: Record<RecommendationPriority, string> = {
     Critical: "border-[#EF4444]/45 bg-[#2A0808] text-[#FCA5A5]",
     High: "border-[#F59E0B]/45 bg-[#2A1C05] text-[#FBBF24]",
@@ -347,10 +417,14 @@ function PriorityBadge({ priority }: { priority: RecommendationPriority }) {
   };
 
   return (
-    <span className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${styles[priority]}`}>
+    <span className={`inline-flex w-fit items-center gap-2 rounded-full border ${compact ? "px-2 py-0.5" : "px-3 py-1"} text-xs font-semibold uppercase tracking-[0.14em] ${styles[priority]}`}>
       {priority}
     </span>
   );
+}
+
+function toDisplayPriority(priority: ExecutiveRecommendation["priority"]): RecommendationPriority {
+  return priority.charAt(0).toUpperCase() + priority.slice(1) as RecommendationPriority;
 }
 
 function MetricCard({ label, value, detail, icon: Icon }: {
