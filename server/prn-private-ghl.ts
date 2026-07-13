@@ -45,6 +45,7 @@ type PrnLiveData = {
 
 type RecommendationCategory = "sales" | "revenue" | "operations" | "risk";
 type RecommendationPriority = "critical" | "high" | "medium" | "low";
+type IntelligenceUrgency = "Immediate" | "This Week" | "This Month" | "Monitor";
 
 export type ExecutiveRecommendation = {
   id: string;
@@ -62,6 +63,44 @@ export type ExecutiveRecommendation = {
   confidenceReason: string;
   measurement: string;
   dataTimestamp: string;
+};
+
+export type PrnIntelligenceEngineRecommendation = {
+  id: string;
+  category: "Sales" | "Revenue" | "Operations" | "Marketing" | "Risk" | "Customer Experience" | "Growth";
+  observation: string;
+  evidence: Array<{
+    metric: string;
+    value: string;
+    source: "GoHighLevel";
+  }>;
+  businessImpact: string;
+  recommendation: string;
+  priority: "Critical" | "High" | "Medium" | "Low";
+  confidence: number;
+  confidenceReason: string;
+  measurement: string;
+  dataTimestamp: string;
+  businessImpactScore: number;
+  urgency: IntelligenceUrgency;
+};
+
+export type PrnIntelligenceEngineResult = {
+  ok: boolean;
+  source: string;
+  division: string;
+  dataTimestamp: string;
+  executiveSummary: string;
+  topRecommendation: PrnIntelligenceEngineRecommendation | null;
+  topRisk: PrnIntelligenceEngineRecommendation | null;
+  topOpportunity: PrnIntelligenceEngineRecommendation | null;
+  recommendations: PrnIntelligenceEngineRecommendation[];
+  dashboard: {
+    businessImpact: number;
+    urgency: IntelligenceUrgency;
+    confidence: number;
+    supportingEvidence: string[];
+  };
 };
 
 type B2BEvidence = Array<{
@@ -153,6 +192,32 @@ export function registerPrnPrivateGhlRoutes(app: Express) {
         ok: false,
         source: "Live PRN Staffers GoHighLevel",
         error: "Unable to generate executive recommendations from live PRN Staffers GoHighLevel data.",
+      });
+    }
+  });
+
+  app.get("/api/prn/intelligence-engine", async (_req, res) => {
+    try {
+      const liveData = await loadPrnLiveData();
+      const intelligence = buildPrnIntelligenceEngine(liveData);
+
+      res.status(liveData.ok ? 200 : 207).json({
+        ...intelligence,
+        endpointHealth: liveData.endpointHealth,
+      });
+    } catch (error) {
+      console.error(JSON.stringify({
+        level: "error",
+        component: "prn_private_ghl",
+        event: "intelligence_engine.failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      }));
+      res.status(502).json({
+        ok: false,
+        source: "Live PRN Staffers GoHighLevel",
+        executiveSummary: "Insufficient data.",
+        recommendations: [],
+        error: "Unable to generate Intelligence Engine output from live PRN Staffers GoHighLevel data.",
       });
     }
   });
@@ -565,6 +630,114 @@ export function buildExecutiveRecommendations(liveData: Pick<PrnLiveData, "metri
   });
 
   return recommendations;
+}
+
+export function buildPrnIntelligenceEngine(liveData: Pick<PrnLiveData, "ok" | "source" | "division" | "metrics" | "endpointHealth" | "lastSync" | "records">): PrnIntelligenceEngineResult {
+  const executiveRecommendations = buildExecutiveRecommendations(liveData);
+  const recommendations = executiveRecommendations.map(toIntelligenceRecommendation);
+  const sorted = recommendations.slice().sort((a, b) => {
+    const impactDelta = b.businessImpactScore - a.businessImpactScore;
+    return impactDelta !== 0 ? impactDelta : b.confidence - a.confidence;
+  });
+  const topRecommendation = sorted[0] ?? null;
+  const topRisk = sorted.find((recommendation) => recommendation.category === "Risk") ?? null;
+  const topOpportunity = sorted.find((recommendation) => ["Sales", "Revenue", "Growth", "Marketing"].includes(recommendation.category)) ?? null;
+  const dashboardRecommendation = topRecommendation ?? topRisk ?? topOpportunity;
+
+  return {
+    ok: liveData.ok,
+    source: liveData.source,
+    division: liveData.division,
+    dataTimestamp: liveData.lastSync,
+    executiveSummary: buildIntelligenceExecutiveSummary(sorted, liveData),
+    topRecommendation,
+    topRisk,
+    topOpportunity,
+    recommendations: sorted,
+    dashboard: {
+      businessImpact: dashboardRecommendation?.businessImpactScore ?? 0,
+      urgency: dashboardRecommendation?.urgency ?? "Monitor",
+      confidence: dashboardRecommendation?.confidence ?? 0,
+      supportingEvidence: dashboardRecommendation?.evidence.map((item) => `${item.metric}: ${item.value}`) ?? ["Insufficient data."],
+    },
+  };
+}
+
+function toIntelligenceRecommendation(recommendation: ExecutiveRecommendation): PrnIntelligenceEngineRecommendation {
+  const confidence = recommendation.confidence;
+  const action = confidence < 80
+    ? "Additional data is required before making this recommendation."
+    : recommendation.recommendedAction;
+
+  return {
+    id: recommendation.id,
+    category: mapRecommendationCategory(recommendation.category),
+    observation: recommendation.observation,
+    evidence: recommendation.evidence,
+    businessImpact: recommendation.expectedImpact,
+    recommendation: action,
+    priority: mapRecommendationPriority(recommendation.priority),
+    confidence,
+    confidenceReason: confidence < 80
+      ? `${recommendation.confidenceReason} Additional data is required before making this recommendation.`
+      : recommendation.confidenceReason,
+    measurement: recommendation.measurement,
+    dataTimestamp: recommendation.dataTimestamp,
+    businessImpactScore: calculateBusinessImpactScore(recommendation),
+    urgency: mapRecommendationUrgency(recommendation),
+  };
+}
+
+function mapRecommendationCategory(category: RecommendationCategory): PrnIntelligenceEngineRecommendation["category"] {
+  switch (category) {
+    case "sales":
+      return "Sales";
+    case "revenue":
+      return "Revenue";
+    case "operations":
+      return "Operations";
+    case "risk":
+      return "Risk";
+  }
+}
+
+function mapRecommendationPriority(priority: RecommendationPriority): PrnIntelligenceEngineRecommendation["priority"] {
+  switch (priority) {
+    case "critical":
+      return "Critical";
+    case "high":
+      return "High";
+    case "medium":
+      return "Medium";
+    case "low":
+      return "Low";
+  }
+}
+
+function mapRecommendationUrgency(recommendation: ExecutiveRecommendation): IntelligenceUrgency {
+  if (recommendation.priority === "critical") return "Immediate";
+  if (recommendation.priority === "high") return "This Week";
+  if (recommendation.priority === "medium") return "This Month";
+  return "Monitor";
+}
+
+function calculateBusinessImpactScore(recommendation: ExecutiveRecommendation) {
+  const priorityBase = { critical: 95, high: 82, medium: 62, low: 35 }[recommendation.priority];
+  const confidenceAdjustment = Math.round((recommendation.confidence - 80) / 5);
+  return clampScore(priorityBase + confidenceAdjustment);
+}
+
+function buildIntelligenceExecutiveSummary(recommendations: PrnIntelligenceEngineRecommendation[], liveData: Pick<PrnLiveData, "metrics" | "lastSync">) {
+  if (recommendations.length === 0) {
+    return "Insufficient verified GoHighLevel data is available for an executive recommendation.";
+  }
+
+  const top = recommendations[0];
+  return [
+    `EEOS analyzed ${liveData.metrics.totalContacts} contacts and ${liveData.metrics.opportunities} opportunities from verified GoHighLevel data`,
+    `${stripTerminalPunctuation(top.observation)}; ${stripTerminalPunctuation(top.recommendation)}`,
+    `Top urgency is ${top.urgency} with ${top.confidence}% confidence`,
+  ].join(". ").concat(".");
 }
 
 export function calculateRecommendationConfidence(liveData: Pick<PrnLiveData, "metrics" | "endpointHealth" | "lastSync" | "records">) {
@@ -1243,6 +1416,14 @@ function numericEvidenceValue(insight: B2BInsight, metric: string) {
 
 function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "unknown";
+}
+
+function stripTerminalPunctuation(value: string) {
+  return value.replace(/[.!?]+$/g, "");
+}
+
+function clampScore(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 function formatUsd(value: number) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildB2BIntelligence, buildC2BIntelligence, buildExecutiveRecommendations, calculateB2BConfidence, calculateC2BConfidence, calculateRecommendationConfidence, isStale } from "./prn-private-ghl";
+import { buildB2BIntelligence, buildC2BIntelligence, buildExecutiveRecommendations, buildPrnIntelligenceEngine, calculateB2BConfidence, calculateC2BConfidence, calculateRecommendationConfidence, isStale } from "./prn-private-ghl";
 
 function liveData(overrides: Record<string, unknown> = {}) {
   const lastSync = new Date().toISOString();
@@ -32,6 +32,56 @@ function liveData(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+describe("PRN Intelligence Engine", () => {
+  it("converts verified live GoHighLevel data into explainable executive decisions", () => {
+    const intelligence = buildPrnIntelligenceEngine({
+      ok: true,
+      source: "Live PRN Staffers GoHighLevel",
+      division: "PRN Staffers South Carolina",
+      ...liveData(),
+    });
+
+    expect(intelligence.ok).toBe(true);
+    expect(intelligence.executiveSummary.split(".").filter(Boolean).length).toBeLessThanOrEqual(3);
+    expect(intelligence.topRecommendation).not.toBeNull();
+    expect(intelligence.dashboard.businessImpact).toBeGreaterThanOrEqual(0);
+    expect(intelligence.dashboard.businessImpact).toBeLessThanOrEqual(100);
+    expect(intelligence.recommendations.every((item) => item.evidence.every((entry) => entry.source === "GoHighLevel"))).toBe(true);
+    expect(intelligence.recommendations.every((item) => item.measurement.length > 0)).toBe(true);
+  });
+
+  it("requires more data before recommending low-confidence action", () => {
+    const intelligence = buildPrnIntelligenceEngine({
+      ok: false,
+      source: "Live PRN Staffers GoHighLevel",
+      division: "PRN Staffers South Carolina",
+      ...liveData({
+        metrics: {
+          totalContacts: 0,
+          users: 0,
+          opportunities: 0,
+          openOpportunities: 0,
+          pipelineValue: 0,
+          healthScore: 50,
+        },
+        endpointHealth: {
+          location: { ok: false, status: 401, path: "/locations/location-id", responseTimeMs: 10 },
+          users: { ok: false, status: 401, path: "/users/", responseTimeMs: 10 },
+          contacts: { ok: false, status: 401, path: "/contacts/", responseTimeMs: 10 },
+          opportunities: { ok: false, status: 401, path: "/opportunities/search", responseTimeMs: 10 },
+        },
+        records: {
+          contacts: [],
+          users: [],
+          opportunities: [],
+        },
+      }),
+    });
+
+    expect(intelligence.recommendations.some((item) => item.recommendation === "Additional data is required before making this recommendation.")).toBe(true);
+  });
+});
 
 describe("PRN executive recommendations", () => {
   it("generates explainable recommendations from verified live data", () => {
