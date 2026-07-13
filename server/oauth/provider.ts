@@ -22,7 +22,7 @@ type AuthorizationRequest = {
 
 const issuerFallback = "https://eeos-platform-production.up.railway.app";
 const ephemeralKeyPair = generateKeyPairSync("rsa", { modulusLength: 2048 });
-const oauthClientRegistrationTimeoutMs = 8_000;
+const oauthClientRegistrationTimeoutMs = 5_000;
 
 export function sendOpenIdConfiguration(req: Request, res: { json: (body: unknown) => void }) {
   const issuer = getIssuer(req);
@@ -91,21 +91,17 @@ export function registerOAuthProviderRoutes(app: Express) {
       const normalizedScopes = scopes.length > 0 ? scopes : ["openid", "profile", "email", "ghl.marketplace"];
 
       logOAuthClientRegistration("storage_check_started", { requestId });
-      await withTimeout(ensureOAuthProviderStorage(), oauthClientRegistrationTimeoutMs, "OAuth provider storage check timed out.");
+      await ensureOAuthProviderStorage(requestId);
       logOAuthClientRegistration("storage_check_completed", { requestId });
 
       logOAuthClientRegistration("client_create_started", { requestId, clientId, redirectUriCount: redirectUris.length, scopeCount: normalizedScopes.length });
-      await withTimeout(
-        createOAuthClient({
-          clientId,
-          clientSecretHash: hashSecret(generated.clientSecret),
-          name,
-          redirectUris,
-          scopes: normalizedScopes,
-        }),
-        oauthClientRegistrationTimeoutMs,
-        "OAuth client creation timed out.",
-      );
+      await createOAuthClient({
+        clientId,
+        clientSecretHash: hashSecret(generated.clientSecret),
+        name,
+        redirectUris,
+        scopes: normalizedScopes,
+      }, requestId);
       logOAuthClientRegistration("client_create_completed", { requestId, clientId });
 
       res.status(201).json({
@@ -116,12 +112,15 @@ export function registerOAuthProviderRoutes(app: Express) {
     } catch (error) {
       logOAuthClientRegistration("failed", {
         requestId,
-        error: error instanceof Error ? error.message : "Unknown OAuth client registration error.",
+        error: sanitizeLogError(error),
       });
-      res.status(503).json({
-        error: "temporarily_unavailable",
-        error_description: "OAuth client registration failed.",
-      });
+
+      if (!res.headersSent) {
+        res.status(503).json({
+          error: "temporarily_unavailable",
+          error_description: "OAuth client registration failed.",
+        });
+      }
     }
   });
 
@@ -288,72 +287,104 @@ function getIssuer(req: Request) {
   return `${protocol}://${host}`.replace(/\/$/, "");
 }
 
-async function createOAuthClient(client: OAuthClient) {
-  await withDatabase(async (db) => {
-    await db.query(
-      `
-        insert into eeos_oauth_clients (
-          client_id,
-          client_secret_hash,
-          name,
-          redirect_uris,
-          scopes,
-          created_at,
-          updated_at
-        )
-        values ($1, $2, $3, $4::jsonb, $5::jsonb, now(), now())
-        on conflict (client_id) do update set
-          client_secret_hash = excluded.client_secret_hash,
-          name = excluded.name,
-          redirect_uris = excluded.redirect_uris,
-          scopes = excluded.scopes,
-          updated_at = now()
-      `,
-      [client.clientId, client.clientSecretHash, client.name, JSON.stringify(client.redirectUris), JSON.stringify(client.scopes)],
-    );
-  });
+async function createOAuthClient(client: OAuthClient, requestId?: string) {
+  await withTimeout(
+    withDatabase(async (db) => {
+      await runOAuthStorageStep("insert_oauth_client", requestId, () =>
+        db.query(
+          `
+            insert into eeos_oauth_clients (
+              client_id,
+              client_secret_hash,
+              name,
+              redirect_uris,
+              scopes,
+              created_at,
+              updated_at
+            )
+            values ($1, $2, $3, $4::jsonb, $5::jsonb, now(), now())
+            on conflict (client_id) do update set
+              client_secret_hash = excluded.client_secret_hash,
+              name = excluded.name,
+              redirect_uris = excluded.redirect_uris,
+              scopes = excluded.scopes,
+              updated_at = now()
+          `,
+          [client.clientId, client.clientSecretHash, client.name, JSON.stringify(client.redirectUris), JSON.stringify(client.scopes)],
+        ),
+      );
+    }),
+    oauthClientRegistrationTimeoutMs,
+    "OAuth client creation timed out.",
+  );
 }
 
-async function ensureOAuthProviderStorage() {
-  await withDatabase(async (db) => {
-    await db.query("select 1 as ok");
-    await db.query(`
-      create table if not exists eeos_oauth_clients (
-        id bigserial primary key,
-        client_id text not null unique,
-        client_secret_hash text not null,
-        name text not null,
-        redirect_uris jsonb not null default '[]'::jsonb,
-        scopes jsonb not null default '[]'::jsonb,
-        created_at timestamptz not null default now(),
-        updated_at timestamptz not null default now(),
-        disabled_at timestamptz
-      )
-    `);
-    await db.query(`
-      create index if not exists eeos_oauth_clients_active_idx
-        on eeos_oauth_clients (client_id)
-        where disabled_at is null
-    `);
-    await db.query(`
-      create table if not exists eeos_oauth_authorization_codes (
-        id bigserial primary key,
-        code_hash text not null unique,
-        client_id text not null references eeos_oauth_clients (client_id) on delete cascade,
-        redirect_uri text not null,
-        code_challenge text not null,
-        scope text not null,
-        created_at timestamptz not null default now(),
-        expires_at timestamptz not null,
-        consumed_at timestamptz
-      )
-    `);
-    await db.query(`
-      create index if not exists eeos_oauth_authorization_codes_client_idx
-        on eeos_oauth_authorization_codes (client_id, expires_at)
-        where consumed_at is null
-    `);
-  });
+async function ensureOAuthProviderStorage(requestId?: string) {
+  await withTimeout(
+    withDatabase(async (db) => {
+      await runOAuthStorageStep("select_1", requestId, () => db.query("select 1 as ok"));
+      await runOAuthStorageStep("create_table_eeos_oauth_clients", requestId, () =>
+        db.query(`
+          create table if not exists eeos_oauth_clients (
+            id bigserial primary key,
+            client_id text not null unique,
+            client_secret_hash text not null,
+            name text not null,
+            redirect_uris jsonb not null default '[]'::jsonb,
+            scopes jsonb not null default '[]'::jsonb,
+            created_at timestamptz not null default now(),
+            updated_at timestamptz not null default now(),
+            disabled_at timestamptz
+          )
+        `),
+      );
+      await runOAuthStorageStep("create_index_eeos_oauth_clients_active", requestId, () =>
+        db.query(`
+          create index if not exists eeos_oauth_clients_active_idx
+            on eeos_oauth_clients (client_id)
+            where disabled_at is null
+        `),
+      );
+      await runOAuthStorageStep("create_table_eeos_oauth_authorization_codes", requestId, () =>
+        db.query(`
+          create table if not exists eeos_oauth_authorization_codes (
+            id bigserial primary key,
+            code_hash text not null unique,
+            client_id text not null references eeos_oauth_clients (client_id) on delete cascade,
+            redirect_uri text not null,
+            code_challenge text not null,
+            scope text not null,
+            created_at timestamptz not null default now(),
+            expires_at timestamptz not null,
+            consumed_at timestamptz
+          )
+        `),
+      );
+      await runOAuthStorageStep("create_index_eeos_oauth_authorization_codes_client", requestId, () =>
+        db.query(`
+          create index if not exists eeos_oauth_authorization_codes_client_idx
+            on eeos_oauth_authorization_codes (client_id, expires_at)
+            where consumed_at is null
+        `),
+      );
+    }),
+    oauthClientRegistrationTimeoutMs,
+    "OAuth provider storage check timed out.",
+  );
+}
+
+async function runOAuthStorageStep<T>(step: string, requestId: string | undefined, operation: () => Promise<T>) {
+  const startedAt = Date.now();
+  logOAuthClientRegistration("sql_step_started", { requestId, step });
+
+  try {
+    const result = await operation();
+    logOAuthClientRegistration("sql_step_completed", { requestId, step, durationMs: Date.now() - startedAt });
+    return result;
+  } catch (error) {
+    logOAuthClientRegistration("sql_step_failed", { requestId, step, durationMs: Date.now() - startedAt, error: sanitizeLogError(error) });
+    throw error;
+  }
 }
 
 async function readOAuthClient(clientId: string) {
@@ -472,6 +503,14 @@ function base64UrlJson(value: unknown) {
 
 function logOAuthClientRegistration(event: string, fields: Record<string, unknown> = {}) {
   console.log(JSON.stringify({ level: "info", component: "oauth_provider", event: `oauth_client_registration.${event}`, ...fields }));
+}
+
+function sanitizeLogError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "Unknown error.";
+  }
+
+  return error.message.replace(/postgres(?:ql)?:\/\/[^@\s]+@/gi, "postgres://[redacted]@");
 }
 
 async function withTimeout<T>(operation: Promise<T>, timeoutMs: number, message: string) {

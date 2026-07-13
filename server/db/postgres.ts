@@ -38,14 +38,31 @@ export function createDatabasePool(env: NodeJS.ProcessEnv = process.env) {
   }
 
   const sslEnabled = readBoolean(env.DATABASE_SSL, true);
+  const connectionTimeoutMillis = readNumber(env.DATABASE_CONNECTION_TIMEOUT_MS, 5_000);
+  const queryTimeoutMillis = readNumber(env.DATABASE_QUERY_TIMEOUT_MS, 5_000);
 
-  return new Pool({
+  const createdPool = new Pool({
     connectionString: env.DATABASE_URL,
     max: readNumber(env.DATABASE_POOL_MAX, 10),
     idleTimeoutMillis: readNumber(env.DATABASE_IDLE_TIMEOUT_MS, 30_000),
-    connectionTimeoutMillis: readNumber(env.DATABASE_CONNECTION_TIMEOUT_MS, 10_000),
+    connectionTimeoutMillis,
+    query_timeout: queryTimeoutMillis,
+    statement_timeout: queryTimeoutMillis,
     ssl: sslEnabled ? { rejectUnauthorized: readBoolean(env.DATABASE_SSL_REJECT_UNAUTHORIZED, false) } : false,
   });
+
+  createdPool.on("error", (error) => {
+    console.error(
+      JSON.stringify({
+        level: "error",
+        component: "database",
+        event: "postgres.pool_error",
+        error: sanitizeDatabaseError(error),
+      }),
+    );
+  });
+
+  return createdPool;
 }
 
 export function getDatabasePool() {
@@ -140,4 +157,12 @@ function readBoolean(value: string | undefined, fallback: boolean) {
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function sanitizeDatabaseError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "Unknown database error.";
+  }
+
+  return error.message.replace(/postgres(?:ql)?:\/\/[^@\s]+@/gi, "postgres://[redacted]@");
 }
