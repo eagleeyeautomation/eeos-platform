@@ -139,7 +139,7 @@ export function registerOAuthProviderRoutes(app: Express) {
   });
 
   app.get("/oauth/authorize", (req, res) => {
-    void handleAuthorizationRequest(req, res, false);
+    void handleAuthorizationRequest(req, res, true);
   });
 
   app.post("/oauth/authorize", (req, res) => {
