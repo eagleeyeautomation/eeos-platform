@@ -25,9 +25,17 @@ type RefreshTokenRecord = {
   scope: string;
 };
 
+type AccessTokenRecord = {
+  clientId: string;
+  subject: string;
+  scope: string;
+  expiresAt: Date;
+};
+
 const issuerFallback = "https://eeos-platform-production.up.railway.app";
 const ephemeralKeyPair = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const oauthClientRegistrationTimeoutMs = 5_000;
+const oauthAccessTokenExpiresIn = 3_600;
 
 export function sendOpenIdConfiguration(req: Request, res: { json: (body: unknown) => void }) {
   const issuer = getIssuer(req);
@@ -177,13 +185,20 @@ export function registerOAuthProviderRoutes(app: Express) {
 
         const accessToken = signJwt({ sub: subject, aud: client.clientId, scope: authorizationCode.scope, typ: "access_token" }, req);
         const idToken = signJwt({ sub: subject, aud: client.clientId, scope: authorizationCode.scope, typ: "id_token" }, req);
+        await storeAccessToken({
+          tokenHash: hashSecret(accessToken),
+          clientId: client.clientId,
+          subject,
+          scope: authorizationCode.scope,
+          expiresIn: oauthAccessTokenExpiresIn,
+        });
 
         res.json({
           access_token: accessToken,
           id_token: idToken,
           refresh_token: refreshToken,
           token_type: "Bearer",
-          expires_in: 3600,
+          expires_in: oauthAccessTokenExpiresIn,
           scope: authorizationCode.scope,
         });
         return;
@@ -210,12 +225,19 @@ export function registerOAuthProviderRoutes(app: Express) {
         }
 
         const accessToken = signJwt({ sub: rotated.subject, aud: client.clientId, scope: rotated.scope, typ: "access_token" }, req);
+        await storeAccessToken({
+          tokenHash: hashSecret(accessToken),
+          clientId: client.clientId,
+          subject: rotated.subject,
+          scope: rotated.scope,
+          expiresIn: oauthAccessTokenExpiresIn,
+        });
 
         res.json({
           access_token: accessToken,
           refresh_token: nextRefreshToken,
           token_type: "Bearer",
-          expires_in: 3600,
+          expires_in: oauthAccessTokenExpiresIn,
           scope: rotated.scope,
         });
         return;
@@ -236,20 +258,61 @@ export function registerOAuthProviderRoutes(app: Express) {
   });
 
   app.get("/oauth/userinfo", (req, res) => {
-    const authorization = req.header("authorization") || "";
+    void handleUserInfoRequest(req, res);
+  });
 
-    if (!authorization.startsWith("Bearer ")) {
+  app.post("/oauth/userinfo", (req, res) => {
+    void handleUserInfoRequest(req, res);
+  });
+}
+
+async function handleUserInfoRequest(req: Request, res: any) {
+  const requestId = randomBytes(8).toString("hex");
+  const authorization = req.header("authorization") || "";
+  const bearerToken = parseBearerToken(authorization);
+
+  logOAuthUserInfo("started", {
+    requestId,
+    method: req.method,
+    hasAuthorizationHeader: Boolean(authorization),
+    authorizationScheme: authorization.split(/\s+/)[0] || null,
+    tokenHash: bearerToken ? hashSecret(bearerToken) : null,
+    tokenLength: bearerToken?.length || 0,
+  });
+
+  if (!bearerToken) {
+    logOAuthUserInfo("rejected", { requestId, reason: "missing_bearer_token" });
+    res.status(401).json({ error: "invalid_token" });
+    return;
+  }
+
+  try {
+    const accessToken = await readAccessToken(hashSecret(bearerToken));
+
+    logOAuthUserInfo("token_lookup_completed", {
+      requestId,
+      found: Boolean(accessToken),
+      clientId: accessToken?.clientId || null,
+      subject: accessToken?.subject || null,
+      expiresAt: accessToken?.expiresAt?.toISOString?.() || null,
+    });
+
+    if (!accessToken) {
+      logOAuthUserInfo("rejected", { requestId, reason: "token_not_found_or_expired" });
       res.status(401).json({ error: "invalid_token" });
       return;
     }
 
     res.json({
-      sub: "eeos-marketplace-user",
+      sub: accessToken.subject,
       name: "EEOS Marketplace User",
       email: "marketplace@eeos.com",
       email_verified: true,
     });
-  });
+  } catch (error) {
+    logOAuthUserInfo("failed", { requestId, error: sanitizeLogError(error) });
+    res.status(503).json({ error: "temporarily_unavailable" });
+  }
 }
 
 async function handleAuthorizationRequest(req: Request, res: any, consentGranted: boolean) {
@@ -687,6 +750,7 @@ async function ensureOAuthProviderStorage(requestId?: string) {
             where revoked_at is null
         `),
       );
+      await ensureAccessTokenStorage(requestId);
     }),
     oauthClientRegistrationTimeoutMs,
     "OAuth provider storage check timed out.",
@@ -968,6 +1032,97 @@ async function storeRefreshToken(input: {
   });
 }
 
+async function ensureAccessTokenStorage(requestId?: string) {
+  await runOAuthAuthorizeStorageStep("create_access_tokens_table", requestId, () =>
+    withDatabase((db) =>
+      db.query(`
+        create table if not exists eeos_oauth_access_tokens (
+          id bigserial primary key,
+          token_hash text not null unique,
+          client_id text not null,
+          subject text not null,
+          scope text not null,
+          created_at timestamptz not null default now(),
+          expires_at timestamptz not null,
+          revoked_at timestamptz
+        )
+      `),
+    ),
+  );
+  await runOAuthAuthorizeStorageStep("create_access_tokens_active_index", requestId, () =>
+    withDatabase((db) =>
+      db.query(`
+        create index if not exists eeos_oauth_access_tokens_active_idx
+          on eeos_oauth_access_tokens (token_hash, expires_at)
+          where revoked_at is null
+      `),
+    ),
+  );
+}
+
+async function storeAccessToken(input: {
+  tokenHash: string;
+  clientId: string;
+  subject: string;
+  scope: string;
+  expiresIn: number;
+}) {
+  await ensureAccessTokenStorage();
+  await withDatabase(async (db) => {
+    await db.query(
+      `
+        insert into eeos_oauth_access_tokens (
+          token_hash,
+          client_id,
+          subject,
+          scope,
+          expires_at,
+          created_at
+        )
+        values ($1, $2, $3, $4, now() + ($5::int * interval '1 second'), now())
+        on conflict (token_hash) do update set
+          client_id = excluded.client_id,
+          subject = excluded.subject,
+          scope = excluded.scope,
+          expires_at = excluded.expires_at,
+          revoked_at = null
+      `,
+      [input.tokenHash, input.clientId, input.subject, input.scope, input.expiresIn],
+    );
+  });
+}
+
+async function readAccessToken(tokenHash: string) {
+  await ensureAccessTokenStorage();
+  return withDatabase(async (db) => {
+    const result = await db.query<{
+      client_id: string;
+      subject: string;
+      scope: string;
+      expires_at: Date;
+    }>(
+      `
+        select client_id, subject, scope, expires_at
+        from eeos_oauth_access_tokens
+        where token_hash = $1
+          and revoked_at is null
+          and expires_at > now()
+      `,
+      [tokenHash],
+    );
+    const row = result.rows[0];
+
+    return row
+      ? {
+          clientId: row.client_id,
+          subject: row.subject,
+          scope: row.scope,
+          expiresAt: row.expires_at,
+        } satisfies AccessTokenRecord
+      : null;
+  });
+}
+
 async function rotateRefreshToken(input: {
   currentTokenHash: string;
   nextTokenHash: string;
@@ -1062,7 +1217,7 @@ async function consumeAuthorizationCode(codeHash: string, clientId: string) {
 function parseClientCredentials(req: Request) {
   const authorization = req.header("authorization");
 
-  if (authorization?.startsWith("Basic ")) {
+  if (authorization?.toLowerCase().startsWith("basic ")) {
     const [clientId = "", clientSecret = ""] = Buffer.from(authorization.slice("Basic ".length), "base64").toString("utf8").split(":");
 
     return { clientId, clientSecret };
@@ -1072,6 +1227,12 @@ function parseClientCredentials(req: Request) {
     clientId: readString(req.body?.client_id) || "",
     clientSecret: readString(req.body?.client_secret) || "",
   };
+}
+
+function parseBearerToken(authorization: string) {
+  const [scheme = "", token = ""] = authorization.trim().split(/\s+/, 2);
+
+  return scheme.toLowerCase() === "bearer" && token ? token : null;
 }
 
 function hashSecret(secret: string) {
@@ -1103,6 +1264,10 @@ function logOAuthClientRegistration(event: string, fields: Record<string, unknow
 
 function logOAuthAuthorize(event: string, fields: Record<string, unknown> = {}) {
   console.log(JSON.stringify({ level: "info", component: "oauth_provider", event: `oauth_authorize.${event}`, ...fields }));
+}
+
+function logOAuthUserInfo(event: string, fields: Record<string, unknown> = {}) {
+  console.log(JSON.stringify({ level: "info", component: "oauth_provider", event: `oauth_userinfo.${event}`, ...fields }));
 }
 
 function sanitizeLogError(error: unknown) {
