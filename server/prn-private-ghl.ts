@@ -7,9 +7,17 @@ type GhlFetchResult = {
   data: unknown;
   errorSummary?: string;
   responseTimeMs: number;
+  attempts?: GhlFetchAttempt[];
 };
 
 type GhlRecord = Record<string, unknown>;
+
+type GhlFetchAttempt = {
+  ok: boolean;
+  status: number;
+  path: string;
+  errorSummary?: string;
+};
 
 const ghlBaseUrl = "https://services.leadconnectorhq.com";
 
@@ -134,16 +142,18 @@ function createPrivateGhlClient(token: string) {
   return {
     async getFirstOk(paths: string[], operation: string) {
       let lastResult: GhlFetchResult | null = null;
+      const attempts: GhlFetchAttempt[] = [];
 
       for (const path of paths) {
         const result = await request(path, operation);
+        attempts.push(summarizeAttempt(result));
         if (result.ok) {
-          return result;
+          return { ...result, attempts };
         }
         lastResult = result;
       }
 
-      return lastResult || { ok: false, status: 500, path: paths[0] || "", data: {}, responseTimeMs: 0 };
+      return lastResult ? { ...lastResult, attempts } : { ok: false, status: 500, path: paths[0] || "", data: {}, responseTimeMs: 0, attempts };
     },
   };
 }
@@ -206,6 +216,16 @@ function sanitizeFetchResult(result: GhlFetchResult) {
     path: result.path,
     errorSummary: result.errorSummary,
     responseTimeMs: result.responseTimeMs,
+    attempts: result.attempts,
+  };
+}
+
+function summarizeAttempt(result: GhlFetchResult): GhlFetchAttempt {
+  return {
+    ok: result.ok,
+    status: result.status,
+    path: result.path,
+    errorSummary: result.errorSummary,
   };
 }
 
