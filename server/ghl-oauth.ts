@@ -156,25 +156,52 @@ function encryptTokenPayload(payload: Record<string, unknown>) {
   });
 }
 
-function decodeStatePayload(state: string) {
-  const stateBody = state.includes(".") ? state.slice(0, state.indexOf(".")) : state;
-  const decoded = JSON.parse(Buffer.from(stateBody, "base64url").toString()) as Record<string, unknown>;
+type GhlOAuthStateValidation =
+  | { source: "eeos"; tenantId: string; validated: true }
+  | { source: "marketplace"; tenantId: string; validated: false }
+  | { source: "absent"; tenantId: string; validated: false };
 
-  return {
-    tenantId: typeof decoded.tenantId === "string" ? decoded.tenantId : "unknown",
-    nonce: typeof decoded.nonce === "string" ? decoded.nonce : undefined,
-  };
+function tryDecodeEeosStatePayload(state: string) {
+  const stateBody = state.includes(".") ? state.slice(0, state.indexOf(".")) : state;
+
+  try {
+    const decoded = JSON.parse(Buffer.from(stateBody, "base64url").toString()) as Record<string, unknown>;
+    const tenantId = typeof decoded.tenantId === "string" ? decoded.tenantId : "";
+
+    if (!tenantId) {
+      return null;
+    }
+
+    return { tenantId };
+  } catch {
+    return null;
+  }
 }
 
-async function validateOAuthState(state: string) {
-  const payload = decodeStatePayload(state);
+async function validateOptionalOAuthState(state: string | undefined): Promise<GhlOAuthStateValidation> {
+  if (!state) {
+    return { source: "absent", tenantId: "ghl-marketplace-install", validated: false };
+  }
+
+  const payload = tryDecodeEeosStatePayload(state);
+
+  if (!payload) {
+    return { source: "marketplace", tenantId: "ghl-marketplace-install", validated: false };
+  }
+
   const consumed = await consumeOAuthState(state);
 
   if (!consumed) {
     throw new Error("GoHighLevel OAuth state is expired, missing, or already used.");
   }
 
-  return payload;
+  return { source: "eeos", tenantId: payload.tenantId, validated: true };
+}
+
+function buildProviderErrorMessage(error: string, errorDescription: string | undefined) {
+  const details = errorDescription ? `: ${errorDescription}` : "";
+
+  return `GoHighLevel returned OAuth error "${error}"${details}. The authorization was not approved by GoHighLevel, the installing user, or the Marketplace app configuration.`;
 }
 
 function renderSuccessPage(res: Response, locationId: string) {
@@ -322,24 +349,35 @@ export function registerGhlOAuthRoutes(app: Express) {
       hasCode: Boolean(code),
       hasState: Boolean(state),
       hasError: Boolean(error),
+      hasErrorDescription: Boolean(errorDescription),
     });
 
     if (error) {
-      logGhlOAuth("callback_failed", { reason: "provider_error", error, errorDescription });
-      renderErrorPage(res, 400, errorDescription || error);
+      const message = buildProviderErrorMessage(error, errorDescription);
+
+      logGhlOAuth("callback_failed", {
+        reason: "provider_error",
+        error,
+        hasErrorDescription: Boolean(errorDescription),
+      });
+      renderErrorPage(res, 400, message);
       return;
     }
 
-    if (!code || !state) {
+    if (!code) {
       logGhlOAuth("callback_failed", { reason: "missing_params" });
-      renderErrorPage(res, 400, "Missing GoHighLevel OAuth code or state.");
+      renderErrorPage(res, 400, "Missing GoHighLevel OAuth authorization code.");
       return;
     }
 
     try {
-      const statePayload = await validateOAuthState(state);
-      const tenantId = statePayload.tenantId;
-      logGhlOAuth("state_validated", { tenantId });
+      const stateValidation = await validateOptionalOAuthState(state);
+      const tenantId = stateValidation.tenantId;
+      logGhlOAuth("state_validated", {
+        tenantId,
+        stateSource: stateValidation.source,
+        validated: stateValidation.validated,
+      });
 
       const redirectUri = getApprovedRedirectUri();
       logGhlOAuth("token_exchange_started", { tenantId, redirectUri });
