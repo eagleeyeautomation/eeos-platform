@@ -23,25 +23,27 @@ type AuthorizationRequest = {
 const issuerFallback = "https://eeos-platform-production.up.railway.app";
 const ephemeralKeyPair = generateKeyPairSync("rsa", { modulusLength: 2048 });
 
-export function registerOAuthProviderRoutes(app: Express) {
-  app.get("/.well-known/openid-configuration", (req, res) => {
-    const issuer = getIssuer(req);
+export function sendOpenIdConfiguration(req: Request, res: { json: (body: unknown) => void }) {
+  const issuer = getIssuer(req);
 
-    res.json({
-      issuer,
-      authorization_endpoint: `${issuer}/oauth/authorize`,
-      token_endpoint: `${issuer}/oauth/token`,
-      userinfo_endpoint: `${issuer}/oauth/userinfo`,
-      jwks_uri: `${issuer}/oauth/jwks.json`,
-      response_types_supported: ["code"],
-      grant_types_supported: ["authorization_code"],
-      subject_types_supported: ["public"],
-      id_token_signing_alg_values_supported: ["RS256"],
-      token_endpoint_auth_methods_supported: ["client_secret_post", "client_secret_basic"],
-      code_challenge_methods_supported: ["S256"],
-      scopes_supported: ["openid", "profile", "email", "ghl.marketplace"],
-    });
+  res.json({
+    issuer,
+    authorization_endpoint: `${issuer}/oauth/authorize`,
+    token_endpoint: `${issuer}/oauth/token`,
+    userinfo_endpoint: `${issuer}/oauth/userinfo`,
+    jwks_uri: `${issuer}/oauth/jwks.json`,
+    response_types_supported: ["code"],
+    grant_types_supported: ["authorization_code"],
+    subject_types_supported: ["public"],
+    id_token_signing_alg_values_supported: ["RS256"],
+    token_endpoint_auth_methods_supported: ["client_secret_post", "client_secret_basic"],
+    code_challenge_methods_supported: ["S256"],
+    scopes_supported: ["openid", "profile", "email", "ghl.marketplace"],
   });
+}
+
+export function registerOAuthProviderRoutes(app: Express) {
+  app.get("/.well-known/openid-configuration", sendOpenIdConfiguration);
 
   app.get("/.well-known/jwks.json", (_req, res) => {
     res.json({ keys: [getPublicJwk()] });

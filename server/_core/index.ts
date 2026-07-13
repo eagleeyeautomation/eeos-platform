@@ -7,7 +7,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { registerGhlOAuthRoutes } from "../ghl-oauth";
 import { registerGhlWebhookRoutes } from "../ghl-webhook";
 import { registerGhlPitRoutes } from "../ghl-pit";
-import { registerOAuthProviderRoutes } from "../oauth/provider";
+import { registerOAuthProviderRoutes, sendOpenIdConfiguration } from "../oauth/provider";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -21,6 +21,8 @@ async function startServer() {
   // NOTE: GHL webhook route uses its own raw body parser for HMAC verification
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  app.get("/.well-known/openid-configuration", sendOpenIdConfiguration);
 
   // Register all routes
   registerStorageProxy(app);
