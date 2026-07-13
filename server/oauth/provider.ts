@@ -307,16 +307,12 @@ async function handleAuthorizationRequest(req: Request, res: any, consentGranted
 
     await continueAuthorization(req, res, request, client, requestId, consentGranted);
     } catch (error) {
-      const sanitizedError = sanitizeLogError(error);
       logOAuthAuthorize("failed", {
         requestId,
         clientId: request.client_id || null,
-        error: sanitizedError,
+        error: sanitizeLogError(error),
       });
-      res.status(503).json({
-        error: "temporarily_unavailable",
-        ...(req.header("x-eeos-debug") === "1" ? { error_description: sanitizedError } : {}),
-      });
+      res.status(503).json({ error: "temporarily_unavailable" });
     }
   }
 
@@ -825,15 +821,35 @@ async function reconcileOAuthClientId(input: { storedClientId: string; incomingC
       scopes: string[];
     }>(
       `
-        update eeos_oauth_clients
-        set client_id = $1,
-            redirect_uris = case
-              when redirect_uris @> $3::jsonb then redirect_uris
-              else redirect_uris || $3::jsonb
-            end,
-            updated_at = now()
+        insert into eeos_oauth_clients (
+          client_id,
+          client_secret_hash,
+          name,
+          redirect_uris,
+          scopes,
+          created_at,
+          updated_at
+        )
+        select
+          $1,
+          client_secret_hash,
+          name,
+          case
+            when redirect_uris @> $3::jsonb then redirect_uris
+            else redirect_uris || $3::jsonb
+          end,
+          scopes,
+          now(),
+          now()
+        from eeos_oauth_clients
         where client_id = $2
           and disabled_at is null
+        on conflict (client_id) do update set
+          client_secret_hash = excluded.client_secret_hash,
+          name = excluded.name,
+          redirect_uris = excluded.redirect_uris,
+          scopes = excluded.scopes,
+            updated_at = now()
         returning client_id, client_secret_hash, name, redirect_uris, scopes
       `,
       [input.incomingClientId, input.storedClientId, JSON.stringify([input.redirectUri])],
