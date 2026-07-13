@@ -135,30 +135,49 @@ type B2BIntelligenceResponse = {
   error?: string;
 };
 
+type C2BIntelligenceResponse = {
+  ok: boolean;
+  consumerDemandSummary: string;
+  serviceInterest: B2BInsight[];
+  geographicDemand: B2BInsight[];
+  journeyDropOffs: B2BInsight[];
+  responseTimeInsights: B2BInsight[];
+  conversionSignals: B2BInsight[];
+  recommendedActions: B2BInsight[];
+  confidence: number;
+  dataTimestamp: string;
+  error?: string;
+};
+
 export default function ExecutiveDashboard() {
   const [data, setData] = useState<PrnDashboardResponse | null>(null);
   const [recommendationData, setRecommendationData] = useState<ExecutiveRecommendationResponse | null>(null);
   const [b2bData, setB2bData] = useState<B2BIntelligenceResponse | null>(null);
+  const [c2bData, setC2bData] = useState<C2BIntelligenceResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [recommendationError, setRecommendationError] = useState<string | null>(null);
   const [b2bError, setB2bError] = useState<string | null>(null);
+  const [c2bError, setC2bError] = useState<string | null>(null);
 
   async function loadDashboard() {
     setLoading(true);
     setError(null);
     setRecommendationError(null);
     setB2bError(null);
+    setC2bError(null);
 
     try {
-      const [dashboardResponse, recommendationResponse, b2bResponse] = await Promise.all([
+      const [dashboardResponse, recommendationResponse, b2bResponse, c2bResponse] = await Promise.all([
         fetch("/api/prn/gohighlevel/live-dashboard", { headers: { Accept: "application/json" } }),
         fetch("/api/prn/executive-recommendations", { headers: { Accept: "application/json" } }),
         fetch("/api/prn/b2b-intelligence", { headers: { Accept: "application/json" } }),
+        fetch("/api/prn/c2b-intelligence", { headers: { Accept: "application/json" } }),
       ]);
       const payload = (await dashboardResponse.json()) as PrnDashboardResponse;
       const recommendationPayload = (await recommendationResponse.json()) as ExecutiveRecommendationResponse;
       const b2bPayload = (await b2bResponse.json()) as B2BIntelligenceResponse;
+      const c2bPayload = (await c2bResponse.json()) as C2BIntelligenceResponse;
 
       if (!dashboardResponse.ok) {
         throw new Error(payload.error || `Dashboard request failed with HTTP ${dashboardResponse.status}`);
@@ -177,11 +196,18 @@ export default function ExecutiveDashboard() {
         setB2bData(null);
         setB2bError(b2bPayload.error || `B2B intelligence request failed with HTTP ${b2bResponse.status}`);
       }
+      if (c2bResponse.ok || c2bResponse.status === 207) {
+        setC2bData(c2bPayload);
+      } else {
+        setC2bData(null);
+        setC2bError(c2bPayload.error || `C2B intelligence request failed with HTTP ${c2bResponse.status}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load live PRN Staffers data.");
       setData(null);
       setRecommendationData(null);
       setB2bData(null);
+      setC2bData(null);
     } finally {
       setLoading(false);
     }
@@ -273,6 +299,8 @@ export default function ExecutiveDashboard() {
             />
 
             <B2BIntelligenceSection response={b2bData} error={b2bError} />
+
+            <C2BIntelligenceSection response={c2bData} error={c2bError} />
 
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {cards.map((card) => (
@@ -553,6 +581,71 @@ function insufficientB2BInsight(label: string): B2BInsight {
     label,
     observation: "Insufficient data.",
     evidence: [{ metric: "Available evidence", value: "Insufficient data", source: "GoHighLevel" }],
+  };
+}
+
+function C2BIntelligenceSection({ response, error }: {
+  response: C2BIntelligenceResponse | null;
+  error: string | null;
+}) {
+  const service = response?.serviceInterest.find((item) => !item.observation.startsWith("Insufficient data"));
+  const geography = response?.geographicDemand.find((item) => !item.observation.startsWith("Insufficient data"));
+  const movement = response?.conversionSignals.find((item) => !item.observation.startsWith("Insufficient data"));
+  const dropOff = response?.journeyDropOffs[0];
+  const action = response?.recommendedActions.find((item) => item.label === "Recommended customer-experience action") || response?.recommendedActions[0];
+  const items = response ? [
+    { label: "New consumer demand", insight: demandSummaryInsight(response), icon: Users },
+    { label: "Most requested service", insight: service || response.serviceInterest[0], icon: Activity },
+    { label: "Highest-demand location", insight: geography || response.geographicDemand[0], icon: MapPin },
+    { label: "Inquiry-to-opportunity movement", insight: movement || response.responseTimeInsights[0] || response.conversionSignals[0], icon: TrendingUp },
+    { label: "Customer journey drop-offs", insight: dropOff, icon: AlertTriangle },
+    { label: "Recommended customer-experience action", insight: action, icon: Target },
+  ] : [];
+
+  return (
+    <section className="rounded-lg border border-[#0EA5E9]/30 bg-[#061527] p-5 shadow-[0_24px_80px_rgba(14,165,233,0.06)]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#38BDF8]/35 bg-[#08233D] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#7DD3FC]">
+            <Users className="h-3.5 w-3.5" />
+            C2B Intelligence
+          </div>
+          <h2 className="mt-3 text-2xl font-semibold text-white">Consumer Activity Signals</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#B7C5D8]">
+            {response?.consumerDemandSummary || "Insufficient data."}
+          </p>
+        </div>
+        {response ? (
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#38BDF8]/35 bg-[#08233D] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#7DD3FC]">
+            Confidence {response.confidence}/100
+          </span>
+        ) : null}
+      </div>
+
+      {error ? (
+        <div className="mt-5 rounded-md border border-[#F59E0B]/35 bg-[#2A1C05] p-4 text-sm text-[#FBBF24]">{error}</div>
+      ) : !response ? (
+        <div className="mt-5 rounded-md border border-[#12314D] bg-[#050F1D] p-4 text-sm text-[#B7C5D8]">No C2B intelligence data available. Insufficient data.</div>
+      ) : (
+        <div className="mt-5 grid gap-3 lg:grid-cols-3">
+          {items.map((item) => (
+            <B2BInsightCard key={item.label} label={item.label} insight={item.insight} icon={item.icon} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function demandSummaryInsight(response: C2BIntelligenceResponse): B2BInsight {
+  return {
+    id: "consumer-demand-summary",
+    label: "New consumer demand",
+    observation: response.consumerDemandSummary,
+    evidence: [
+      { metric: "Consumer demand summary", value: response.consumerDemandSummary, source: "GoHighLevel" },
+      { metric: "Data timestamp", value: response.dataTimestamp, source: "GoHighLevel" },
+    ],
   };
 }
 

@@ -90,6 +90,18 @@ export type B2BIntelligence = {
   dataTimestamp: string;
 };
 
+export type C2BIntelligence = {
+  consumerDemandSummary: string;
+  serviceInterest: B2BInsight[];
+  geographicDemand: B2BInsight[];
+  journeyDropOffs: B2BInsight[];
+  responseTimeInsights: B2BInsight[];
+  conversionSignals: B2BInsight[];
+  recommendedActions: B2BInsight[];
+  confidence: number;
+  dataTimestamp: string;
+};
+
 const ghlBaseUrl = "https://services.leadconnectorhq.com";
 
 export function registerPrnPrivateGhlRoutes(app: Express) {
@@ -176,6 +188,41 @@ export function registerPrnPrivateGhlRoutes(app: Express) {
         confidence: 0,
         dataTimestamp: new Date().toISOString(),
         error: "Unable to generate B2B intelligence from live PRN Staffers GoHighLevel data.",
+      });
+    }
+  });
+
+  app.get("/api/prn/c2b-intelligence", async (_req, res) => {
+    try {
+      const liveData = await loadPrnLiveData();
+      const c2bIntelligence = buildC2BIntelligence(liveData);
+
+      res.status(liveData.ok ? 200 : 207).json({
+        ok: liveData.ok,
+        source: liveData.source,
+        division: liveData.division,
+        endpointHealth: liveData.endpointHealth,
+        ...c2bIntelligence,
+      });
+    } catch (error) {
+      console.error(JSON.stringify({
+        level: "error",
+        component: "prn_private_ghl",
+        event: "c2b_intelligence.failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      }));
+      res.status(502).json({
+        ok: false,
+        consumerDemandSummary: "Insufficient data.",
+        serviceInterest: [],
+        geographicDemand: [],
+        journeyDropOffs: [],
+        responseTimeInsights: [],
+        conversionSignals: [],
+        recommendedActions: [],
+        confidence: 0,
+        dataTimestamp: new Date().toISOString(),
+        error: "Unable to generate C2B intelligence from live PRN Staffers GoHighLevel data.",
       });
     }
   });
@@ -588,6 +635,221 @@ export function calculateB2BConfidence(liveData: Pick<PrnLiveData, "metrics" | "
   return Math.round(baseConfidence * 0.65 + fieldCompleteness * 35);
 }
 
+export function buildC2BIntelligence(liveData: Pick<PrnLiveData, "metrics" | "endpointHealth" | "lastSync" | "records">): C2BIntelligence {
+  const contacts = liveData.records.contacts;
+  const opportunities = liveData.records.opportunities;
+  const confidence = calculateC2BConfidence(liveData);
+  const serviceInterest = buildServiceInterest(contacts, opportunities);
+  const geographicDemand = buildGeographicDemand(contacts, opportunities);
+  const journeyDropOffs = buildJourneyDropOffs(contacts, opportunities);
+  const responseTimeInsights = buildResponseTimeInsights(contacts, opportunities);
+  const conversionSignals = buildConversionSignals(contacts, opportunities);
+  const recommendedActions = buildC2BActions({
+    serviceInterest,
+    geographicDemand,
+    journeyDropOffs,
+    responseTimeInsights,
+    conversionSignals,
+    contacts,
+    opportunities,
+  });
+
+  return {
+    consumerDemandSummary: contacts.length > 0 || opportunities.length > 0
+      ? `Consumer activity is based on ${contacts.length} verified GoHighLevel contact records and ${opportunities.length} opportunity records.`
+      : "Insufficient data.",
+    serviceInterest,
+    geographicDemand,
+    journeyDropOffs,
+    responseTimeInsights,
+    conversionSignals,
+    recommendedActions,
+    confidence,
+    dataTimestamp: liveData.lastSync,
+  };
+}
+
+export function calculateC2BConfidence(liveData: Pick<PrnLiveData, "metrics" | "endpointHealth" | "lastSync" | "records">) {
+  const baseConfidence = calculateRecommendationConfidence(liveData);
+  const contacts = liveData.records.contacts;
+  const opportunities = liveData.records.opportunities;
+  if (contacts.length === 0 && opportunities.length === 0) return Math.min(baseConfidence, 35);
+
+  const combined = [...contacts, ...opportunities];
+  const fieldChecks = [
+    contacts.some(readRecordDate),
+    opportunities.some(readRecordDate),
+    combined.some(readServiceInterest),
+    combined.some(readLocationLabel),
+    canMatchContactsToOpportunities(contacts, opportunities),
+    combined.some((record) => readTags(record).length > 0),
+  ];
+  const fieldCompleteness = fieldChecks.filter(Boolean).length / fieldChecks.length;
+
+  return Math.round(baseConfidence * 0.6 + fieldCompleteness * 40);
+}
+
+function buildServiceInterest(contacts: GhlRecord[], opportunities: GhlRecord[]): B2BInsight[] {
+  const groups = groupByValue([...contacts, ...opportunities], readServiceInterest);
+  if (groups.size === 0) {
+    return [insufficientInsight("service-interest-insufficient", "Most requested service", "Service interest requires tags, explicit service fields, conversation data, or pipeline data.")];
+  }
+
+  return Array.from(groups.entries())
+    .map(([service, records]) => ({
+      id: `service-${slugify(service)}`,
+      label: service,
+      observation: `Fact: ${service} appears on ${records.length} verified GoHighLevel record${records.length === 1 ? "" : "s"}.`,
+      evidence: [
+        b2bEvidence("Service interest", service, records),
+        b2bEvidence("Supporting record count", records.length, records),
+      ],
+    }))
+    .sort((a, b) => numericEvidenceValue(b, "Supporting record count") - numericEvidenceValue(a, "Supporting record count"))
+    .slice(0, 5);
+}
+
+function buildGeographicDemand(contacts: GhlRecord[], opportunities: GhlRecord[]): B2BInsight[] {
+  const groups = groupByValue([...contacts, ...opportunities], readLocationLabel);
+  const sufficientGroups = Array.from(groups.entries()).filter(([, records]) => records.length >= 2);
+  if (sufficientGroups.length === 0) {
+    return [insufficientInsight("geographic-demand-insufficient", "Highest-demand location", "At least two records with city or ZIP data are required before identifying geographic demand.")];
+  }
+
+  return sufficientGroups
+    .map(([location, records]) => ({
+      id: `consumer-location-${slugify(location)}`,
+      label: location,
+      observation: `Fact: ${records.length} verified GoHighLevel record${records.length === 1 ? "" : "s"} include city or ZIP data for ${location}.`,
+      evidence: [
+        b2bEvidence("City or ZIP", location, records),
+        b2bEvidence("Record count", records.length, records),
+      ],
+    }))
+    .sort((a, b) => numericEvidenceValue(b, "Record count") - numericEvidenceValue(a, "Record count"))
+    .slice(0, 5);
+}
+
+function buildJourneyDropOffs(contacts: GhlRecord[], opportunities: GhlRecord[]): B2BInsight[] {
+  if (!canMatchContactsToOpportunities(contacts, opportunities)) {
+    return [insufficientInsight("journey-dropoffs-insufficient", "Customer journey drop-offs", "Contact-to-opportunity matching requires contact IDs on both contact and opportunity records.")];
+  }
+
+  const opportunityContactIds = new Set(opportunities.map(readContactId).filter(Boolean));
+  const dropOffs = contacts.filter((contact) => {
+    const contactId = readContactId(contact);
+    return contactId && !opportunityContactIds.has(contactId);
+  });
+  const lostOrStalled = opportunities.filter((record) => isLostOpportunity(record) || (!isClosedOpportunity(record) && (calculateOpportunityAgeDays(record) || 0) >= 30));
+
+  return [{
+    id: "journey-contact-opportunity-dropoff",
+    label: "Customer journey drop-offs",
+    observation: `Fact: ${dropOffs.length} contact record${dropOffs.length === 1 ? "" : "s"} do not have a matched opportunity, and ${lostOrStalled.length} opportunit${lostOrStalled.length === 1 ? "y is" : "ies are"} lost or stalled based on available fields.`,
+    evidence: [
+      b2bEvidence("Contacts without matched opportunity", dropOffs.length, dropOffs),
+      b2bEvidence("Lost or stalled opportunities", lostOrStalled.length, lostOrStalled),
+    ],
+  }];
+}
+
+function buildResponseTimeInsights(contacts: GhlRecord[], opportunities: GhlRecord[]): B2BInsight[] {
+  const pairs = matchContactOpportunityPairs(contacts, opportunities)
+    .map(({ contact, opportunity }) => {
+      const contactDate = readRecordDate(contact);
+      const opportunityDate = readRecordDate(opportunity);
+      if (!contactDate || !opportunityDate) return null;
+      return {
+        contact,
+        opportunity,
+        hours: Math.max(0, Math.round((opportunityDate.getTime() - contactDate.getTime()) / 3_600_000)),
+      };
+    })
+    .filter((item): item is { contact: GhlRecord; opportunity: GhlRecord; hours: number } => Boolean(item));
+
+  if (pairs.length === 0) {
+    return [insufficientInsight("response-time-insufficient", "Inquiry-to-opportunity movement", "Time from contact creation to opportunity creation requires matching contact IDs and creation timestamps.")];
+  }
+
+  const averageHours = Math.round(pairs.reduce((sum, pair) => sum + pair.hours, 0) / pairs.length);
+  return [{
+    id: "response-contact-to-opportunity-time",
+    label: "Inquiry-to-opportunity movement",
+    observation: `Fact: matched records show an average of ${averageHours} hours from contact creation to opportunity creation.`,
+    evidence: [
+      b2bEvidence("Matched contact-opportunity pairs", pairs.length, pairs.map((pair) => pair.opportunity)),
+      b2bEvidence("Average creation-to-opportunity time", `${averageHours} hours`, pairs.map((pair) => pair.opportunity)),
+    ],
+  }];
+}
+
+function buildConversionSignals(contacts: GhlRecord[], opportunities: GhlRecord[]): B2BInsight[] {
+  if (!canMatchContactsToOpportunities(contacts, opportunities)) {
+    return [insufficientInsight("conversion-insufficient", "Inquiry-to-opportunity movement", "Conversion calculation requires verified contact denominator and matched opportunity numerator.")];
+  }
+
+  const matchedContactIds = new Set(matchContactOpportunityPairs(contacts, opportunities).map(({ contact }) => readContactId(contact)).filter(Boolean));
+  const denominator = contacts.filter(readContactId).length;
+  const numerator = matchedContactIds.size;
+  const rate = denominator > 0 ? Math.round((numerator / denominator) * 100) : 0;
+
+  return [{
+    id: "conversion-contact-to-opportunity",
+    label: "Inquiry-to-opportunity movement",
+    observation: `Fact: ${numerator} of ${denominator} contacts have matched opportunity records (${rate}%).`,
+    evidence: [
+      b2bEvidence("Matched opportunity numerator", numerator),
+      b2bEvidence("Verified contact denominator", denominator),
+      b2bEvidence("Calculated movement rate", `${rate}%`),
+    ],
+  }];
+}
+
+function buildC2BActions(input: {
+  serviceInterest: B2BInsight[];
+  geographicDemand: B2BInsight[];
+  journeyDropOffs: B2BInsight[];
+  responseTimeInsights: B2BInsight[];
+  conversionSignals: B2BInsight[];
+  contacts: GhlRecord[];
+  opportunities: GhlRecord[];
+}) {
+  const actions: B2BInsight[] = [];
+  const service = input.serviceInterest.find((item) => !item.observation.startsWith("Insufficient data"));
+  const dropOff = input.journeyDropOffs.find((item) => !item.observation.startsWith("Insufficient data"));
+
+  if (dropOff) {
+    actions.push({
+      id: "action-review-consumer-dropoffs",
+      label: "Recommended customer-experience action",
+      observation: "Recommendation: review contacts without matched opportunities and lost or stalled inquiries before making demand claims.",
+      evidence: dropOff.evidence,
+    });
+  } else if (service) {
+    actions.push({
+      id: "action-review-service-interest",
+      label: "Recommended customer-experience action",
+      observation: `Recommendation: review follow-up quality for ${service.label}, the most supported service-interest signal in current GoHighLevel data.`,
+      evidence: service.evidence,
+    });
+  } else {
+    actions.push(insufficientInsight("action-c2b-data-needed", "Recommended customer-experience action", "Insufficient data: add service interest, contact source, and contact-to-opportunity links before choosing a customer-experience action."));
+  }
+
+  actions.push({
+    id: "action-c2b-data-completeness",
+    label: "Data completeness",
+    observation: "Fact: appointment and conversation activity are not available in the current verified PRN GoHighLevel dashboard payload.",
+    evidence: [
+      b2bEvidence("Appointment activity", "Insufficient data"),
+      b2bEvidence("Conversation activity", "Insufficient data"),
+    ],
+  });
+
+  return actions;
+}
+
+
 function buildSourcePerformance(opportunities: GhlRecord[]): B2BInsight[] {
   const groups = groupByValue(opportunities, readOpportunitySource);
   if (groups.size === 0) {
@@ -891,6 +1153,51 @@ function readLocationLabel(record: GhlRecord) {
   return location || postalCode;
 }
 
+function readServiceInterest(record: GhlRecord) {
+  for (const key of ["serviceInterest", "service", "services", "interest", "primaryService", "requestedService"]) {
+    const value = readString(record[key]);
+    if (value) return value;
+  }
+
+  const tag = readTags(record).find((value) => /\b(care|staff|nurs|service|home|medical|cna|rn|lpn|therapy)\b/i.test(value));
+  if (tag) return tag;
+
+  return readPipelineStage(record);
+}
+
+function readContactId(record: GhlRecord) {
+  return readString(record.contactId) || readString(record.contact_id) || readString(record.id);
+}
+
+function readRecordDate(record: GhlRecord) {
+  for (const key of ["createdAt", "dateAdded", "dateCreated", "created_at", "updatedAt"]) {
+    const value = record[key];
+    if (typeof value !== "string") continue;
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+  return null;
+}
+
+function canMatchContactsToOpportunities(contacts: GhlRecord[], opportunities: GhlRecord[]) {
+  const contactIds = new Set(contacts.map(readContactId).filter(Boolean));
+  return contactIds.size > 0 && opportunities.some((opportunity) => contactIds.has(readContactId(opportunity)));
+}
+
+function matchContactOpportunityPairs(contacts: GhlRecord[], opportunities: GhlRecord[]) {
+  const contactsById = new Map<string, GhlRecord>();
+  for (const contact of contacts) {
+    const contactId = readContactId(contact);
+    if (contactId) contactsById.set(contactId, contact);
+  }
+  return opportunities
+    .map((opportunity) => {
+      const contact = contactsById.get(readContactId(opportunity));
+      return contact ? { contact, opportunity } : null;
+    })
+    .filter((item): item is { contact: GhlRecord; opportunity: GhlRecord } => Boolean(item));
+}
+
 function readRecordId(record: GhlRecord) {
   return readString(record.id) || readString(record.contactId) || readString(record.opportunityId) || slugify(JSON.stringify(record).slice(0, 48));
 }
@@ -981,6 +1288,11 @@ function readMoney(record: GhlRecord) {
 function isClosedOpportunity(record: GhlRecord) {
   const status = `${readString(record.status) || readString(record.pipelineStageName) || ""}`.toLowerCase();
   return status.includes("won") || status.includes("lost") || status.includes("closed");
+}
+
+function isLostOpportunity(record: GhlRecord) {
+  const status = `${readString(record.status) || readString(record.pipelineStageName) || readString(record.stageName) || ""}`.toLowerCase();
+  return status.includes("lost");
 }
 
 function readString(value: unknown) {

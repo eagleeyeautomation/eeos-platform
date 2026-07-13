@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildB2BIntelligence, buildExecutiveRecommendations, calculateB2BConfidence, calculateRecommendationConfidence, isStale } from "./prn-private-ghl";
+import { buildB2BIntelligence, buildC2BIntelligence, buildExecutiveRecommendations, calculateB2BConfidence, calculateC2BConfidence, calculateRecommendationConfidence, isStale } from "./prn-private-ghl";
 
 function liveData(overrides: Record<string, unknown> = {}) {
   const lastSync = new Date().toISOString();
@@ -189,6 +189,116 @@ describe("PRN B2B intelligence", () => {
         opportunities: [{ id: "opp-1", status: "open" }],
       },
       location: { id: "loc-1", name: "PRN Staffers CSC", city: "Beaufort", state: "SC" },
+    }));
+
+    expect(complete).toBeGreaterThan(incomplete);
+  });
+});
+
+describe("PRN C2B intelligence", () => {
+  it("aggregates consumer activity from contacts and opportunities", () => {
+    const intelligence = buildC2BIntelligence(liveData({
+      records: {
+        contacts: [{ id: "contact-1", createdAt: new Date().toISOString(), tags: ["Home Care"], city: "Beaufort" }],
+        users: [],
+        opportunities: [{ id: "opp-1", contactId: "contact-1", createdAt: new Date().toISOString(), status: "open", serviceInterest: "Home Care" }],
+      },
+    }));
+
+    expect(intelligence.consumerDemandSummary).toContain("1 verified GoHighLevel contact");
+    expect(intelligence.serviceInterest[0]?.label).toBe("Home Care");
+  });
+
+  it("requires sufficient city or ZIP data before claiming geographic demand", () => {
+    const insufficient = buildC2BIntelligence(liveData({
+      records: {
+        contacts: [{ id: "contact-1", city: "Beaufort" }],
+        users: [],
+        opportunities: [],
+      },
+    }));
+    const sufficient = buildC2BIntelligence(liveData({
+      records: {
+        contacts: [{ id: "contact-1", city: "Beaufort" }, { id: "contact-2", city: "Beaufort" }],
+        users: [],
+        opportunities: [],
+      },
+    }));
+
+    expect(insufficient.geographicDemand[0]?.observation).toContain("Insufficient data");
+    expect(sufficient.geographicDemand[0]?.label).toBe("Beaufort");
+  });
+
+  it("uses tags or explicit fields as service-interest evidence", () => {
+    const intelligence = buildC2BIntelligence(liveData({
+      records: {
+        contacts: [{ id: "contact-1", tags: ["Nursing Service"] }],
+        users: [],
+        opportunities: [{ id: "opp-1", serviceInterest: "Nursing Service" }],
+      },
+    }));
+
+    expect(intelligence.serviceInterest[0]?.evidence.some((item) => item.metric === "Service interest")).toBe(true);
+  });
+
+  it("calculates conversion only with verified numerator and denominator", () => {
+    const intelligence = buildC2BIntelligence(liveData({
+      records: {
+        contacts: [{ id: "contact-1" }, { id: "contact-2" }],
+        users: [],
+        opportunities: [{ id: "opp-1", contactId: "contact-1" }],
+      },
+    }));
+
+    expect(intelligence.conversionSignals[0]?.observation).toContain("1 of 2 contacts");
+    expect(intelligence.conversionSignals[0]?.evidence).toContainEqual({
+      metric: "Calculated movement rate",
+      value: "50%",
+      source: "GoHighLevel",
+      recordIds: [],
+    });
+  });
+
+  it("handles missing contact-to-opportunity data as insufficient data", () => {
+    const intelligence = buildC2BIntelligence(liveData({
+      records: {
+        contacts: [{ id: "contact-1" }],
+        users: [],
+        opportunities: [{ id: "opp-1" }],
+      },
+    }));
+
+    expect(intelligence.conversionSignals[0]?.observation).toContain("Insufficient data");
+    expect(intelligence.responseTimeInsights[0]?.observation).toContain("Insufficient data");
+  });
+
+  it("does not fabricate demand signals without consumer activity", () => {
+    const intelligence = buildC2BIntelligence(liveData({
+      records: {
+        contacts: [],
+        users: [],
+        opportunities: [],
+      },
+    }));
+
+    expect(intelligence.consumerDemandSummary).toBe("Insufficient data.");
+    expect(intelligence.serviceInterest[0]?.observation).toContain("Insufficient data");
+  });
+
+  it("calculates C2B confidence from endpoint health and field completeness", () => {
+    const complete = calculateC2BConfidence(liveData({
+      records: {
+        contacts: [{ id: "contact-1", createdAt: new Date().toISOString(), tags: ["Home Care"], city: "Beaufort" }],
+        users: [],
+        opportunities: [{ id: "opp-1", contactId: "contact-1", createdAt: new Date().toISOString(), serviceInterest: "Home Care" }],
+      },
+    }));
+    const incomplete = calculateC2BConfidence(liveData({
+      records: {
+        contacts: [{ id: "contact-1" }],
+        users: [],
+        opportunities: [],
+      },
     }));
 
     expect(complete).toBeGreaterThan(incomplete);
