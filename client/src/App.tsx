@@ -35,6 +35,7 @@ import LiveSignals from "./pages/LiveSignals";
 import IntegrationStatus from "./pages/IntegrationStatus";
 import ExecutiveTimeline from "./pages/ExecutiveTimeline";
 import KnowledgeGraphPreview from "./pages/KnowledgeGraphPreview";
+import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -70,6 +71,7 @@ function Router() {
       <Route path="/integration-status" component={IntegrationStatus} />
       <Route path="/executive-timeline" component={ExecutiveTimeline} />
       <Route path="/knowledge-graph" component={KnowledgeGraphPreview} />
+      <Route path="/executive-dashboard" component={ExecutiveDashboard} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
