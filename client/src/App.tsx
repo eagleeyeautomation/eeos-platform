@@ -16,8 +16,27 @@ import Contact from "./pages/Contact";
 import Onboarding from "./pages/Onboarding";
 import Integrations from "./pages/Integrations";
 import ConnectGHL from "./pages/ConnectGHL";
-
+// Sprint 11 pages
+import OAuthSuccess from "./pages/OAuthSuccess";
+import OAuthFailure from "./pages/OAuthFailure";
+import IntegrationHealth from "./pages/IntegrationHealth";
+import TenantConfirmation from "./pages/TenantConfirmation";
+import PRNOnboarding from "./pages/PRNOnboarding";
+// Sprint 12 — Executive Experience
+import ExecutiveHome from "./pages/ExecutiveHome";
+import LiveStatus from "./pages/LiveStatus";
+import ConnectedApps from "./pages/ConnectedApps";
+import SystemHealth from "./pages/SystemHealth";
+import Notifications from "./pages/Notifications";
+// Sprint 13 — Executive Intelligence Pages
+import BusinessHealth from "./pages/BusinessHealth";
+import AIRecommendations from "./pages/AIRecommendations";
+import LiveSignals from "./pages/LiveSignals";
+import IntegrationStatus from "./pages/IntegrationStatus";
+import ExecutiveTimeline from "./pages/ExecutiveTimeline";
+import KnowledgeGraphPreview from "./pages/KnowledgeGraphPreview";
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path="/" component={Home} />
@@ -32,6 +51,25 @@ function Router() {
       <Route path="/onboarding" component={Onboarding} />
       <Route path="/integrations" component={Integrations} />
       <Route path="/connect-ghl" component={ConnectGHL} />
+      {/* Sprint 11 — GHL Connection Journey */}
+      <Route path="/oauth-success" component={OAuthSuccess} />
+      <Route path="/oauth-failure" component={OAuthFailure} />
+      <Route path="/integration-health" component={IntegrationHealth} />
+      <Route path="/tenant-confirmation" component={TenantConfirmation} />
+      <Route path="/prn-onboarding" component={PRNOnboarding} />
+      {/* Sprint 12 — Executive Experience */}
+      <Route path="/executive-home" component={ExecutiveHome} />
+      <Route path="/live-status" component={LiveStatus} />
+      <Route path="/connected-apps" component={ConnectedApps} />
+      <Route path="/system-health" component={SystemHealth} />
+      <Route path="/notifications" component={Notifications} />
+      {/* Sprint 13 — Executive Intelligence Pages */}
+      <Route path="/business-health" component={BusinessHealth} />
+      <Route path="/ai-recommendations" component={AIRecommendations} />
+      <Route path="/live-signals" component={LiveSignals} />
+      <Route path="/integration-status" component={IntegrationStatus} />
+      <Route path="/executive-timeline" component={ExecutiveTimeline} />
+      <Route path="/knowledge-graph" component={KnowledgeGraphPreview} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -10,22 +10,22 @@ const VALUES = [
   {
     icon: Target,
     title: "Precision over volume",
-    description: "We believe executives are drowning in data and starving for intelligence. Every EEOS feature is designed to reduce noise and amplify signal.",
+    description: "Service business owners are drowning in data and starving for intelligence. Every EEOS feature is designed to reduce noise and amplify the signals that actually drive growth.",
   },
   {
     icon: Lightbulb,
     title: "Intelligence, not automation",
-    description: "EEOS augments executive judgment — it doesn't replace it. We surface what matters and provide context, but the decision always belongs to the leader.",
+    description: "EEOS augments your judgment — it doesn't replace it. We surface what matters and provide context, but the decision always belongs to you.",
   },
   {
     icon: Users,
-    title: "Built by operators, for operators",
-    description: "Our team includes former Fortune 500 executives, intelligence analysts, and enterprise software architects who have lived the problem EEOS solves.",
+    title: "Built for service businesses",
+    description: "Our team has worked with staffing firms, consulting agencies, healthcare operators, and professional services companies. We understand the specific challenges you face.",
   },
   {
     icon: Globe,
     title: "Sovereign by design",
-    description: "We believe organizations have a right to their own intelligence. EEOS is built on the principle that your data, your insights, and your decisions belong to you.",
+    description: "We believe businesses have a right to their own intelligence. EEOS is built on the principle that your data, your insights, and your decisions belong to you.",
   },
 ];
 
@@ -69,13 +69,13 @@ const LEADERSHIP = [
 ];
 
 const MILESTONES = [
-  { year: "2019", event: "Eagle Eye Automation founded in Washington D.C." },
-  { year: "2020", event: "First EEOS prototype deployed with defense contractor pilot" },
-  { year: "2021", event: "Series A — $28M raised. SOC 2 Type II certification achieved" },
-  { year: "2022", event: "EEOS 2.0 launched. Knowledge Graph and Business DNA introduced" },
-  { year: "2023", event: "Series B — $95M raised. FedRAMP Ready designation achieved" },
-  { year: "2024", event: "42 enterprise clients across 6 industries. ISO 27001 certified" },
-  { year: "2025", event: "EEOS 3.0 — Full Executive Intelligence Suite. Global expansion" },
+  { year: "2019", event: "Eagle Eye Automation founded — mission: AI software that helps service businesses grow" },
+  { year: "2020", event: "First EEOS prototype deployed with staffing and professional services pilot clients" },
+  { year: "2021", event: "Series A funding. SOC 2 Type II certification achieved" },
+  { year: "2022", event: "EEOS 2.0 launched — Knowledge Graph and Business DNA introduced" },
+  { year: "2023", event: "GoHighLevel integration launched. FedRAMP Ready designation achieved" },
+  { year: "2024", event: "42 service business clients across 6 industries. ISO 27001 certified" },
+  { year: "2025", event: "EEOS 3.0 — Full Executive Intelligence Suite. PRN Staffers activation" },
 ];
 
 export default function About() {
@@ -92,14 +92,14 @@ export default function About() {
               className="text-5xl sm:text-6xl font-bold text-[#E8EDF5] tracking-tight mb-6"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              We built the operating
+              AI software that helps
               <br />
-              system executives
+              service businesses
               <br />
-              <span className="gradient-text">always needed.</span>
+              <span className="gradient-text">grow.</span>
             </h1>
             <p className="text-xl text-[#E8EDF5]/65 leading-relaxed">
-              Eagle Eye Automation was founded on a single conviction: the most consequential decisions in the world are made by executives operating with incomplete information. We built EEOS to change that.
+              Eagle Eye Automation builds AI software for service businesses. Our flagship product, EEOS, helps business owners stop reacting to today's problems and start making tomorrow's decisions with confidence.
             </p>
           </AnimatedSection>
         </div>
@@ -115,9 +115,9 @@ export default function About() {
                 className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight mb-6"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                Give every executive
+                Help every service
                 <br />
-                the clarity to lead
+                business owner lead
                 <br />
                 <span className="gradient-text">with certainty.</span>
               </h2>

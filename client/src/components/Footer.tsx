@@ -43,26 +43,29 @@ export default function Footer() {
             <div className="flex items-center gap-3 mb-4">
               <img
                 src="/manus-storage/eeos-logo-mark_707d59ff.png"
-                alt="EEOS"
+                alt="Eagle Eye Automation"
                 className="w-8 h-8 object-contain"
               />
               <div>
                 <div
-                  className="text-[#E8EDF5] font-bold text-lg tracking-tight"
+                  className="text-[#E8EDF5] font-bold text-base tracking-tight leading-none"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  EEOS
-                </div>
-                <div
-                  className="text-[#00D4C8] text-[9px] tracking-[0.15em] uppercase"
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 >
                   Eagle Eye Automation
                 </div>
+                <div
+                  className="text-[#00D4C8] text-[9px] tracking-[0.15em] uppercase mt-0.5"
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                >
+                  EEOS · Don't Build More. Build Accurate.
+                </div>
               </div>
             </div>
-            <p className="text-[#E8EDF5]/55 text-sm leading-relaxed max-w-xs mb-5">
-              EEOS connects to your business systems, reads approved signals, and turns them into executive recommendations — without storing your data.
+            <p className="text-[#E8EDF5]/55 text-sm leading-relaxed max-w-xs mb-3">
+              Eagle Eye Automation builds AI software that helps service businesses grow. EEOS connects to your business systems, reads approved signals, and turns them into executive recommendations.
+            </p>
+            <p className="text-[#00D4C8]/70 text-xs italic mb-5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              “Transcend Your Business. Stop Managing. Start Leading.”
             </p>
             <div
               className="flex items-center gap-2 text-xs text-[#E8EDF5]/35"
@@ -162,7 +165,7 @@ export default function Footer() {
             className="text-xs text-[#E8EDF5]/30"
             style={{ fontFamily: "'JetBrains Mono', monospace" }}
           >
-            © 2025 Eagle Eye Automation, Inc. All rights reserved.
+            © 2026 Eagle Eye Automation, Inc. All rights reserved. · AI Software for Service Businesses
           </p>
           <div className="flex flex-wrap items-center gap-4 sm:gap-6">
             {["Privacy Policy", "Terms of Service", "Security Policy", "Cookie Settings"].map((item) => (

@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, ChevronDown, ArrowRight, Zap } from "lucide-react";
+import { Menu, X, ChevronDown, ArrowRight, Zap, Plug, Activity } from "lucide-react";
 
 const NAV_LINKS = [
   { label: "Why EEOS", href: "/why-eeos" },
@@ -18,6 +18,32 @@ const NAV_LINKS = [
       { label: "About Eagle Eye", href: "/about" },
       { label: "Integrations", href: "/integrations" },
       { label: "Contact", href: "/contact" },
+    ],
+  },
+  {
+    label: "Connect",
+    href: "#",
+    children: [
+      { label: "Connect GoHighLevel", href: "/connect-ghl" },
+      { label: "Integration Health", href: "/integration-health" },
+      { label: "Live Signal Status", href: "/live-status" },
+      { label: "Connected Apps", href: "/connected-apps" },
+      { label: "PRN Staffers Setup", href: "/prn-onboarding" },
+    ],
+  },
+  {
+    label: "Dashboard",
+    href: "#",
+    children: [
+      { label: "Executive Home", href: "/executive-home" },
+      { label: "Business Health", href: "/business-health" },
+      { label: "AI Recommendations", href: "/ai-recommendations" },
+      { label: "Live Signals", href: "/live-signals" },
+      { label: "Integration Status", href: "/integration-status" },
+      { label: "Executive Timeline", href: "/executive-timeline" },
+      { label: "Knowledge Graph", href: "/knowledge-graph" },
+      { label: "System Health", href: "/system-health" },
+      { label: "Notifications", href: "/notifications" },
     ],
   },
 ];
@@ -69,16 +95,16 @@ export default function Navigation() {
               </div>
               <div className="flex flex-col leading-none">
                 <span
-                  className="text-[#E8EDF5] font-bold text-lg tracking-tight"
+                  className="text-[#E8EDF5] font-bold text-base tracking-tight leading-none"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  EEOS
+                  Eagle Eye Automation
                 </span>
                 <span
-                  className="text-[#00D4C8] text-[9px] tracking-[0.15em] uppercase font-medium hidden sm:block"
+                  className="text-[#00D4C8] text-[9px] tracking-[0.15em] uppercase font-medium hidden sm:block mt-0.5"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 >
-                  Eagle Eye Automation
+                  EEOS · Don't Build More. Build Accurate.
                 </span>
               </div>
             </Link>
@@ -220,26 +246,28 @@ export default function Navigation() {
           {/* Mobile CTAs */}
           <div className="mt-8 space-y-3 border-t border-[rgba(0,212,200,0.1)] pt-6">
             <Link
-              href="/demo"
-              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-xl hover:bg-[rgba(0,212,200,0.08)] transition-all"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              Request Demo
-            </Link>
-            <Link
               href="/connect-ghl"
               className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-xl hover:bg-[#00E8DB] transition-all shadow-[0_0_20px_rgba(0,212,200,0.4)]"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              <Zap className="w-4 h-4" />
-              Start Private Beta
+              <Plug className="w-4 h-4" />
+              Connect GoHighLevel
             </Link>
             <Link
-              href="/onboarding"
-              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#E8EDF5]/70 hover:text-[#E8EDF5] transition-all"
+              href="/integration-health"
+              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-xl hover:bg-[rgba(0,212,200,0.08)] transition-all"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              Connect Your Business
+              <Activity className="w-4 h-4" />
+              View Integration Health
+            </Link>
+            <Link
+              href="/executive-home"
+              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#E8EDF5]/70 hover:text-[#E8EDF5] transition-all"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              aria-label="Open Executive Dashboard"
+            >
+              Open Executive Dashboard
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>

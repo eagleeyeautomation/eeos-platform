@@ -51,10 +51,10 @@ export default function Pricing() {
               >
                 Investment-grade
                 <br />
-                <span className="gradient-text">executive intelligence</span>
+                <span className="gradient-text">business intelligence</span>
               </h1>
               <p className="text-xl text-[#E8EDF5]/60 leading-relaxed max-w-xl">
-                EEOS delivers an average 340% ROI within the first year. Pricing scales with your organization's complexity — not your headcount.
+                Eagle Eye Automation's EEOS delivers an average 340% ROI within the first year. Pricing scales with your business complexity — not your headcount.
               </p>
             </AnimatedSection>
             <AnimatedSection delay={200} className="shrink-0 lg:w-72">
@@ -77,7 +77,7 @@ export default function Pricing() {
                 </div>
                 <div className="mt-4 pt-4 border-t border-[rgba(0,212,200,0.1)]">
                   <div className="text-[10px] text-[#E8EDF5]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    Based on 42 enterprise deployments · 2023–2025
+                    Based on 42 service business deployments · 2023–2025
                   </div>
                 </div>
               </div>

@@ -153,17 +153,17 @@ export default function Features() {
       <section className="pt-32 pb-20 bg-[#050C1A] scan-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center max-w-3xl mx-auto">
-            <div className="section-label mb-4">Platform Features</div>
+            <div className="section-label mb-4">EEOS Platform Features</div>
             <h1
               className="text-5xl sm:text-6xl font-bold text-[#E8EDF5] tracking-tight mb-6"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Every capability
               <br />
-              <span className="gradient-text">an executive needs</span>
+              <span className="gradient-text">a business leader needs</span>
             </h1>
             <p className="text-xl text-[#E8EDF5]/65 leading-relaxed">
-              EEOS is a complete executive intelligence platform — not a collection of dashboards. Every feature is designed around how executives actually lead.
+              EEOS is Eagle Eye Automation's flagship product — a complete business intelligence platform, not a collection of dashboards. Every feature is designed around how service business owners actually lead.
             </p>
           </AnimatedSection>
         </div>

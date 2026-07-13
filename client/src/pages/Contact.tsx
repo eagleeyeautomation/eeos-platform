@@ -58,10 +58,10 @@ export default function Contact() {
             >
               Let's talk about
               <br />
-              <span className="gradient-text">your intelligence needs</span>
+              <span className="gradient-text">growing your business</span>
             </h1>
             <p className="text-lg text-[#E8EDF5]/65">
-              Our team responds within 24 hours. For urgent inquiries, call us directly.
+              Eagle Eye Automation's team responds within 24 hours. For urgent inquiries, call us directly.
             </p>
           </AnimatedSection>
         </div>
