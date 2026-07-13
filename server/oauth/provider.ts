@@ -22,6 +22,7 @@ type AuthorizationRequest = {
 
 const issuerFallback = "https://eeos-platform-production.up.railway.app";
 const ephemeralKeyPair = generateKeyPairSync("rsa", { modulusLength: 2048 });
+const oauthClientRegistrationTimeoutMs = 8_000;
 
 export function sendOpenIdConfiguration(req: Request, res: { json: (body: unknown) => void }) {
   const issuer = getIssuer(req);
@@ -54,45 +55,74 @@ export function registerOAuthProviderRoutes(app: Express) {
   });
 
   app.post("/oauth/clients", async (req, res) => {
-    const registrationSecret = process.env.EEOS_OAUTH_CLIENT_REGISTRATION_SECRET;
+    const requestId = randomBytes(8).toString("hex");
 
-    if (!registrationSecret) {
-      res.status(503).json({ error: "temporarily_unavailable" });
-      return;
+    try {
+      logOAuthClientRegistration("started", { requestId });
+
+      const registrationSecret = process.env.EEOS_OAUTH_CLIENT_REGISTRATION_SECRET;
+
+      if (!registrationSecret) {
+        logOAuthClientRegistration("missing_registration_secret", { requestId });
+        res.status(503).json({ error: "temporarily_unavailable", error_description: "OAuth client registration is not configured." });
+        return;
+      }
+
+      if (!secureCompare(req.header("x-eeos-registration-secret") || "", registrationSecret)) {
+        logOAuthClientRegistration("unauthorized", { requestId });
+        res.status(401).json({ error: "unauthorized_client" });
+        return;
+      }
+
+      logOAuthClientRegistration("authorized", { requestId });
+
+      const name = readString(req.body?.name) || "GoHighLevel Marketplace";
+      const redirectUris = readStringArray(req.body?.redirect_uris);
+      const scopes = readStringArray(req.body?.scopes);
+
+      if (redirectUris.length === 0) {
+        logOAuthClientRegistration("invalid_metadata", { requestId, reason: "missing_redirect_uris" });
+        res.status(400).json({ error: "invalid_client_metadata", error_description: "redirect_uris is required" });
+        return;
+      }
+
+      const generated = generateOAuthClientSecret();
+      const clientId = `eeos_${randomBytes(16).toString("hex")}`;
+      const normalizedScopes = scopes.length > 0 ? scopes : ["openid", "profile", "email", "ghl.marketplace"];
+
+      logOAuthClientRegistration("storage_check_started", { requestId });
+      await withTimeout(ensureOAuthProviderStorage(), oauthClientRegistrationTimeoutMs, "OAuth provider storage check timed out.");
+      logOAuthClientRegistration("storage_check_completed", { requestId });
+
+      logOAuthClientRegistration("client_create_started", { requestId, clientId, redirectUriCount: redirectUris.length, scopeCount: normalizedScopes.length });
+      await withTimeout(
+        createOAuthClient({
+          clientId,
+          clientSecretHash: hashSecret(generated.clientSecret),
+          name,
+          redirectUris,
+          scopes: normalizedScopes,
+        }),
+        oauthClientRegistrationTimeoutMs,
+        "OAuth client creation timed out.",
+      );
+      logOAuthClientRegistration("client_create_completed", { requestId, clientId });
+
+      res.status(201).json({
+        clientId,
+        clientSecret: generated.clientSecret,
+        redirectUri: redirectUris[0],
+      });
+    } catch (error) {
+      logOAuthClientRegistration("failed", {
+        requestId,
+        error: error instanceof Error ? error.message : "Unknown OAuth client registration error.",
+      });
+      res.status(503).json({
+        error: "temporarily_unavailable",
+        error_description: "OAuth client registration failed.",
+      });
     }
-
-    if (!secureCompare(req.header("x-eeos-registration-secret") || "", registrationSecret)) {
-      res.status(401).json({ error: "unauthorized_client" });
-      return;
-    }
-
-    const name = readString(req.body?.name) || "GoHighLevel Marketplace";
-    const redirectUris = readStringArray(req.body?.redirect_uris);
-    const scopes = readStringArray(req.body?.scopes);
-
-    if (redirectUris.length === 0) {
-      res.status(400).json({ error: "invalid_client_metadata", error_description: "redirect_uris is required" });
-      return;
-    }
-
-    const generated = generateOAuthClientSecret();
-    const clientId = `eeos_${randomBytes(16).toString("hex")}`;
-
-    await createOAuthClient({
-      clientId,
-      clientSecretHash: hashSecret(generated.clientSecret),
-      name,
-      redirectUris,
-      scopes: scopes.length > 0 ? scopes : ["openid", "profile", "email", "ghl.marketplace"],
-    });
-
-    res.status(201).json({
-      client_id: clientId,
-      client_secret: generated.clientSecret,
-      client_secret_expires_at: 0,
-      redirect_uris: redirectUris,
-      token_endpoint_auth_method: "client_secret_post",
-    });
   });
 
   app.get("/oauth/authorize", async (req, res) => {
@@ -284,6 +314,48 @@ async function createOAuthClient(client: OAuthClient) {
   });
 }
 
+async function ensureOAuthProviderStorage() {
+  await withDatabase(async (db) => {
+    await db.query("select 1 as ok");
+    await db.query(`
+      create table if not exists eeos_oauth_clients (
+        id bigserial primary key,
+        client_id text not null unique,
+        client_secret_hash text not null,
+        name text not null,
+        redirect_uris jsonb not null default '[]'::jsonb,
+        scopes jsonb not null default '[]'::jsonb,
+        created_at timestamptz not null default now(),
+        updated_at timestamptz not null default now(),
+        disabled_at timestamptz
+      )
+    `);
+    await db.query(`
+      create index if not exists eeos_oauth_clients_active_idx
+        on eeos_oauth_clients (client_id)
+        where disabled_at is null
+    `);
+    await db.query(`
+      create table if not exists eeos_oauth_authorization_codes (
+        id bigserial primary key,
+        code_hash text not null unique,
+        client_id text not null references eeos_oauth_clients (client_id) on delete cascade,
+        redirect_uri text not null,
+        code_challenge text not null,
+        scope text not null,
+        created_at timestamptz not null default now(),
+        expires_at timestamptz not null,
+        consumed_at timestamptz
+      )
+    `);
+    await db.query(`
+      create index if not exists eeos_oauth_authorization_codes_client_idx
+        on eeos_oauth_authorization_codes (client_id, expires_at)
+        where consumed_at is null
+    `);
+  });
+}
+
 async function readOAuthClient(clientId: string) {
   return withDatabase(async (db) => {
     const result = await db.query<{
@@ -396,6 +468,27 @@ function readStringArray(value: unknown) {
 
 function base64UrlJson(value: unknown) {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function logOAuthClientRegistration(event: string, fields: Record<string, unknown> = {}) {
+  console.log(JSON.stringify({ level: "info", component: "oauth_provider", event: `oauth_client_registration.${event}`, ...fields }));
+}
+
+async function withTimeout<T>(operation: Promise<T>, timeoutMs: number, message: string) {
+  let timeout: NodeJS.Timeout | undefined;
+
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
 }
 
 export const oauthProviderInternals = {
