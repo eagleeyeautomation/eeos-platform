@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { loadBusinessMemorySnapshot, PRN_BUSINESS_ID, type BusinessMemorySnapshot } from "./business-memory";
 
 type GhlFetchResult = {
   ok: boolean;
@@ -83,6 +84,14 @@ export type PrnIntelligenceEngineRecommendation = {
   dataTimestamp: string;
   businessImpactScore: number;
   urgency: IntelligenceUrgency;
+  memoryInfluence: {
+    influenced: boolean;
+    activeGoalsReferenced: string[];
+    strategicPrioritiesReferenced: string[];
+    pastDecisionsReferenced: string[];
+    outcomeComparisons: string[];
+    duplicateSuppressed: boolean;
+  };
 };
 
 export type PrnIntelligenceEngineResult = {
@@ -100,6 +109,15 @@ export type PrnIntelligenceEngineResult = {
     urgency: IntelligenceUrgency;
     confidence: number;
     supportingEvidence: string[];
+  };
+  businessMemory: {
+    businessId: string;
+    activeGoals: number;
+    activeStrategicPriorities: number;
+    pastDecisionsReferenced: number;
+    outcomesReviewed: number;
+    duplicateRecommendationsSuppressed: number;
+    influencedRecommendations: number;
   };
 };
 
@@ -199,7 +217,8 @@ export function registerPrnPrivateGhlRoutes(app: Express) {
   app.get("/api/prn/intelligence-engine", async (_req, res) => {
     try {
       const liveData = await loadPrnLiveData();
-      const intelligence = buildPrnIntelligenceEngine(liveData);
+      const memory = await loadBusinessMemorySnapshot(PRN_BUSINESS_ID);
+      const intelligence = buildPrnIntelligenceEngine(liveData, memory);
 
       res.status(liveData.ok ? 200 : 207).json({
         ...intelligence,
@@ -632,9 +651,15 @@ export function buildExecutiveRecommendations(liveData: Pick<PrnLiveData, "metri
   return recommendations;
 }
 
-export function buildPrnIntelligenceEngine(liveData: Pick<PrnLiveData, "ok" | "source" | "division" | "metrics" | "endpointHealth" | "lastSync" | "records">): PrnIntelligenceEngineResult {
+export function buildPrnIntelligenceEngine(
+  liveData: Pick<PrnLiveData, "ok" | "source" | "division" | "metrics" | "endpointHealth" | "lastSync" | "records">,
+  memory?: BusinessMemorySnapshot,
+): PrnIntelligenceEngineResult {
   const executiveRecommendations = buildExecutiveRecommendations(liveData);
-  const recommendations = executiveRecommendations.map(toIntelligenceRecommendation);
+  const memoryContext = summarizeMemoryContext(memory, liveData.lastSync);
+  const recommendations = executiveRecommendations
+    .filter((recommendation) => !isSuppressedByMemory(recommendation, memoryContext))
+    .map((recommendation) => toIntelligenceRecommendation(recommendation, memoryContext));
   const sorted = recommendations.slice().sort((a, b) => {
     const impactDelta = b.businessImpactScore - a.businessImpactScore;
     return impactDelta !== 0 ? impactDelta : b.confidence - a.confidence;
@@ -649,7 +674,7 @@ export function buildPrnIntelligenceEngine(liveData: Pick<PrnLiveData, "ok" | "s
     source: liveData.source,
     division: liveData.division,
     dataTimestamp: liveData.lastSync,
-    executiveSummary: buildIntelligenceExecutiveSummary(sorted, liveData),
+    executiveSummary: buildIntelligenceExecutiveSummary(sorted, liveData, memoryContext),
     topRecommendation,
     topRisk,
     topOpportunity,
@@ -660,14 +685,27 @@ export function buildPrnIntelligenceEngine(liveData: Pick<PrnLiveData, "ok" | "s
       confidence: dashboardRecommendation?.confidence ?? 0,
       supportingEvidence: dashboardRecommendation?.evidence.map((item) => `${item.metric}: ${item.value}`) ?? ["Insufficient data."],
     },
+    businessMemory: {
+      businessId: memoryContext.businessId,
+      activeGoals: memoryContext.activeGoals.length,
+      activeStrategicPriorities: memoryContext.activeStrategicPriorities.length,
+      pastDecisionsReferenced: memoryContext.activeDecisions.length,
+      outcomesReviewed: memoryContext.outcomes.length,
+      duplicateRecommendationsSuppressed: memoryContext.suppressedRecommendationIds.length,
+      influencedRecommendations: sorted.filter((recommendation) => recommendation.memoryInfluence.influenced).length,
+    },
   };
 }
 
-function toIntelligenceRecommendation(recommendation: ExecutiveRecommendation): PrnIntelligenceEngineRecommendation {
+function toIntelligenceRecommendation(
+  recommendation: ExecutiveRecommendation,
+  memoryContext: IntelligenceMemoryContext = emptyMemoryContext(),
+): PrnIntelligenceEngineRecommendation {
   const confidence = recommendation.confidence;
   const action = confidence < 80
     ? "Additional data is required before making this recommendation."
     : recommendation.recommendedAction;
+  const influence = buildRecommendationMemoryInfluence(recommendation, memoryContext);
 
   return {
     id: recommendation.id,
@@ -678,14 +716,165 @@ function toIntelligenceRecommendation(recommendation: ExecutiveRecommendation): 
     recommendation: action,
     priority: mapRecommendationPriority(recommendation.priority),
     confidence,
-    confidenceReason: confidence < 80
-      ? `${recommendation.confidenceReason} Additional data is required before making this recommendation.`
-      : recommendation.confidenceReason,
+    confidenceReason: buildMemoryConfidenceReason(recommendation.confidenceReason, confidence, influence),
     measurement: recommendation.measurement,
     dataTimestamp: recommendation.dataTimestamp,
     businessImpactScore: calculateBusinessImpactScore(recommendation),
     urgency: mapRecommendationUrgency(recommendation),
+    memoryInfluence: influence,
   };
+}
+
+type IntelligenceMemoryContext = {
+  businessId: string;
+  activeGoals: Array<{ id: string; title: string; description: string; category: string; source: string }>;
+  activeStrategicPriorities: Array<{ id: string; title: string; description: string; category: string; source: string }>;
+  activeDecisions: Array<{ id: string; title: string; description: string; category: string; source: string }>;
+  outcomes: Array<{
+    recommendationId: string;
+    expectedOutcome: string;
+    actualOutcome: string;
+    result: string;
+    reviewedAt: string | null;
+    source: string;
+  }>;
+  suppressedRecommendationIds: string[];
+};
+
+function summarizeMemoryContext(memory: BusinessMemorySnapshot | undefined, dataTimestamp: string): IntelligenceMemoryContext {
+  if (!memory) {
+    return emptyMemoryContext();
+  }
+
+  const activeGoals = memory.businessGoals.filter(isActiveMemoryRecord).map(toMemoryReference);
+  const activeStrategicPriorities = memory.strategicPriorities.filter(isActiveMemoryRecord).map(toMemoryReference);
+  const activeDecisions = memory.executiveDecisions.filter(isActiveMemoryRecord).map(toMemoryReference);
+  const outcomes = memory.recommendationOutcomes.map((outcome) => ({
+    recommendationId: outcome.recommendationId,
+    expectedOutcome: outcome.expectedOutcome,
+    actualOutcome: outcome.actualOutcome,
+    result: outcome.result,
+    reviewedAt: outcome.reviewedAt,
+    source: outcome.source,
+  }));
+  const suppressedRecommendationIds = outcomes
+    .filter((outcome) => isDismissedOutcomeWithoutNewEvidence(outcome.result, outcome.reviewedAt, dataTimestamp))
+    .map((outcome) => outcome.recommendationId);
+
+  return {
+    businessId: memory.businessId,
+    activeGoals,
+    activeStrategicPriorities,
+    activeDecisions,
+    outcomes,
+    suppressedRecommendationIds,
+  };
+}
+
+function emptyMemoryContext(): IntelligenceMemoryContext {
+  return {
+    businessId: PRN_BUSINESS_ID,
+    activeGoals: [],
+    activeStrategicPriorities: [],
+    activeDecisions: [],
+    outcomes: [],
+    suppressedRecommendationIds: [],
+  };
+}
+
+function toMemoryReference(record: BusinessMemorySnapshot["businessGoals"][number]) {
+  return {
+    id: record.id,
+    title: record.title,
+    description: record.description,
+    category: record.category,
+    source: record.source,
+  };
+}
+
+function isActiveMemoryRecord(record: { status: string }) {
+  return ["active", "in_progress", "open", "approved"].includes(record.status.toLowerCase());
+}
+
+function isSuppressedByMemory(recommendation: ExecutiveRecommendation, memoryContext: IntelligenceMemoryContext) {
+  return memoryContext.suppressedRecommendationIds.includes(recommendation.id);
+}
+
+function isDismissedOutcomeWithoutNewEvidence(result: string, reviewedAt: string | null, dataTimestamp: string) {
+  if (!["dismissed", "rejected", "not_pursued"].includes(result.toLowerCase())) {
+    return false;
+  }
+
+  if (!reviewedAt) {
+    return true;
+  }
+
+  return new Date(reviewedAt).getTime() >= new Date(dataTimestamp).getTime();
+}
+
+function buildRecommendationMemoryInfluence(
+  recommendation: ExecutiveRecommendation,
+  memoryContext: IntelligenceMemoryContext,
+): PrnIntelligenceEngineRecommendation["memoryInfluence"] {
+  const activeGoalsReferenced = relevantMemoryTitles(recommendation, memoryContext.activeGoals);
+  const strategicPrioritiesReferenced = relevantMemoryTitles(recommendation, memoryContext.activeStrategicPriorities);
+  const pastDecisionsReferenced = relevantMemoryTitles(recommendation, memoryContext.activeDecisions);
+  const outcomeComparisons = memoryContext.outcomes
+    .filter((outcome) => outcome.recommendationId === recommendation.id)
+    .map((outcome) => `Expected: ${outcome.expectedOutcome}; Actual: ${outcome.actualOutcome}; Result: ${outcome.result}`);
+  const duplicateSuppressed = memoryContext.suppressedRecommendationIds.includes(recommendation.id);
+
+  return {
+    influenced: activeGoalsReferenced.length > 0
+      || strategicPrioritiesReferenced.length > 0
+      || pastDecisionsReferenced.length > 0
+      || outcomeComparisons.length > 0
+      || duplicateSuppressed,
+    activeGoalsReferenced,
+    strategicPrioritiesReferenced,
+    pastDecisionsReferenced,
+    outcomeComparisons,
+    duplicateSuppressed,
+  };
+}
+
+function relevantMemoryTitles(
+  recommendation: ExecutiveRecommendation,
+  records: Array<{ title: string; description: string; category: string }>,
+) {
+  const recommendationText = [
+    recommendation.category,
+    recommendation.id,
+    recommendation.observation,
+    recommendation.recommendedAction,
+  ].join(" ").toLowerCase();
+
+  return records
+    .filter((record) => {
+      const category = record.category.toLowerCase();
+      const titleWords = record.title.toLowerCase().split(/\W+/).filter((word) => word.length > 4);
+      return recommendationText.includes(category) || titleWords.some((word) => recommendationText.includes(word));
+    })
+    .map((record) => record.title)
+    .slice(0, 3);
+}
+
+function buildMemoryConfidenceReason(
+  baseReason: string,
+  confidence: number,
+  influence: PrnIntelligenceEngineRecommendation["memoryInfluence"],
+) {
+  const parts = [baseReason];
+
+  if (confidence < 80) {
+    parts.push("Additional data is required before making this recommendation.");
+  }
+
+  if (influence.influenced) {
+    parts.push("Business Memory influenced this recommendation using recorded goals, priorities, decisions, or outcome evidence.");
+  }
+
+  return parts.join(" ");
 }
 
 function mapRecommendationCategory(category: RecommendationCategory): PrnIntelligenceEngineRecommendation["category"] {
@@ -727,16 +916,26 @@ function calculateBusinessImpactScore(recommendation: ExecutiveRecommendation) {
   return clampScore(priorityBase + confidenceAdjustment);
 }
 
-function buildIntelligenceExecutiveSummary(recommendations: PrnIntelligenceEngineRecommendation[], liveData: Pick<PrnLiveData, "metrics" | "lastSync">) {
+function buildIntelligenceExecutiveSummary(
+  recommendations: PrnIntelligenceEngineRecommendation[],
+  liveData: Pick<PrnLiveData, "metrics" | "lastSync">,
+  memoryContext: IntelligenceMemoryContext = emptyMemoryContext(),
+) {
   if (recommendations.length === 0) {
     return "Insufficient verified GoHighLevel data is available for an executive recommendation.";
   }
 
   const top = recommendations[0];
+  const memorySentence = top.memoryInfluence.influenced
+    ? "Business Memory influenced at least one recommendation using recorded user-entered facts"
+    : memoryContext.activeGoals.length > 0 || memoryContext.activeStrategicPriorities.length > 0
+      ? "Business Memory was reviewed, but no recorded goal or priority directly changed the top recommendation"
+      : "No user-entered Business Memory goals or priorities are recorded";
+
   return [
     `EEOS analyzed ${liveData.metrics.totalContacts} contacts and ${liveData.metrics.opportunities} opportunities from verified GoHighLevel data`,
     `${stripTerminalPunctuation(top.observation)}; ${stripTerminalPunctuation(top.recommendation)}`,
-    `Top urgency is ${top.urgency} with ${top.confidence}% confidence`,
+    `${memorySentence}; top urgency is ${top.urgency} with ${top.confidence}% confidence`,
   ].join(". ").concat(".");
 }
 

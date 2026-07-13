@@ -9,6 +9,7 @@ import { registerGhlWebhookRoutes } from "../ghl-webhook";
 import { registerGhlPitRoutes } from "../ghl-pit";
 import { registerOAuthProviderRoutes, sendOpenIdConfiguration } from "../oauth/provider";
 import { registerPrnPrivateGhlRoutes } from "../prn-private-ghl";
+import { registerBusinessMemoryRoutes } from "../business-memory";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -32,6 +33,7 @@ async function startServer() {
   registerGhlPitRoutes(app);         // GHL PIT: /api/ghl/pit/connect, /api/ghl/pit/verify, /api/ghl/pit/disconnect
   registerGhlWebhookRoutes(app);     // GHL Webhooks: /api/webhooks/ghl
   registerOAuthProviderRoutes(app);  // EEOS OAuth Provider: /.well-known/*, /oauth/*
+  registerBusinessMemoryRoutes(app); // EEOS Business Memory: /api/prn/business-memory
   registerPrnPrivateGhlRoutes(app);  // PRN Staffers live dashboard: /api/prn/gohighlevel/live-dashboard
 
   app.get("/health", (_req, res) => {

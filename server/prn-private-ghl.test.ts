@@ -81,6 +81,149 @@ describe("PRN Intelligence Engine", () => {
 
     expect(intelligence.recommendations.some((item) => item.recommendation === "Additional data is required before making this recommendation.")).toBe(true);
   });
+
+  it("uses active Business Memory goals and past decisions when relevant", () => {
+    const intelligence = buildPrnIntelligenceEngine({
+      ok: true,
+      source: "Live PRN Staffers GoHighLevel",
+      division: "PRN Staffers South Carolina",
+      ...liveData(),
+    }, {
+      businessId: "test-business",
+      businessGoals: [{
+        id: "goal-1",
+        businessId: "test-business",
+        category: "sales",
+        title: "Improve opportunity follow-up",
+        description: "User-entered sales goal.",
+        status: "active",
+        source: "user",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }],
+      strategicPriorities: [{
+        id: "priority-1",
+        businessId: "test-business",
+        category: "revenue",
+        title: "Improve pipeline conversion",
+        description: "User-entered strategic priority.",
+        status: "active",
+        source: "user",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }],
+      executiveDecisions: [{
+        id: "decision-1",
+        businessId: "test-business",
+        category: "sales",
+        title: "Keep weekly opportunity review",
+        description: "User-entered executive decision.",
+        status: "active",
+        source: "user",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }],
+      recommendationOutcomes: [],
+      businessMilestones: [],
+      auditTrail: [],
+    });
+
+    const influenced = intelligence.recommendations.find((item) => item.memoryInfluence.influenced);
+
+    expect(influenced).toBeTruthy();
+    expect(intelligence.businessMemory.activeGoals).toBe(1);
+    expect(intelligence.businessMemory.activeStrategicPriorities).toBe(1);
+    expect(intelligence.executiveSummary).toContain("Business Memory");
+  });
+
+  it("suppresses dismissed duplicate recommendations when no newer evidence exists", () => {
+    const timestamp = new Date("2026-07-13T12:00:00.000Z").toISOString();
+    const intelligence = buildPrnIntelligenceEngine({
+      ok: true,
+      source: "Live PRN Staffers GoHighLevel",
+      division: "PRN Staffers South Carolina",
+      ...liveData({ lastSync: timestamp }),
+    }, {
+      businessId: "test-business",
+      businessGoals: [],
+      strategicPriorities: [],
+      executiveDecisions: [],
+      recommendationOutcomes: [{
+        id: "outcome-1",
+        businessId: "test-business",
+        category: "sales",
+        title: "Dismiss open opportunity review",
+        description: "User dismissed this recommendation.",
+        status: "reviewed",
+        source: "user",
+        recommendationId: "sales-high-open-opportunity-volume",
+        actionTaken: "No action taken",
+        expectedOutcome: "Reduce stale opportunities",
+        actualOutcome: "Dismissed by leadership",
+        successMetric: "Open opportunities",
+        result: "dismissed",
+        reviewedAt: new Date("2026-07-13T12:01:00.000Z").toISOString(),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }],
+      businessMilestones: [],
+      auditTrail: [],
+    });
+
+    expect(intelligence.recommendations.some((item) => item.id === "sales-high-open-opportunity-volume")).toBe(false);
+    expect(intelligence.businessMemory.duplicateRecommendationsSuppressed).toBe(1);
+  });
+
+  it("compares expected outcomes with actual outcomes when recommendation history exists", () => {
+    const timestamp = new Date("2026-07-13T12:00:00.000Z").toISOString();
+    const intelligence = buildPrnIntelligenceEngine({
+      ok: true,
+      source: "Live PRN Staffers GoHighLevel",
+      division: "PRN Staffers South Carolina",
+      ...liveData({ lastSync: timestamp }),
+    }, {
+      businessId: "test-business",
+      businessGoals: [],
+      strategicPriorities: [],
+      executiveDecisions: [],
+      recommendationOutcomes: [{
+        id: "outcome-1",
+        businessId: "test-business",
+        category: "revenue",
+        title: "Pipeline review outcome",
+        description: "Recorded result of prior revenue recommendation.",
+        status: "reviewed",
+        source: "user",
+        recommendationId: "revenue-strong-pipeline-value",
+        actionTaken: "Reviewed pipeline blockers",
+        expectedOutcome: "Cleaner pipeline stages",
+        actualOutcome: "Stage accuracy improved",
+        successMetric: "Updated next steps",
+        result: "improved",
+        reviewedAt: new Date("2026-07-13T11:00:00.000Z").toISOString(),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }],
+      businessMilestones: [],
+      auditTrail: [],
+    });
+    const recommendation = intelligence.recommendations.find((item) => item.id === "revenue-strong-pipeline-value");
+
+    expect(recommendation?.memoryInfluence.outcomeComparisons[0]).toContain("Expected: Cleaner pipeline stages");
+    expect(recommendation?.confidenceReason).toContain("Business Memory influenced");
+  });
+
+  it("does not invent Business Memory when no user-entered facts exist", () => {
+    const intelligence = buildPrnIntelligenceEngine({
+      ok: true,
+      source: "Live PRN Staffers GoHighLevel",
+      division: "PRN Staffers South Carolina",
+      ...liveData(),
+    });
+
+    expect(intelligence.businessMemory.activeGoals).toBe(0);
+    expect(intelligence.recommendations.every((item) => !item.memoryInfluence.influenced)).toBe(true);
+  });
 });
 
 describe("PRN executive recommendations", () => {
