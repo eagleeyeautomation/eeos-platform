@@ -32,7 +32,7 @@ export function registerOAuthProviderRoutes(app: Express) {
       authorization_endpoint: `${issuer}/oauth/authorize`,
       token_endpoint: `${issuer}/oauth/token`,
       userinfo_endpoint: `${issuer}/oauth/userinfo`,
-      jwks_uri: `${issuer}/.well-known/jwks.json`,
+      jwks_uri: `${issuer}/oauth/jwks.json`,
       response_types_supported: ["code"],
       grant_types_supported: ["authorization_code"],
       subject_types_supported: ["public"],
@@ -44,6 +44,10 @@ export function registerOAuthProviderRoutes(app: Express) {
   });
 
   app.get("/.well-known/jwks.json", (_req, res) => {
+    res.json({ keys: [getPublicJwk()] });
+  });
+
+  app.get("/oauth/jwks.json", (_req, res) => {
     res.json({ keys: [getPublicJwk()] });
   });
 
@@ -240,7 +244,7 @@ function getKeyId() {
 }
 
 function getIssuer(req: Request) {
-  const configured = process.env.EEOS_OAUTH_ISSUER || process.env.EEOS_APP_BASE_URL;
+  const configured = process.env.OAUTH_SERVER_URL || process.env.EEOS_OAUTH_ISSUER || process.env.EEOS_APP_BASE_URL;
 
   if (configured) {
     return configured.replace(/\/$/, "");
