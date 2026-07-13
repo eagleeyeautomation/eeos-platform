@@ -538,16 +538,20 @@ async function continueAuthorization(
 
   logOAuthAuthorize("consent_received", { requestId, clientId: client.clientId, redirectUri: request.redirect_uri || null });
 
+  logOAuthAuthorize("storage_check_started", { requestId, clientId: client.clientId });
+  await ensureOAuthProviderStorage(requestId);
+  logOAuthAuthorize("storage_check_completed", { requestId, clientId: client.clientId });
+
   const code = `eeos_code_${randomBytes(24).toString("base64url")}`;
   logOAuthAuthorize("authorization_code_created", { requestId, clientId: client.clientId });
 
-  await storeAuthorizationCode({
+  await withTimeout(storeAuthorizationCode({
     codeHash: hashSecret(code),
     clientId: client.clientId,
     redirectUri: request.redirect_uri || "",
     codeChallenge: request.code_challenge || "",
     scope: request.scope || "openid profile email ghl.marketplace",
-  });
+  }, requestId), oauthClientRegistrationTimeoutMs, "OAuth authorization code persistence timed out.");
   logOAuthAuthorize("authorization_code_persisted", { requestId, clientId: client.clientId });
 
   const redirectUrl = new URL(request.redirect_uri || "");
@@ -677,6 +681,20 @@ async function runOAuthStorageStep<T>(step: string, requestId: string | undefine
     return result;
   } catch (error) {
     logOAuthClientRegistration("sql_step_failed", { requestId, step, durationMs: Date.now() - startedAt, error: sanitizeLogError(error) });
+    throw error;
+  }
+}
+
+async function runOAuthAuthorizeStorageStep<T>(step: string, requestId: string | undefined, operation: () => Promise<T>) {
+  const startedAt = Date.now();
+  logOAuthAuthorize("sql_step_started", { requestId, step });
+
+  try {
+    const result = await operation();
+    logOAuthAuthorize("sql_step_completed", { requestId, step, durationMs: Date.now() - startedAt });
+    return result;
+  } catch (error) {
+    logOAuthAuthorize("sql_step_failed", { requestId, step, durationMs: Date.now() - startedAt, error: sanitizeLogError(error) });
     throw error;
   }
 }
@@ -840,22 +858,24 @@ async function storeAuthorizationCode(input: {
   redirectUri: string;
   codeChallenge: string;
   scope: string;
-}) {
+}, requestId?: string) {
   await withDatabase(async (db) => {
-    await db.query(
-      `
-        insert into eeos_oauth_authorization_codes (
-          code_hash,
-          client_id,
-          redirect_uri,
-          code_challenge,
-          scope,
-          expires_at,
-          created_at
-        )
-        values ($1, $2, $3, $4, $5, now() + interval '10 minutes', now())
-      `,
-      [input.codeHash, input.clientId, input.redirectUri, input.codeChallenge, input.scope],
+    await runOAuthAuthorizeStorageStep("insert_authorization_code", requestId, () =>
+      db.query(
+        `
+          insert into eeos_oauth_authorization_codes (
+            code_hash,
+            client_id,
+            redirect_uri,
+            code_challenge,
+            scope,
+            expires_at,
+            created_at
+          )
+          values ($1, $2, $3, $4, $5, now() + interval '10 minutes', now())
+        `,
+        [input.codeHash, input.clientId, input.redirectUri, input.codeChallenge, input.scope],
+      ),
     );
   });
 }
