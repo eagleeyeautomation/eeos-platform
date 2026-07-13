@@ -170,7 +170,37 @@ export function registerOAuthProviderRoutes(app: Express) {
       });
 
       if (!client) {
-        logOAuthAuthorize("rejected", { requestId, clientId: request.client_id, reason: "client_not_found" });
+        const storedCandidates = await findOAuthClientsByRedirectUri(request.redirect_uri);
+        logOAuthAuthorize("client_id_comparison", {
+          requestId,
+          incomingClientId: request.client_id,
+          storedClientIds: storedCandidates.map((candidate) => candidate.clientId),
+          redirectUriMatchCount: storedCandidates.length,
+        });
+
+        if (storedCandidates.length === 1) {
+          const reconciledClient = await reconcileOAuthClientId({
+            storedClientId: storedCandidates[0].clientId,
+            incomingClientId: request.client_id,
+          });
+
+          logOAuthAuthorize("client_id_reconciled", {
+            requestId,
+            incomingClientId: request.client_id,
+            storedClientId: storedCandidates[0].clientId,
+            reason: "registered_client_id_differed_from_marketplace_authorize_client_id",
+          });
+
+          await continueAuthorization(req, res, request, reconciledClient, requestId);
+          return;
+        }
+
+        logOAuthAuthorize("rejected", {
+          requestId,
+          clientId: request.client_id,
+          reason: storedCandidates.length > 1 ? "ambiguous_redirect_uri_match" : "client_not_found",
+          storedClientIds: storedCandidates.map((candidate) => candidate.clientId),
+        });
         res.status(400).json({ error: "invalid_client" });
         return;
       }
@@ -187,27 +217,7 @@ export function registerOAuthProviderRoutes(app: Express) {
         return;
       }
 
-      if (req.query.approve !== "1") {
-        logOAuthAuthorize("page_rendered", { requestId, clientId: client.clientId });
-        res.status(200).type("html").send(renderAuthorizationPage(req.originalUrl, client.name));
-        return;
-      }
-
-      const code = `eeos_code_${randomBytes(24).toString("base64url")}`;
-      await storeAuthorizationCode({
-        codeHash: hashSecret(code),
-        clientId: client.clientId,
-        redirectUri: request.redirect_uri,
-        codeChallenge: request.code_challenge,
-        scope: request.scope || "openid profile email ghl.marketplace",
-      });
-
-      const redirectUrl = new URL(request.redirect_uri);
-      redirectUrl.searchParams.set("code", code);
-      if (request.state) redirectUrl.searchParams.set("state", request.state);
-
-      logOAuthAuthorize("approved", { requestId, clientId: client.clientId });
-      res.redirect(302, redirectUrl.toString());
+      await continueAuthorization(req, res, request, client, requestId);
     } catch (error) {
       logOAuthAuthorize("failed", {
         requestId,
@@ -461,6 +471,43 @@ function escapeHtml(value: string) {
   });
 }
 
+async function continueAuthorization(
+  req: Request,
+  res: {
+    status: (code: number) => {
+      type: (contentType: string) => {
+        send: (body: string) => void;
+      };
+    };
+    redirect: (status: number, url: string) => void;
+  },
+  request: AuthorizationRequest,
+  client: OAuthClient,
+  requestId: string,
+) {
+  if (req.query.approve !== "1") {
+    logOAuthAuthorize("page_rendered", { requestId, clientId: client.clientId });
+    res.status(200).type("html").send(renderAuthorizationPage(req.originalUrl, client.name));
+    return;
+  }
+
+  const code = `eeos_code_${randomBytes(24).toString("base64url")}`;
+  await storeAuthorizationCode({
+    codeHash: hashSecret(code),
+    clientId: client.clientId,
+    redirectUri: request.redirect_uri || "",
+    codeChallenge: request.code_challenge || "",
+    scope: request.scope || "openid profile email ghl.marketplace",
+  });
+
+  const redirectUrl = new URL(request.redirect_uri || "");
+  redirectUrl.searchParams.set("code", code);
+  if (request.state) redirectUrl.searchParams.set("state", request.state);
+
+  logOAuthAuthorize("approved", { requestId, clientId: client.clientId });
+  res.redirect(302, redirectUrl.toString());
+}
+
 async function createOAuthClient(client: OAuthClient, requestId?: string) {
   await withTimeout(
     withDatabase(async (db) => {
@@ -610,6 +657,71 @@ async function readOAuthClient(clientId: string) {
           scopes: row.scopes,
         }
       : null;
+  });
+}
+
+async function findOAuthClientsByRedirectUri(redirectUri: string) {
+  return withDatabase(async (db) => {
+    const result = await db.query<{
+      client_id: string;
+      client_secret_hash: string;
+      name: string;
+      redirect_uris: string[];
+      scopes: string[];
+    }>(
+      `
+        select client_id, client_secret_hash, name, redirect_uris, scopes
+        from eeos_oauth_clients
+        where disabled_at is null
+          and redirect_uris @> $1::jsonb
+        order by updated_at desc
+        limit 5
+      `,
+      [JSON.stringify([redirectUri])],
+    );
+
+    return result.rows.map((row) => ({
+      clientId: row.client_id,
+      clientSecretHash: row.client_secret_hash,
+      name: row.name,
+      redirectUris: row.redirect_uris,
+      scopes: row.scopes,
+    }));
+  });
+}
+
+async function reconcileOAuthClientId(input: { storedClientId: string; incomingClientId: string }) {
+  return withDatabase(async (db) => {
+    const result = await db.query<{
+      client_id: string;
+      client_secret_hash: string;
+      name: string;
+      redirect_uris: string[];
+      scopes: string[];
+    }>(
+      `
+        update eeos_oauth_clients
+        set client_id = $1,
+            updated_at = now()
+        where client_id = $2
+          and disabled_at is null
+        returning client_id, client_secret_hash, name, redirect_uris, scopes
+      `,
+      [input.incomingClientId, input.storedClientId],
+    );
+    const row = result.rows[0];
+
+    if (!row) {
+      throw new Error("OAuth client ID reconciliation failed.");
+    }
+
+    return {
+      clientId: row.client_id,
+      clientSecretHash: row.client_secret_hash,
+      name: row.name,
+      redirectUris: row.redirect_uris,
+      scopes: row.scopes,
+    };
   });
 }
 
