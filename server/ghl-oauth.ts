@@ -224,12 +224,13 @@ function buildProviderErrorMessage(error: string, errorDescription: string | und
 }
 
 function renderSuccessPage(res: Response, locationId: string) {
-  res.status(200).send(`<!doctype html>
+  res.type("html").status(200).send(`<!doctype html>
 <html lang="en">
   <head><meta charset="utf-8"><title>EEOS GoHighLevel Connected</title></head>
   <body>
     <main style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 48px;">
       <h1>EEOS is now connected to GoHighLevel.</h1>
+      <p>You can close this window and return to GoHighLevel.</p>
       ${locationId ? `<p>Connected location: ${escapeHtml(locationId)}</p>` : ""}
     </main>
   </body>
@@ -237,7 +238,7 @@ function renderSuccessPage(res: Response, locationId: string) {
 }
 
 function renderErrorPage(res: Response, status: number, message: string) {
-  res.status(status).send(`<!doctype html>
+  res.type("html").status(status).send(`<!doctype html>
 <html lang="en">
   <head><meta charset="utf-8"><title>EEOS GoHighLevel Connection Error</title></head>
   <body>
@@ -358,6 +359,14 @@ export function registerGhlOAuthRoutes(app: Express) {
    * and stores them in the ghl_tokens table.
    */
   const handleGhlOAuthCallback = async (req: Request, res: Response) => {
+    res.once("finish", () => {
+      logGhlOAuth("callback_response_finished", {
+        path: req.path,
+        statusCode: res.statusCode,
+        contentType: res.getHeader("content-type") || null,
+      });
+    });
+
     const code = getQueryParam(req, "code");
     const state = getQueryParam(req, "state");
     const error = getQueryParam(req, "error");
@@ -413,11 +422,20 @@ export function registerGhlOAuthRoutes(app: Express) {
       const companyId = readTokenCompanyId(tokenData);
       const userType = readTokenUserType(tokenData);
       const scopes = tokenData.scope?.split(/[,\s]+/).filter(Boolean) || [];
+      logGhlOAuth("token_payload_normalized", {
+        tenantId,
+        hasLocationId: Boolean(locationId),
+        hasCompanyId: Boolean(companyId),
+        userType,
+        scopeCount: scopes.length,
+        expiresAt: expiresAt.toISOString(),
+      });
 
       if (!locationId) {
         throw new Error("GoHighLevel token response did not include a location ID.");
       }
 
+      logGhlOAuth("token_storage_started", { tenantId, locationId });
       await upsertGhlTokenRecord({
         membershipId: tenantId,
         operationalDivisionId: locationId,
@@ -435,7 +453,9 @@ export function registerGhlOAuthRoutes(app: Express) {
         expiresAt: expiresAt.toISOString(),
         scopes,
       });
+      logGhlOAuth("token_storage_succeeded", { tenantId, locationId });
 
+      logGhlOAuth("audit_event_started", { tenantId, locationId });
       await persistAuditEvent({
         organizationId: tenantId,
         source: "gohighlevel",
@@ -443,8 +463,9 @@ export function registerGhlOAuthRoutes(app: Express) {
         locationId: locationId || null,
         metadata: { companyId, userType, scopes },
       });
+      logGhlOAuth("audit_event_succeeded", { tenantId, locationId });
 
-      logGhlOAuth("token_storage_succeeded", { tenantId, locationId: locationId || null });
+      logGhlOAuth("callback_success_page_started", { tenantId, locationId });
       renderSuccessPage(res, locationId);
     } catch (err) {
       logGhlOAuthError("callback_failed", err, { path: req.path });
