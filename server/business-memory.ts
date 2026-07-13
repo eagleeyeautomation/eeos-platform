@@ -22,6 +22,7 @@ export type BusinessMemoryBaseRecord = {
   description: string;
   status: string;
   source: BusinessMemorySource;
+  metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 };
@@ -64,7 +65,21 @@ export type BusinessMemoryCreateInput = {
   description?: string;
   status?: string;
   source?: BusinessMemorySource;
+  metadata?: Record<string, unknown>;
+  target?: string;
+  dueDate?: string;
+  priority?: string;
+  owner?: string;
+  decisionDate?: string;
+  reviewDate?: string;
+  expectedOutcome?: string;
+  supportingEvidence?: string;
+  reason?: string;
+  lessonLearned?: string;
+  sortOrder?: number;
 };
+
+export type BusinessMemoryUpdateInput = Partial<BusinessMemoryCreateInput>;
 
 export type RecommendationOutcomeCreateInput = BusinessMemoryCreateInput & {
   recommendationId?: string;
@@ -100,12 +115,24 @@ export function registerBusinessMemoryRoutes(app: Express) {
     await createBaseMemoryResponse(req, res, "business_goal");
   });
 
+  app.patch("/api/prn/business-memory/goals/:id", async (req, res) => {
+    await updateBaseMemoryResponse(req, res, "business_goal");
+  });
+
   app.post("/api/prn/business-memory/priorities", async (req, res) => {
     await createBaseMemoryResponse(req, res, "strategic_priority");
   });
 
+  app.patch("/api/prn/business-memory/priorities/:id", async (req, res) => {
+    await updateBaseMemoryResponse(req, res, "strategic_priority");
+  });
+
   app.post("/api/prn/business-memory/decisions", async (req, res) => {
     await createBaseMemoryResponse(req, res, "executive_decision");
+  });
+
+  app.patch("/api/prn/business-memory/decisions/:id", async (req, res) => {
+    await updateBaseMemoryResponse(req, res, "executive_decision");
   });
 
   app.post("/api/prn/business-memory/outcomes", async (req, res) => {
@@ -117,8 +144,21 @@ export function registerBusinessMemoryRoutes(app: Express) {
     }
   });
 
+  app.patch("/api/prn/business-memory/outcomes/:id", async (req, res) => {
+    try {
+      const record = await updateRecommendationOutcome(req.params.id, req.body);
+      res.status(200).json({ ok: true, record });
+    } catch (error) {
+      handleBusinessMemoryError(res, error, "Unable to update recommendation outcome.");
+    }
+  });
+
   app.post("/api/prn/business-memory/milestones", async (req, res) => {
     await createBaseMemoryResponse(req, res, "business_milestone");
+  });
+
+  app.patch("/api/prn/business-memory/milestones/:id", async (req, res) => {
+    await updateBaseMemoryResponse(req, res, "business_milestone");
   });
 }
 
@@ -147,10 +187,10 @@ export async function createBaseMemoryRecord(
     const result = await client.query<DbBaseRecord>(
       `
         insert into ${memoryTables[recordType]} (
-          id, business_id, category, title, description, status, source, created_at, updated_at
+          id, business_id, category, title, description, status, source, metadata, created_at, updated_at
         )
-        values ($1, $2, $3, $4, $5, $6, $7, now(), now())
-        returning id, business_id, category, title, description, status, source, created_at, updated_at
+        values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, now(), now())
+        returning id, business_id, category, title, description, status, source, metadata, created_at, updated_at
       `,
       [
         randomUUID(),
@@ -160,10 +200,58 @@ export async function createBaseMemoryRecord(
         normalized.description,
         normalized.status,
         normalized.source,
+        JSON.stringify(normalized.metadata),
       ],
     );
     const record = mapBaseRecord(result.rows[0]);
     await insertAuditEntry(client, recordType, record.id, record.businessId, record.source, record);
+    return record;
+  });
+}
+
+export async function updateBaseMemoryRecord(
+  recordType: Exclude<BusinessMemoryRecordType, "recommendation_outcome">,
+  id: string,
+  input: BusinessMemoryUpdateInput,
+) {
+  const normalized = normalizeBaseUpdateInput(input);
+  await ensureBusinessMemorySchema();
+
+  return withTransaction(async (client) => {
+    const existing = await selectBaseRecordById(client, recordType, id);
+    if (!existing) {
+      throw new Error("Business Memory record not found.");
+    }
+
+    const metadata = { ...existing.metadata, ...normalized.metadata };
+    const result = await client.query<DbBaseRecord>(
+      `
+        update ${memoryTables[recordType]}
+        set
+          category = $2,
+          title = $3,
+          description = $4,
+          status = $5,
+          source = $6,
+          metadata = $7::jsonb,
+          updated_at = now()
+        where id = $1
+          and business_id = $8
+        returning id, business_id, category, title, description, status, source, metadata, created_at, updated_at
+      `,
+      [
+        id,
+        normalized.category ?? existing.category,
+        normalized.title ?? existing.title,
+        normalized.description ?? existing.description,
+        normalized.status ?? existing.status,
+        normalized.source ?? existing.source,
+        JSON.stringify(metadata),
+        existing.businessId,
+      ],
+    );
+    const record = mapBaseRecord(result.rows[0]);
+    await insertAuditEntry(client, recordType, record.id, record.businessId, record.source, { before: existing, after: record }, "updated");
     return record;
   });
 }
@@ -190,10 +278,11 @@ export async function createRecommendationOutcome(input: RecommendationOutcomeCr
           success_metric,
           result,
           reviewed_at,
+          metadata,
           created_at,
           updated_at
         )
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, now(), now())
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb, now(), now())
         returning
           id,
           business_id,
@@ -209,6 +298,7 @@ export async function createRecommendationOutcome(input: RecommendationOutcomeCr
           success_metric,
           result,
           reviewed_at,
+          metadata,
           created_at,
           updated_at
       `,
@@ -227,10 +317,85 @@ export async function createRecommendationOutcome(input: RecommendationOutcomeCr
         normalized.successMetric,
         normalized.result,
         normalized.reviewedAt,
+        JSON.stringify(normalized.metadata),
       ],
     );
     const record = mapRecommendationOutcome(result.rows[0]);
     await insertAuditEntry(client, "recommendation_outcome", record.id, record.businessId, record.source, record);
+    return record;
+  });
+}
+
+export async function updateRecommendationOutcome(id: string, input: RecommendationOutcomeCreateInput) {
+  const normalized = normalizeOutcomeUpdateInput(input);
+  await ensureBusinessMemorySchema();
+
+  return withTransaction(async (client) => {
+    const existing = await selectRecommendationOutcomeById(client, id);
+    if (!existing) {
+      throw new Error("Recommendation outcome not found.");
+    }
+
+    const metadata = { ...existing.metadata, ...normalized.metadata };
+    const result = await client.query<DbRecommendationOutcomeRecord>(
+      `
+        update recommendation_outcomes
+        set
+          category = $2,
+          title = $3,
+          description = $4,
+          status = $5,
+          source = $6,
+          recommendation_id = $7,
+          action_taken = $8,
+          expected_outcome = $9,
+          actual_outcome = $10,
+          success_metric = $11,
+          result = $12,
+          reviewed_at = $13,
+          metadata = $14::jsonb,
+          updated_at = now()
+        where id = $1
+          and business_id = $15
+        returning
+          id,
+          business_id,
+          category,
+          title,
+          description,
+          status,
+          source,
+          recommendation_id,
+          action_taken,
+          expected_outcome,
+          actual_outcome,
+          success_metric,
+          result,
+          reviewed_at,
+          metadata,
+          created_at,
+          updated_at
+      `,
+      [
+        id,
+        normalized.category ?? existing.category,
+        normalized.title ?? existing.title,
+        normalized.description ?? existing.description,
+        normalized.status ?? existing.status,
+        normalized.source ?? existing.source,
+        normalized.recommendationId ?? existing.recommendationId,
+        normalized.actionTaken ?? existing.actionTaken,
+        normalized.expectedOutcome ?? existing.expectedOutcome,
+        normalized.actualOutcome ?? existing.actualOutcome,
+        normalized.successMetric ?? existing.successMetric,
+        normalized.result ?? existing.result,
+        normalized.reviewedAt === undefined ? existing.reviewedAt : normalized.reviewedAt,
+        JSON.stringify(metadata),
+        existing.businessId,
+      ],
+    );
+    const record = mapRecommendationOutcome(result.rows[0]);
+    await insertAuditEntry(client, "recommendation_outcome", record.id, record.businessId, record.source, { before: existing, after: record }, "updated");
     return record;
   });
 }
@@ -259,10 +424,23 @@ async function createBaseMemoryResponse(
   }
 }
 
+async function updateBaseMemoryResponse(
+  req: Request,
+  res: Response,
+  recordType: Exclude<BusinessMemoryRecordType, "recommendation_outcome">,
+) {
+  try {
+    const record = await updateBaseMemoryRecord(recordType, req.params.id, req.body);
+    res.status(200).json({ ok: true, record });
+  } catch (error) {
+    handleBusinessMemoryError(res, error, "Unable to update Business Memory record.");
+  }
+}
+
 async function selectBaseRecords(client: PoolClient, recordType: Exclude<BusinessMemoryRecordType, "recommendation_outcome">, businessId: string) {
   const result = await client.query<DbBaseRecord>(
     `
-      select id, business_id, category, title, description, status, source, created_at, updated_at
+      select id, business_id, category, title, description, status, source, metadata, created_at, updated_at
       from ${memoryTables[recordType]}
       where business_id = $1
       order by created_at desc
@@ -271,6 +449,24 @@ async function selectBaseRecords(client: PoolClient, recordType: Exclude<Busines
   );
 
   return result.rows.map(mapBaseRecord);
+}
+
+async function selectBaseRecordById(
+  client: PoolClient,
+  recordType: Exclude<BusinessMemoryRecordType, "recommendation_outcome">,
+  id: string,
+) {
+  const result = await client.query<DbBaseRecord>(
+    `
+      select id, business_id, category, title, description, status, source, metadata, created_at, updated_at
+      from ${memoryTables[recordType]}
+      where id = $1
+      limit 1
+    `,
+    [id],
+  );
+
+  return result.rows[0] ? mapBaseRecord(result.rows[0]) : null;
 }
 
 async function selectRecommendationOutcomes(client: PoolClient, businessId: string) {
@@ -291,6 +487,7 @@ async function selectRecommendationOutcomes(client: PoolClient, businessId: stri
         success_metric,
         result,
         reviewed_at,
+        metadata,
         created_at,
         updated_at
       from recommendation_outcomes
@@ -301,6 +498,37 @@ async function selectRecommendationOutcomes(client: PoolClient, businessId: stri
   );
 
   return result.rows.map(mapRecommendationOutcome);
+}
+
+async function selectRecommendationOutcomeById(client: PoolClient, id: string) {
+  const result = await client.query<DbRecommendationOutcomeRecord>(
+    `
+      select
+        id,
+        business_id,
+        category,
+        title,
+        description,
+        status,
+        source,
+        recommendation_id,
+        action_taken,
+        expected_outcome,
+        actual_outcome,
+        success_metric,
+        result,
+        reviewed_at,
+        metadata,
+        created_at,
+        updated_at
+      from recommendation_outcomes
+      where id = $1
+      limit 1
+    `,
+    [id],
+  );
+
+  return result.rows[0] ? mapRecommendationOutcome(result.rows[0]) : null;
 }
 
 async function selectAuditTrail(client: PoolClient, businessId: string) {
@@ -334,15 +562,16 @@ async function insertAuditEntry(
   businessId: string,
   source: BusinessMemorySource,
   snapshot: Record<string, unknown>,
+  action: "created" | "updated" = "created",
 ) {
   await client.query(
     `
       insert into business_memory_audit_entries (
         id, business_id, record_type, record_id, action, source, snapshot, created_at
       )
-      values ($1, $2, $3, $4, 'created', $5, $6::jsonb, now())
+      values ($1, $2, $3, $4, $5, $6, $7::jsonb, now())
     `,
-    [randomUUID(), businessId, recordType, recordId, source, JSON.stringify(snapshot)],
+    [randomUUID(), businessId, recordType, recordId, action, source, JSON.stringify(snapshot)],
   );
 }
 
@@ -357,6 +586,18 @@ function normalizeBaseInput(input: BusinessMemoryCreateInput) {
     description,
     status: normalizeText(input.status) || "active",
     source: normalizeSource(input.source),
+    metadata: normalizeMetadata(input),
+  };
+}
+
+function normalizeBaseUpdateInput(input: BusinessMemoryUpdateInput) {
+  return {
+    category: optionalText(input.category),
+    title: optionalText(input.title),
+    description: optionalText(input.description),
+    status: optionalText(input.status),
+    source: input.source === undefined ? undefined : normalizeSource(input.source),
+    metadata: normalizeMetadata(input),
   };
 }
 
@@ -374,6 +615,20 @@ function normalizeOutcomeInput(input: RecommendationOutcomeCreateInput) {
     successMetric: requireText(input.successMetric, "successMetric"),
     result,
     reviewedAt: input.reviewedAt === null ? null : normalizeText(input.reviewedAt) || null,
+    metadata: normalizeMetadata(input),
+  };
+}
+
+function normalizeOutcomeUpdateInput(input: RecommendationOutcomeCreateInput) {
+  return {
+    ...normalizeBaseUpdateInput(input),
+    recommendationId: optionalText(input.recommendationId),
+    actionTaken: optionalText(input.actionTaken),
+    expectedOutcome: optionalText(input.expectedOutcome),
+    actualOutcome: optionalText(input.actualOutcome),
+    successMetric: optionalText(input.successMetric),
+    result: optionalText(input.result),
+    reviewedAt: input.reviewedAt === undefined ? undefined : input.reviewedAt === null ? null : normalizeText(input.reviewedAt) || null,
   };
 }
 
@@ -393,6 +648,41 @@ function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function optionalText(value: unknown) {
+  const normalized = normalizeText(value);
+  return normalized || undefined;
+}
+
+function normalizeMetadata(input: BusinessMemoryCreateInput) {
+  const metadata = isRecord(input.metadata) ? { ...input.metadata } : {};
+  const metadataFields = [
+    "target",
+    "dueDate",
+    "priority",
+    "owner",
+    "decisionDate",
+    "reviewDate",
+    "expectedOutcome",
+    "supportingEvidence",
+    "reason",
+    "lessonLearned",
+    "sortOrder",
+  ] as const;
+
+  for (const field of metadataFields) {
+    const value = input[field];
+    if (value !== undefined && value !== "") {
+      metadata[field] = value;
+    }
+  }
+
+  return metadata;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
 function mapBaseRecord(row: DbBaseRecord): BusinessMemoryBaseRecord {
   return {
     id: row.id,
@@ -402,6 +692,7 @@ function mapBaseRecord(row: DbBaseRecord): BusinessMemoryBaseRecord {
     description: row.description,
     status: row.status,
     source: row.source,
+    metadata: row.metadata ?? {},
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
   };
@@ -446,6 +737,7 @@ type DbBaseRecord = {
   description: string;
   status: string;
   source: BusinessMemorySource;
+  metadata: Record<string, unknown>;
   created_at: Date | string;
   updated_at: Date | string;
 };
@@ -479,6 +771,7 @@ const baseTableColumns = `
   description text not null,
   status text not null,
   source text not null check (source in ('user', 'system')),
+  metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 `;
@@ -525,4 +818,15 @@ const businessMemorySchemaSql = `
   );
   create index if not exists business_memory_audit_business_created_idx
     on business_memory_audit_entries (business_id, created_at desc);
+
+  alter table business_goals
+    add column if not exists metadata jsonb not null default '{}'::jsonb;
+  alter table strategic_priorities
+    add column if not exists metadata jsonb not null default '{}'::jsonb;
+  alter table executive_decisions
+    add column if not exists metadata jsonb not null default '{}'::jsonb;
+  alter table recommendation_outcomes
+    add column if not exists metadata jsonb not null default '{}'::jsonb;
+  alter table business_milestones
+    add column if not exists metadata jsonb not null default '{}'::jsonb;
 `;

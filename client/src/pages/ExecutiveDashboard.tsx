@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import BusinessMemoryCommandCenter from "@/components/BusinessMemoryCommandCenter";
 
 type EndpointHealth = {
   ok: boolean;
@@ -297,6 +298,8 @@ export default function ExecutiveDashboard() {
               error={recommendationError}
               onRefresh={() => void loadDashboard()}
             />
+
+            <BusinessMemoryCommandCenter />
 
             <B2BIntelligenceSection response={b2bData} error={b2bError} />
 

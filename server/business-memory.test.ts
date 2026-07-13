@@ -25,9 +25,9 @@ const client = {
         business_id: params[1],
         record_type: params[2],
         record_id: params[3],
-        action: "created",
-        source: params[4],
-        snapshot: JSON.parse(String(params[5])),
+        action: params[4],
+        source: params[5],
+        snapshot: JSON.parse(String(params[6])),
         created_at: now,
       });
       return { rows: [] };
@@ -43,11 +43,31 @@ const client = {
           description: params[4],
           status: params[5],
           source: params[6],
+          metadata: JSON.parse(String(params[7])),
           created_at: now,
           updated_at: now,
         };
         rows[table].push(row);
         return { rows: [row] };
+      }
+
+      if (normalized.startsWith(`update ${table}`)) {
+        const existing = rows[table].find((row) => row.id === params[0] && row.business_id === params[7]);
+        if (!existing) return { rows: [] };
+        Object.assign(existing, {
+          category: params[1],
+          title: params[2],
+          description: params[3],
+          status: params[4],
+          source: params[5],
+          metadata: JSON.parse(String(params[6])),
+          updated_at: new Date("2026-07-13T12:05:00.000Z"),
+        });
+        return { rows: [existing] };
+      }
+
+      if (normalized.includes(`from ${table}`) && normalized.includes("where id = $1")) {
+        return { rows: rows[table].filter((row) => row.id === params[0]) };
       }
 
       if (normalized.includes(`from ${table}`)) {
@@ -71,11 +91,38 @@ const client = {
         success_metric: params[11],
         result: params[12],
         reviewed_at: params[13],
+        metadata: JSON.parse(String(params[14])),
         created_at: now,
         updated_at: now,
       };
       rows.recommendation_outcomes.push(row);
       return { rows: [row] };
+    }
+
+    if (normalized.startsWith("update recommendation_outcomes")) {
+      const existing = rows.recommendation_outcomes.find((row) => row.id === params[0] && row.business_id === params[14]);
+      if (!existing) return { rows: [] };
+      Object.assign(existing, {
+        category: params[1],
+        title: params[2],
+        description: params[3],
+        status: params[4],
+        source: params[5],
+        recommendation_id: params[6],
+        action_taken: params[7],
+        expected_outcome: params[8],
+        actual_outcome: params[9],
+        success_metric: params[10],
+        result: params[11],
+        reviewed_at: params[12],
+        metadata: JSON.parse(String(params[13])),
+        updated_at: new Date("2026-07-13T12:05:00.000Z"),
+      });
+      return { rows: [existing] };
+    }
+
+    if (normalized.includes("from recommendation_outcomes") && normalized.includes("where id = $1")) {
+      return { rows: rows.recommendation_outcomes.filter((row) => row.id === params[0]) };
     }
 
     if (normalized.includes("from recommendation_outcomes")) {
@@ -112,6 +159,8 @@ describe("Business Memory persistence", () => {
       description: "User-entered annual revenue goal.",
       status: "active",
       source: "user",
+      target: "$1M annual revenue",
+      dueDate: "2026-12-31",
     });
     const snapshot = await loadBusinessMemorySnapshot("test-business");
 
@@ -121,12 +170,46 @@ describe("Business Memory persistence", () => {
       businessId: "test-business",
       source: "user",
       title: "Reach $1M annual revenue",
+      metadata: {
+        target: "$1M annual revenue",
+        dueDate: "2026-12-31",
+      },
     });
     expect(snapshot.auditTrail[0]).toMatchObject({
       recordType: "business_goal",
       source: "user",
       recordId: goal.id,
     });
+  });
+
+  it("updates goals and preserves an audit event with before and after snapshots", async () => {
+    const { createBaseMemoryRecord, updateBaseMemoryRecord, loadBusinessMemorySnapshot } = await import("./business-memory");
+
+    const goal = await createBaseMemoryRecord("business_goal", {
+      businessId: "test-business",
+      category: "revenue",
+      title: "Increase recurring revenue",
+      description: "Original user-entered goal.",
+      status: "planned",
+      source: "user",
+      priority: "high",
+    });
+    const updated = await updateBaseMemoryRecord("business_goal", goal.id, {
+      status: "active",
+      target: "$250k monthly recurring revenue",
+    });
+    const snapshot = await loadBusinessMemorySnapshot("test-business");
+
+    expect(updated.status).toBe("active");
+    expect(updated.metadata).toMatchObject({
+      priority: "high",
+      target: "$250k monthly recurring revenue",
+    });
+    expect(snapshot.auditTrail).toHaveLength(2);
+    const auditEntry = snapshot.auditTrail.find((entry) => entry.action === "updated");
+    expect(auditEntry).toMatchObject({ action: "updated", recordId: goal.id });
+    expect(auditEntry?.snapshot).toHaveProperty("before");
+    expect(auditEntry?.snapshot).toHaveProperty("after");
   });
 
   it("persists executive decisions and recommendation outcomes", async () => {
@@ -164,5 +247,32 @@ describe("Business Memory persistence", () => {
       result: "dismissed",
     });
     expect(snapshot.auditTrail).toHaveLength(2);
+  });
+
+  it("updates recommendation outcomes without marking success automatically", async () => {
+    const { createRecommendationOutcome, updateRecommendationOutcome } = await import("./business-memory");
+
+    const outcome = await createRecommendationOutcome({
+      businessId: "test-business",
+      category: "sales",
+      title: "Track recommendation",
+      description: "Outcome requires user confirmation.",
+      status: "reviewed",
+      source: "user",
+      recommendationId: "sales-contact-to-opportunity-coverage",
+      actionTaken: "Deferred pending review",
+      expectedOutcome: "Cleaner conversion tracking",
+      actualOutcome: "Result unknown",
+      successMetric: "Matched contacts to opportunities",
+      result: "result_unknown",
+      reviewedAt: "2026-07-13T12:01:00.000Z",
+    });
+    const updated = await updateRecommendationOutcome(outcome.id, {
+      result: "completed",
+      actualOutcome: "User confirmed matching process was completed",
+    });
+
+    expect(updated.result).toBe("completed");
+    expect(updated.actualOutcome).toBe("User confirmed matching process was completed");
   });
 });
