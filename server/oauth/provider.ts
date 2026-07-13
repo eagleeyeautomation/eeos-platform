@@ -130,118 +130,12 @@ export function registerOAuthProviderRoutes(app: Express) {
     }
   });
 
-  app.get("/oauth/authorize", async (req, res) => {
-    const request = normalizeAuthorizationRequest(req.query as AuthorizationRequest);
-    const requestId = randomBytes(8).toString("hex");
+  app.get("/oauth/authorize", (req, res) => {
+    void handleAuthorizationRequest(req, res, false);
+  });
 
-    try {
-      logOAuthAuthorize("started", {
-        requestId,
-        clientId: request.client_id || null,
-        redirectUri: request.redirect_uri || null,
-        responseType: request.response_type || null,
-        hasCodeChallenge: Boolean(request.code_challenge),
-        codeChallengeMethod: request.code_challenge_method || null,
-      });
-
-      if (request.response_type !== "code") {
-        logOAuthAuthorize("rejected", { requestId, clientId: request.client_id || null, reason: "unsupported_response_type" });
-        res.status(400).json({ error: "unsupported_response_type" });
-        return;
-      }
-
-      if (!request.client_id || !request.redirect_uri) {
-        logOAuthAuthorize("rejected", { requestId, clientId: request.client_id || null, reason: "missing_client_or_redirect_uri" });
-        res.status(400).json({ error: "invalid_request" });
-        return;
-      }
-
-      if (!request.code_challenge || request.code_challenge_method !== "S256") {
-        logOAuthAuthorize("rejected", { requestId, clientId: request.client_id, reason: "missing_pkce_s256" });
-        res.status(400).json({ error: "invalid_request", error_description: "PKCE S256 is required" });
-        return;
-      }
-
-      const client = await readOAuthClient(request.client_id);
-      logOAuthAuthorize("client_lookup_completed", {
-        requestId,
-        clientId: request.client_id,
-        found: Boolean(client),
-        redirectUriCount: client?.redirectUris.length || 0,
-        active: Boolean(client),
-      });
-
-      if (!client) {
-        const storedCandidates = await findOAuthClientsByRedirectUri(request.redirect_uri);
-        const marketplaceCandidates = storedCandidates.length === 0 ? await findActiveMarketplaceOAuthClients() : [];
-        const reconciliationCandidates = storedCandidates.length > 0 ? storedCandidates : marketplaceCandidates;
-        const redirectClientId = extractLeadConnectorClientId(request.redirect_uri);
-
-        logOAuthAuthorize("client_id_comparison", {
-          requestId,
-          incomingClientId: request.client_id,
-          redirectClientId,
-          storedClientIds: reconciliationCandidates.map((candidate) => candidate.clientId),
-          redirectUriMatchCount: storedCandidates.length,
-          marketplaceCandidateCount: marketplaceCandidates.length,
-        });
-
-        if (
-          reconciliationCandidates.length === 1 &&
-          (!redirectClientId || redirectClientId === request.client_id) &&
-          isLeadConnectorRedirectUri(request.redirect_uri)
-        ) {
-          const reconciledClient = await reconcileOAuthClientId({
-            storedClientId: reconciliationCandidates[0].clientId,
-            incomingClientId: request.client_id,
-            redirectUri: request.redirect_uri,
-          });
-
-          logOAuthAuthorize("client_id_reconciled", {
-            requestId,
-            incomingClientId: request.client_id,
-            storedClientId: reconciliationCandidates[0].clientId,
-            reason:
-              storedCandidates.length === 1
-                ? "registered_client_id_differed_from_marketplace_authorize_client_id"
-                : "single_marketplace_client_reconciled_to_authorize_client_id",
-          });
-
-          await continueAuthorization(req, res, request, reconciledClient, requestId);
-          return;
-        }
-
-        logOAuthAuthorize("rejected", {
-          requestId,
-          clientId: request.client_id,
-          reason: reconciliationCandidates.length > 1 ? "ambiguous_client_candidates" : "client_not_found",
-          storedClientIds: reconciliationCandidates.map((candidate) => candidate.clientId),
-        });
-        res.status(400).json({ error: "invalid_client" });
-        return;
-      }
-
-      if (!client.redirectUris.includes(request.redirect_uri)) {
-        logOAuthAuthorize("rejected", {
-          requestId,
-          clientId: request.client_id,
-          reason: "redirect_uri_mismatch",
-          incomingRedirectUri: request.redirect_uri,
-          registeredRedirectUris: client.redirectUris,
-        });
-        res.status(400).json({ error: "invalid_request", error_description: "redirect_uri is not registered for this client." });
-        return;
-      }
-
-      await continueAuthorization(req, res, request, client, requestId);
-    } catch (error) {
-      logOAuthAuthorize("failed", {
-        requestId,
-        clientId: request.client_id || null,
-        error: sanitizeLogError(error),
-      });
-      res.status(503).json({ error: "temporarily_unavailable" });
-    }
+  app.post("/oauth/authorize", (req, res) => {
+    void handleAuthorizationRequest(req, res, true);
   });
 
   app.post("/oauth/token", async (req, res) => {
@@ -358,6 +252,135 @@ export function registerOAuthProviderRoutes(app: Express) {
   });
 }
 
+async function handleAuthorizationRequest(req: Request, res: any, consentGranted: boolean) {
+  const request = normalizeAuthorizationRequest({ ...(req.query as AuthorizationRequest), ...(req.body || {}) });
+  const requestId = randomBytes(8).toString("hex");
+
+  try {
+    logOAuthAuthorize("started", {
+      requestId,
+      method: req.method,
+      consentGranted,
+      clientId: request.client_id || null,
+      redirectUri: request.redirect_uri || null,
+      responseType: request.response_type || null,
+      hasCodeChallenge: Boolean(request.code_challenge),
+      codeChallengeMethod: request.code_challenge_method || null,
+    });
+
+    if (request.response_type !== "code") {
+      logOAuthAuthorize("rejected", { requestId, clientId: request.client_id || null, reason: "unsupported_response_type" });
+      res.status(400).json({ error: "unsupported_response_type" });
+      return;
+    }
+
+    if (!request.client_id || !request.redirect_uri) {
+      logOAuthAuthorize("rejected", { requestId, clientId: request.client_id || null, reason: "missing_client_or_redirect_uri" });
+      res.status(400).json({ error: "invalid_request" });
+      return;
+    }
+
+    if (!request.code_challenge || request.code_challenge_method !== "S256") {
+      logOAuthAuthorize("rejected", { requestId, clientId: request.client_id, reason: "missing_pkce_s256" });
+      res.status(400).json({ error: "invalid_request", error_description: "PKCE S256 is required" });
+      return;
+    }
+
+    const client = await resolveAuthorizationClient(request, requestId);
+
+    if (!client) {
+      res.status(400).json({ error: "invalid_client" });
+      return;
+    }
+
+    if (!client.redirectUris.includes(request.redirect_uri)) {
+      logOAuthAuthorize("rejected", {
+        requestId,
+        clientId: request.client_id,
+        reason: "redirect_uri_mismatch",
+        incomingRedirectUri: request.redirect_uri,
+        registeredRedirectUris: client.redirectUris,
+      });
+      res.status(400).json({ error: "invalid_request", error_description: "redirect_uri is not registered for this client." });
+      return;
+    }
+
+    await continueAuthorization(req, res, request, client, requestId, consentGranted);
+  } catch (error) {
+    logOAuthAuthorize("failed", {
+      requestId,
+      clientId: request.client_id || null,
+      error: sanitizeLogError(error),
+    });
+    res.status(503).json({ error: "temporarily_unavailable" });
+  }
+}
+
+async function resolveAuthorizationClient(request: AuthorizationRequest, requestId: string) {
+  const clientId = request.client_id || "";
+  const redirectUri = request.redirect_uri || "";
+  const client = await readOAuthClient(clientId);
+
+  logOAuthAuthorize("client_lookup_completed", {
+    requestId,
+    clientId,
+    found: Boolean(client),
+    redirectUriCount: client?.redirectUris.length || 0,
+    active: Boolean(client),
+  });
+
+  if (client) {
+    return client;
+  }
+
+  const storedCandidates = await findOAuthClientsByRedirectUri(redirectUri);
+  const marketplaceCandidates = storedCandidates.length === 0 ? await findActiveMarketplaceOAuthClients() : [];
+  const reconciliationCandidates = storedCandidates.length > 0 ? storedCandidates : marketplaceCandidates;
+  const redirectClientId = extractLeadConnectorClientId(redirectUri);
+
+  logOAuthAuthorize("client_id_comparison", {
+    requestId,
+    incomingClientId: clientId,
+    redirectClientId,
+    storedClientIds: reconciliationCandidates.map((candidate) => candidate.clientId),
+    redirectUriMatchCount: storedCandidates.length,
+    marketplaceCandidateCount: marketplaceCandidates.length,
+  });
+
+  if (
+    reconciliationCandidates.length === 1 &&
+    (!redirectClientId || redirectClientId === clientId) &&
+    isLeadConnectorRedirectUri(redirectUri)
+  ) {
+    const reconciledClient = await reconcileOAuthClientId({
+      storedClientId: reconciliationCandidates[0].clientId,
+      incomingClientId: clientId,
+      redirectUri,
+    });
+
+    logOAuthAuthorize("client_id_reconciled", {
+      requestId,
+      incomingClientId: clientId,
+      storedClientId: reconciliationCandidates[0].clientId,
+      reason:
+        storedCandidates.length === 1
+          ? "registered_client_id_differed_from_marketplace_authorize_client_id"
+          : "single_marketplace_client_reconciled_to_authorize_client_id",
+    });
+
+    return reconciledClient;
+  }
+
+  logOAuthAuthorize("rejected", {
+    requestId,
+    clientId,
+    reason: reconciliationCandidates.length > 1 ? "ambiguous_client_candidates" : "client_not_found",
+    storedClientIds: reconciliationCandidates.map((candidate) => candidate.clientId),
+  });
+
+  return null;
+}
+
 export function generateOAuthClientSecret() {
   return { clientSecret: `eeos_secret_${randomBytes(32).toString("base64url")}` };
 }
@@ -443,8 +466,9 @@ function normalizeAuthorizationRequest(request: AuthorizationRequest): Authoriza
 
 function renderAuthorizationPage(originalUrl: string, clientName: string) {
   const approveUrl = new URL(originalUrl, issuerFallback);
-  approveUrl.searchParams.set("approve", "1");
-  const relativeApproveUrl = `${approveUrl.pathname}${approveUrl.search}`;
+  const hiddenInputs = Array.from(approveUrl.searchParams.entries())
+    .map(([name, value]) => `      <input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(value)}" />`)
+    .join("\n");
 
   return `<!doctype html>
 <html lang="en">
@@ -464,7 +488,11 @@ function renderAuthorizationPage(originalUrl: string, clientName: string) {
     <main>
       <h1>Authorize EEOS</h1>
       <p>${escapeHtml(clientName)} is requesting access to connect with EEOS.</p>
-      <a href="${escapeHtml(relativeApproveUrl)}">Authorize</a>
+      <form method="post" action="/oauth/authorize">
+${hiddenInputs}
+        <input type="hidden" name="approve" value="1" />
+        <button type="submit">Authorize</button>
+      </form>
     </main>
   </body>
 </html>`;
@@ -500,14 +528,19 @@ async function continueAuthorization(
   request: AuthorizationRequest,
   client: OAuthClient,
   requestId: string,
+  consentGranted: boolean,
 ) {
-  if (req.query.approve !== "1") {
+  if (!consentGranted) {
     logOAuthAuthorize("page_rendered", { requestId, clientId: client.clientId });
     res.status(200).type("html").send(renderAuthorizationPage(req.originalUrl, client.name));
     return;
   }
 
+  logOAuthAuthorize("consent_received", { requestId, clientId: client.clientId, redirectUri: request.redirect_uri || null });
+
   const code = `eeos_code_${randomBytes(24).toString("base64url")}`;
+  logOAuthAuthorize("authorization_code_created", { requestId, clientId: client.clientId });
+
   await storeAuthorizationCode({
     codeHash: hashSecret(code),
     clientId: client.clientId,
@@ -515,12 +548,14 @@ async function continueAuthorization(
     codeChallenge: request.code_challenge || "",
     scope: request.scope || "openid profile email ghl.marketplace",
   });
+  logOAuthAuthorize("authorization_code_persisted", { requestId, clientId: client.clientId });
 
   const redirectUrl = new URL(request.redirect_uri || "");
   redirectUrl.searchParams.set("code", code);
   if (request.state) redirectUrl.searchParams.set("state", request.state);
 
-  logOAuthAuthorize("approved", { requestId, clientId: client.clientId });
+  logOAuthAuthorize("redirect_prepared", { requestId, clientId: client.clientId, redirectUri: request.redirect_uri || null, hasState: Boolean(request.state) });
+  logOAuthAuthorize("redirect_sent", { requestId, clientId: client.clientId });
   res.redirect(302, redirectUrl.toString());
 }
 
