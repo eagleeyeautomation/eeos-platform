@@ -20,6 +20,11 @@ type AuthorizationRequest = {
   code_challenge_method?: string;
 };
 
+type RefreshTokenRecord = {
+  subject: string;
+  scope: string;
+};
+
 const issuerFallback = "https://eeos-platform-production.up.railway.app";
 const ephemeralKeyPair = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const oauthClientRegistrationTimeoutMs = 5_000;
@@ -34,7 +39,7 @@ export function sendOpenIdConfiguration(req: Request, res: { json: (body: unknow
     userinfo_endpoint: `${issuer}/oauth/userinfo`,
     jwks_uri: `${issuer}/oauth/jwks.json`,
     response_types_supported: ["code"],
-    grant_types_supported: ["authorization_code"],
+    grant_types_supported: ["authorization_code", "refresh_token"],
     subject_types_supported: ["public"],
     id_token_signing_alg_values_supported: ["RS256"],
     token_endpoint_auth_methods_supported: ["client_secret_post", "client_secret_basic"],
@@ -166,41 +171,100 @@ export function registerOAuthProviderRoutes(app: Express) {
   });
 
   app.post("/oauth/token", async (req, res) => {
-    const clientCredentials = parseClientCredentials(req);
-    const code = readString(req.body?.code);
-    const redirectUri = readString(req.body?.redirect_uri);
-    const verifier = readString(req.body?.code_verifier);
+    try {
+      const clientCredentials = parseClientCredentials(req);
+      const grantType = readString(req.body?.grant_type);
+      const client = await readOAuthClient(clientCredentials.clientId);
 
-    if (req.body?.grant_type !== "authorization_code" || !code || !redirectUri || !verifier) {
-      res.status(400).json({ error: "invalid_request" });
-      return;
+      if (!client || !secureCompare(client.clientSecretHash, hashSecret(clientCredentials.clientSecret))) {
+        res.status(401).json({ error: "invalid_client" });
+        return;
+      }
+
+      if (grantType === "authorization_code") {
+        const code = readString(req.body?.code);
+        const redirectUri = readString(req.body?.redirect_uri);
+        const verifier = readString(req.body?.code_verifier);
+
+        if (!code || !redirectUri || !verifier) {
+          res.status(400).json({ error: "invalid_request" });
+          return;
+        }
+
+        const authorizationCode = await consumeAuthorizationCode(hashSecret(code), client.clientId);
+
+        if (!authorizationCode || authorizationCode.redirectUri !== redirectUri || !verifyPkce(verifier, authorizationCode.codeChallenge)) {
+          res.status(400).json({ error: "invalid_grant" });
+          return;
+        }
+
+        const subject = `eeos-org-${client.clientId}`;
+        const refreshToken = generateOAuthRefreshToken();
+        await storeRefreshToken({
+          tokenHash: hashSecret(refreshToken),
+          clientId: client.clientId,
+          subject,
+          scope: authorizationCode.scope,
+        });
+
+        const accessToken = signJwt({ sub: subject, aud: client.clientId, scope: authorizationCode.scope, typ: "access_token" }, req);
+        const idToken = signJwt({ sub: subject, aud: client.clientId, scope: authorizationCode.scope, typ: "id_token" }, req);
+
+        res.json({
+          access_token: accessToken,
+          id_token: idToken,
+          refresh_token: refreshToken,
+          token_type: "Bearer",
+          expires_in: 3600,
+          scope: authorizationCode.scope,
+        });
+        return;
+      }
+
+      if (grantType === "refresh_token") {
+        const refreshToken = readString(req.body?.refresh_token);
+
+        if (!refreshToken) {
+          res.status(400).json({ error: "invalid_request" });
+          return;
+        }
+
+        const nextRefreshToken = generateOAuthRefreshToken();
+        const rotated = await rotateRefreshToken({
+          currentTokenHash: hashSecret(refreshToken),
+          nextTokenHash: hashSecret(nextRefreshToken),
+          clientId: client.clientId,
+        });
+
+        if (!rotated) {
+          res.status(400).json({ error: "invalid_grant" });
+          return;
+        }
+
+        const accessToken = signJwt({ sub: rotated.subject, aud: client.clientId, scope: rotated.scope, typ: "access_token" }, req);
+
+        res.json({
+          access_token: accessToken,
+          refresh_token: nextRefreshToken,
+          token_type: "Bearer",
+          expires_in: 3600,
+          scope: rotated.scope,
+        });
+        return;
+      }
+
+      res.status(400).json({ error: "unsupported_grant_type" });
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          level: "error",
+          component: "oauth_provider",
+          event: "oauth_token.failed",
+          error: sanitizeLogError(error),
+        }),
+      );
+      res.status(503).json({ error: "temporarily_unavailable" });
     }
-
-    const client = await readOAuthClient(clientCredentials.clientId);
-
-    if (!client || !secureCompare(client.clientSecretHash, hashSecret(clientCredentials.clientSecret))) {
-      res.status(401).json({ error: "invalid_client" });
-      return;
-    }
-
-    const authorizationCode = await consumeAuthorizationCode(hashSecret(code), client.clientId);
-
-    if (!authorizationCode || authorizationCode.redirectUri !== redirectUri || !verifyPkce(verifier, authorizationCode.codeChallenge)) {
-      res.status(400).json({ error: "invalid_grant" });
-      return;
-    }
-
-    const subject = `eeos-org-${client.clientId}`;
-    const accessToken = signJwt({ sub: subject, aud: client.clientId, scope: authorizationCode.scope, typ: "access_token" }, req);
-    const idToken = signJwt({ sub: subject, aud: client.clientId, scope: authorizationCode.scope, typ: "id_token" }, req);
-
-    res.json({
-      access_token: accessToken,
-      id_token: idToken,
-      token_type: "Bearer",
-      expires_in: 3600,
-      scope: authorizationCode.scope,
-    });
   });
 
   app.get("/oauth/userinfo", (req, res) => {
@@ -222,6 +286,10 @@ export function registerOAuthProviderRoutes(app: Express) {
 
 export function generateOAuthClientSecret() {
   return { clientSecret: `eeos_secret_${randomBytes(32).toString("base64url")}` };
+}
+
+export function generateOAuthRefreshToken() {
+  return `eeos_refresh_${randomBytes(48).toString("base64url")}`;
 }
 
 export function verifyPkce(verifier: string, challenge: string) {
@@ -367,6 +435,28 @@ async function ensureOAuthProviderStorage(requestId?: string) {
             where consumed_at is null
         `),
       );
+      await runOAuthStorageStep("create_table_eeos_oauth_refresh_tokens", requestId, () =>
+        db.query(`
+          create table if not exists eeos_oauth_refresh_tokens (
+            id bigserial primary key,
+            token_hash text not null unique,
+            client_id text not null references eeos_oauth_clients (client_id) on delete cascade,
+            subject text not null,
+            scope text not null,
+            created_at timestamptz not null default now(),
+            expires_at timestamptz not null,
+            revoked_at timestamptz,
+            replaced_by_hash text
+          )
+        `),
+      );
+      await runOAuthStorageStep("create_index_eeos_oauth_refresh_tokens_active", requestId, () =>
+        db.query(`
+          create index if not exists eeos_oauth_refresh_tokens_active_idx
+            on eeos_oauth_refresh_tokens (client_id, expires_at)
+            where revoked_at is null
+        `),
+      );
     }),
     oauthClientRegistrationTimeoutMs,
     "OAuth provider storage check timed out.",
@@ -440,6 +530,83 @@ async function storeAuthorizationCode(input: {
       `,
       [input.codeHash, input.clientId, input.redirectUri, input.codeChallenge, input.scope],
     );
+  });
+}
+
+async function storeRefreshToken(input: {
+  tokenHash: string;
+  clientId: string;
+  subject: string;
+  scope: string;
+}) {
+  await withDatabase(async (db) => {
+    await db.query(
+      `
+        insert into eeos_oauth_refresh_tokens (
+          token_hash,
+          client_id,
+          subject,
+          scope,
+          expires_at,
+          created_at
+        )
+        values ($1, $2, $3, $4, now() + interval '90 days', now())
+      `,
+      [input.tokenHash, input.clientId, input.subject, input.scope],
+    );
+  });
+}
+
+async function rotateRefreshToken(input: {
+  currentTokenHash: string;
+  nextTokenHash: string;
+  clientId: string;
+}) {
+  return withDatabase(async (db) => {
+    await db.query("BEGIN");
+
+    try {
+      const current = await db.query<RefreshTokenRecord>(
+        `
+          update eeos_oauth_refresh_tokens
+          set revoked_at = now(),
+              replaced_by_hash = $1
+          where token_hash = $2
+            and client_id = $3
+            and revoked_at is null
+            and expires_at > now()
+          returning subject, scope
+        `,
+        [input.nextTokenHash, input.currentTokenHash, input.clientId],
+      );
+      const row = current.rows[0];
+
+      if (!row) {
+        await db.query("ROLLBACK");
+        return null;
+      }
+
+      await db.query(
+        `
+          insert into eeos_oauth_refresh_tokens (
+            token_hash,
+            client_id,
+            subject,
+            scope,
+            expires_at,
+            created_at
+          )
+          values ($1, $2, $3, $4, now() + interval '90 days', now())
+        `,
+        [input.nextTokenHash, input.clientId, row.subject, row.scope],
+      );
+
+      await db.query("COMMIT");
+      return { subject: row.subject, scope: row.scope };
+    } catch (error) {
+      await db.query("ROLLBACK");
+      throw error;
+    }
   });
 }
 
@@ -532,6 +699,7 @@ async function withTimeout<T>(operation: Promise<T>, timeoutMs: number, message:
 
 export const oauthProviderInternals = {
   generateOAuthClientSecret,
+  generateOAuthRefreshToken,
   signJwt,
   verifyPkce,
 };

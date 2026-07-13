@@ -29,3 +29,19 @@ create table if not exists eeos_oauth_authorization_codes (
 create index if not exists eeos_oauth_authorization_codes_client_idx
   on eeos_oauth_authorization_codes (client_id, expires_at)
   where consumed_at is null;
+
+create table if not exists eeos_oauth_refresh_tokens (
+  id bigserial primary key,
+  token_hash text not null unique,
+  client_id text not null references eeos_oauth_clients (client_id) on delete cascade,
+  subject text not null,
+  scope text not null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  revoked_at timestamptz,
+  replaced_by_hash text
+);
+
+create index if not exists eeos_oauth_refresh_tokens_active_idx
+  on eeos_oauth_refresh_tokens (client_id, expires_at)
+  where revoked_at is null;

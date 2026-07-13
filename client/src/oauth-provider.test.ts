@@ -10,6 +10,13 @@ describe("EEOS OAuth provider internals", () => {
     expect(clientSecret.length).toBeGreaterThan(40);
   });
 
+  it("generates production-style refresh tokens", () => {
+    const token = oauthProviderInternals.generateOAuthRefreshToken();
+
+    expect(token).toMatch(/^eeos_refresh_/);
+    expect(token.length).toBeGreaterThan(60);
+  });
+
   it("verifies S256 PKCE challenges", () => {
     const verifier = "test-verifier-value";
     const challenge = Buffer.from(awaitDigest(verifier), "hex").toString("base64url");
