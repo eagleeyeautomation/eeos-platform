@@ -130,44 +130,92 @@ export function registerOAuthProviderRoutes(app: Express) {
   });
 
   app.get("/oauth/authorize", async (req, res) => {
-    const request = req.query as AuthorizationRequest;
+    const request = normalizeAuthorizationRequest(req.query as AuthorizationRequest);
+    const requestId = randomBytes(8).toString("hex");
 
-    if (request.response_type !== "code") {
-      res.status(400).json({ error: "unsupported_response_type" });
-      return;
+    try {
+      logOAuthAuthorize("started", {
+        requestId,
+        clientId: request.client_id || null,
+        redirectUri: request.redirect_uri || null,
+        responseType: request.response_type || null,
+        hasCodeChallenge: Boolean(request.code_challenge),
+        codeChallengeMethod: request.code_challenge_method || null,
+      });
+
+      if (request.response_type !== "code") {
+        logOAuthAuthorize("rejected", { requestId, clientId: request.client_id || null, reason: "unsupported_response_type" });
+        res.status(400).json({ error: "unsupported_response_type" });
+        return;
+      }
+
+      if (!request.client_id || !request.redirect_uri) {
+        logOAuthAuthorize("rejected", { requestId, clientId: request.client_id || null, reason: "missing_client_or_redirect_uri" });
+        res.status(400).json({ error: "invalid_request" });
+        return;
+      }
+
+      if (!request.code_challenge || request.code_challenge_method !== "S256") {
+        logOAuthAuthorize("rejected", { requestId, clientId: request.client_id, reason: "missing_pkce_s256" });
+        res.status(400).json({ error: "invalid_request", error_description: "PKCE S256 is required" });
+        return;
+      }
+
+      const client = await readOAuthClient(request.client_id);
+      logOAuthAuthorize("client_lookup_completed", {
+        requestId,
+        clientId: request.client_id,
+        found: Boolean(client),
+        redirectUriCount: client?.redirectUris.length || 0,
+      });
+
+      if (!client) {
+        logOAuthAuthorize("rejected", { requestId, clientId: request.client_id, reason: "client_not_found" });
+        res.status(400).json({ error: "invalid_client" });
+        return;
+      }
+
+      if (!client.redirectUris.includes(request.redirect_uri)) {
+        logOAuthAuthorize("rejected", {
+          requestId,
+          clientId: request.client_id,
+          reason: "redirect_uri_mismatch",
+          incomingRedirectUri: request.redirect_uri,
+          registeredRedirectUris: client.redirectUris,
+        });
+        res.status(400).json({ error: "invalid_request", error_description: "redirect_uri is not registered for this client." });
+        return;
+      }
+
+      if (req.query.approve !== "1") {
+        logOAuthAuthorize("page_rendered", { requestId, clientId: client.clientId });
+        res.status(200).type("html").send(renderAuthorizationPage(req.originalUrl, client.name));
+        return;
+      }
+
+      const code = `eeos_code_${randomBytes(24).toString("base64url")}`;
+      await storeAuthorizationCode({
+        codeHash: hashSecret(code),
+        clientId: client.clientId,
+        redirectUri: request.redirect_uri,
+        codeChallenge: request.code_challenge,
+        scope: request.scope || "openid profile email ghl.marketplace",
+      });
+
+      const redirectUrl = new URL(request.redirect_uri);
+      redirectUrl.searchParams.set("code", code);
+      if (request.state) redirectUrl.searchParams.set("state", request.state);
+
+      logOAuthAuthorize("approved", { requestId, clientId: client.clientId });
+      res.redirect(302, redirectUrl.toString());
+    } catch (error) {
+      logOAuthAuthorize("failed", {
+        requestId,
+        clientId: request.client_id || null,
+        error: sanitizeLogError(error),
+      });
+      res.status(503).json({ error: "temporarily_unavailable" });
     }
-
-    if (!request.client_id || !request.redirect_uri) {
-      res.status(400).json({ error: "invalid_request" });
-      return;
-    }
-
-    if (!request.code_challenge || request.code_challenge_method !== "S256") {
-      res.status(400).json({ error: "invalid_request", error_description: "PKCE S256 is required" });
-      return;
-    }
-
-    const client = await readOAuthClient(request.client_id);
-
-    if (!client || !client.redirectUris.includes(request.redirect_uri)) {
-      res.status(400).json({ error: "invalid_client" });
-      return;
-    }
-
-    const code = `eeos_code_${randomBytes(24).toString("base64url")}`;
-    await storeAuthorizationCode({
-      codeHash: hashSecret(code),
-      clientId: client.clientId,
-      redirectUri: request.redirect_uri,
-      codeChallenge: request.code_challenge,
-      scope: request.scope || "openid profile email ghl.marketplace",
-    });
-
-    const redirectUrl = new URL(request.redirect_uri);
-    redirectUrl.searchParams.set("code", code);
-    if (request.state) redirectUrl.searchParams.set("state", request.state);
-
-    res.redirect(302, redirectUrl.toString());
   });
 
   app.post("/oauth/token", async (req, res) => {
@@ -353,6 +401,64 @@ function getIssuer(req: Request) {
   const protocol = req.header("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
 
   return `${protocol}://${host}`.replace(/\/$/, "");
+}
+
+function normalizeAuthorizationRequest(request: AuthorizationRequest): AuthorizationRequest {
+  return {
+    client_id: readString(request.client_id)?.trim(),
+    redirect_uri: readString(request.redirect_uri)?.trim(),
+    response_type: readString(request.response_type)?.trim(),
+    scope: readString(request.scope)?.trim(),
+    state: readString(request.state),
+    code_challenge: readString(request.code_challenge)?.trim(),
+    code_challenge_method: readString(request.code_challenge_method)?.trim(),
+  };
+}
+
+function renderAuthorizationPage(originalUrl: string, clientName: string) {
+  const approveUrl = new URL(originalUrl, issuerFallback);
+  approveUrl.searchParams.set("approve", "1");
+  const relativeApproveUrl = `${approveUrl.pathname}${approveUrl.search}`;
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Authorize EEOS</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #0f172a; color: #f8fafc; display: grid; min-height: 100vh; place-items: center; }
+      main { width: min(480px, calc(100vw - 32px)); background: #111827; border: 1px solid #334155; border-radius: 8px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+      h1 { font-size: 22px; margin: 0 0 12px; }
+      p { color: #cbd5e1; line-height: 1.5; }
+      a { display: inline-flex; margin-top: 16px; background: #fbbf24; color: #111827; text-decoration: none; font-weight: 700; padding: 10px 14px; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Authorize EEOS</h1>
+      <p>${escapeHtml(clientName)} is requesting access to connect with EEOS.</p>
+      <a href="${escapeHtml(relativeApproveUrl)}">Authorize</a>
+    </main>
+  </body>
+</html>`;
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case "\"":
+        return "&quot;";
+      default:
+        return "&#39;";
+    }
+  });
 }
 
 async function createOAuthClient(client: OAuthClient, requestId?: string) {
@@ -670,6 +776,10 @@ function base64UrlJson(value: unknown) {
 
 function logOAuthClientRegistration(event: string, fields: Record<string, unknown> = {}) {
   console.log(JSON.stringify({ level: "info", component: "oauth_provider", event: `oauth_client_registration.${event}`, ...fields }));
+}
+
+function logOAuthAuthorize(event: string, fields: Record<string, unknown> = {}) {
+  console.log(JSON.stringify({ level: "info", component: "oauth_provider", event: `oauth_authorize.${event}`, ...fields }));
 }
 
 function sanitizeLogError(error: unknown) {
