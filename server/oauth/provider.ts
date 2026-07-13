@@ -636,6 +636,19 @@ async function ensureOAuthProviderStorage(requestId?: string) {
           )
         `),
       );
+      await runOAuthStorageStep("repair_table_eeos_oauth_authorization_codes", requestId, () =>
+        db.query(`
+          alter table eeos_oauth_authorization_codes
+            add column if not exists code_hash text,
+            add column if not exists client_id text,
+            add column if not exists redirect_uri text,
+            add column if not exists code_challenge text,
+            add column if not exists scope text,
+            add column if not exists created_at timestamptz not null default now(),
+            add column if not exists expires_at timestamptz,
+            add column if not exists consumed_at timestamptz
+        `),
+      );
       await runOAuthStorageStep("create_index_eeos_oauth_authorization_codes_client", requestId, () =>
         db.query(`
           create index if not exists eeos_oauth_authorization_codes_client_idx
@@ -656,6 +669,19 @@ async function ensureOAuthProviderStorage(requestId?: string) {
             revoked_at timestamptz,
             replaced_by_hash text
           )
+        `),
+      );
+      await runOAuthStorageStep("repair_table_eeos_oauth_refresh_tokens", requestId, () =>
+        db.query(`
+          alter table eeos_oauth_refresh_tokens
+            add column if not exists token_hash text,
+            add column if not exists client_id text,
+            add column if not exists subject text,
+            add column if not exists scope text,
+            add column if not exists created_at timestamptz not null default now(),
+            add column if not exists expires_at timestamptz,
+            add column if not exists revoked_at timestamptz,
+            add column if not exists replaced_by_hash text
         `),
       );
       await runOAuthStorageStep("create_index_eeos_oauth_refresh_tokens_active", requestId, () =>
