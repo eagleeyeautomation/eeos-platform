@@ -306,15 +306,19 @@ async function handleAuthorizationRequest(req: Request, res: any, consentGranted
     }
 
     await continueAuthorization(req, res, request, client, requestId, consentGranted);
-  } catch (error) {
-    logOAuthAuthorize("failed", {
-      requestId,
-      clientId: request.client_id || null,
-      error: sanitizeLogError(error),
-    });
-    res.status(503).json({ error: "temporarily_unavailable" });
+    } catch (error) {
+      const sanitizedError = sanitizeLogError(error);
+      logOAuthAuthorize("failed", {
+        requestId,
+        clientId: request.client_id || null,
+        error: sanitizedError,
+      });
+      res.status(503).json({
+        error: "temporarily_unavailable",
+        ...(req.header("x-eeos-debug") === "1" ? { error_description: sanitizedError } : {}),
+      });
+    }
   }
-}
 
 async function resolveAuthorizationClient(request: AuthorizationRequest, requestId: string) {
   const clientId = request.client_id || "";
