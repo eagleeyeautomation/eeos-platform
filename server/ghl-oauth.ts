@@ -7,23 +7,61 @@
  * Every token stored here feeds the IE pipeline with accurate, fresh data.
  */
 
+import { createCipheriv, createHash, randomBytes } from "crypto";
 import type { Express, Request, Response } from "express";
 import { ENV } from "./_core/env";
 import { upsertGhlToken, getGhlToken } from "./db";
+import { consumeOAuthState, persistAuditEvent, persistOAuthState, upsertGhlTokenRecord } from "./db/runtimePersistence";
 
 const GHL_AUTH_URL = "https://marketplace.gohighlevel.com/oauth/chooselocation";
 const GHL_TOKEN_URL = "https://services.leadconnectorhq.com/oauth/token";
+const APPROVED_GHL_CALLBACK_PATH = "/api/integrations/eea/oauth/callback";
+const APPROVED_GHL_CALLBACK_URL = "https://eeos-platform-production.up.railway.app/api/integrations/eea/oauth/callback";
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
   return typeof value === "string" ? value : undefined;
 }
 
+function logGhlOAuth(event: string, metadata: Record<string, unknown> = {}) {
+  console.log(JSON.stringify({
+    level: "info",
+    component: "ghl_oauth",
+    event,
+    ...metadata,
+  }));
+}
+
+function logGhlOAuthError(event: string, error: unknown, metadata: Record<string, unknown> = {}) {
+  console.error(JSON.stringify({
+    level: "error",
+    component: "ghl_oauth",
+    event,
+    error: sanitizeError(error),
+    ...metadata,
+  }));
+}
+
+function sanitizeError(error: unknown) {
+  if (error instanceof Error) {
+    return { name: error.name, message: redactSecrets(error.message) };
+  }
+
+  return { message: redactSecrets(String(error)) };
+}
+
+function redactSecrets(value: string) {
+  return value
+    .replace(/access_token["'=:\s]+[^"',\s}]+/gi, "access_token=<redacted>")
+    .replace(/refresh_token["'=:\s]+[^"',\s}]+/gi, "refresh_token=<redacted>")
+    .replace(/client_secret["'=:\s]+[^"',\s}]+/gi, "client_secret=<redacted>");
+}
+
 /** Build the GHL OAuth authorization URL */
 function buildGhlAuthUrl(state: string): string {
   const params = new URLSearchParams({
     response_type: "code",
-    redirect_uri: ENV.ghlRedirectUri || `${process.env.VITE_FRONTEND_FORGE_API_URL || ""}/api/ghl/callback`,
+    redirect_uri: getApprovedRedirectUri(),
     client_id: ENV.ghlClientId,
     scope: [
       "contacts.readonly",
@@ -72,9 +110,107 @@ async function exchangeCodeForTokens(code: string, redirectUri: string) {
     expires_in: number;
     scope: string;
     locationId?: string;
+    location_id?: string;
     companyId?: string;
+    company_id?: string;
     userId?: string;
+    userType?: string;
+    user_type?: string;
   }>;
+}
+
+function getApprovedRedirectUri() {
+  return ENV.ghlRedirectUri || APPROVED_GHL_CALLBACK_URL;
+}
+
+function readTokenLocationId(tokenData: Awaited<ReturnType<typeof exchangeCodeForTokens>>) {
+  return tokenData.locationId || tokenData.location_id || "";
+}
+
+function readTokenCompanyId(tokenData: Awaited<ReturnType<typeof exchangeCodeForTokens>>) {
+  return tokenData.companyId || tokenData.company_id || "";
+}
+
+function readTokenUserType(tokenData: Awaited<ReturnType<typeof exchangeCodeForTokens>>) {
+  return tokenData.userType || tokenData.user_type || "Location";
+}
+
+function encryptTokenPayload(payload: Record<string, unknown>) {
+  const keyMaterial = process.env.EEOS_TOKEN_VAULT_KEY;
+
+  if (!keyMaterial) {
+    throw new Error("EEOS_TOKEN_VAULT_KEY is required to store GoHighLevel OAuth tokens.");
+  }
+
+  const key = createHash("sha256").update(keyMaterial).digest();
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const ciphertext = Buffer.concat([cipher.update(JSON.stringify(payload), "utf8"), cipher.final()]);
+
+  return JSON.stringify({
+    version: 1,
+    algorithm: "aes-256-gcm",
+    iv: iv.toString("base64url"),
+    tag: cipher.getAuthTag().toString("base64url"),
+    ciphertext: ciphertext.toString("base64url"),
+  });
+}
+
+function decodeStatePayload(state: string) {
+  const stateBody = state.includes(".") ? state.slice(0, state.indexOf(".")) : state;
+  const decoded = JSON.parse(Buffer.from(stateBody, "base64url").toString()) as Record<string, unknown>;
+
+  return {
+    tenantId: typeof decoded.tenantId === "string" ? decoded.tenantId : "unknown",
+    nonce: typeof decoded.nonce === "string" ? decoded.nonce : undefined,
+  };
+}
+
+async function validateOAuthState(state: string) {
+  const payload = decodeStatePayload(state);
+  const consumed = await consumeOAuthState(state);
+
+  if (!consumed) {
+    throw new Error("GoHighLevel OAuth state is expired, missing, or already used.");
+  }
+
+  return payload;
+}
+
+function renderSuccessPage(res: Response, locationId: string) {
+  res.status(200).send(`<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>EEOS GoHighLevel Connected</title></head>
+  <body>
+    <main style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 48px;">
+      <h1>EEOS is now connected to GoHighLevel.</h1>
+      ${locationId ? `<p>Connected location: ${escapeHtml(locationId)}</p>` : ""}
+    </main>
+  </body>
+</html>`);
+}
+
+function renderErrorPage(res: Response, status: number, message: string) {
+  res.status(status).send(`<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>EEOS GoHighLevel Connection Error</title></head>
+  <body>
+    <main style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 48px;">
+      <h1>GoHighLevel connection failed.</h1>
+      <p>${escapeHtml(message)}</p>
+    </main>
+  </body>
+</html>`);
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  })[char] || char);
 }
 
 /** Refresh an expired GHL access token */
@@ -146,7 +282,7 @@ export function registerGhlOAuthRoutes(app: Express) {
    * Generates GHL OAuth authorization URL and redirects the browser to it.
    * The tenantId (user's openId) is encoded in the state parameter.
    */
-  app.get("/api/ghl/auth", (req: Request, res: Response) => {
+  app.get("/api/ghl/auth", async (req: Request, res: Response) => {
     if (!ENV.ghlClientId) {
       res.status(503).json({ error: "GHL integration not configured" });
       return;
@@ -163,6 +299,8 @@ export function registerGhlOAuthRoutes(app: Express) {
       ts: Date.now(),
     })).toString("base64url");
 
+    await persistOAuthState(state, { tenantId }, new Date(Date.now() + 10 * 60_000));
+
     const authUrl = buildGhlAuthUrl(state);
     console.log(`[GHL] Redirecting tenant ${tenantId} to GHL OAuth`);
     res.redirect(302, authUrl);
@@ -173,59 +311,92 @@ export function registerGhlOAuthRoutes(app: Express) {
    * GHL redirects here after user authorizes. Exchanges code for tokens
    * and stores them in the ghl_tokens table.
    */
-  app.get("/api/ghl/callback", async (req: Request, res: Response) => {
+  const handleGhlOAuthCallback = async (req: Request, res: Response) => {
     const code = getQueryParam(req, "code");
     const state = getQueryParam(req, "state");
     const error = getQueryParam(req, "error");
+    const errorDescription = getQueryParam(req, "error_description");
+
+    logGhlOAuth("callback_received", {
+      path: req.path,
+      hasCode: Boolean(code),
+      hasState: Boolean(state),
+      hasError: Boolean(error),
+    });
 
     if (error) {
-      console.warn(`[GHL] OAuth denied: ${error}`);
-      res.redirect(302, `/oauth-failure?provider=gohighlevel&error=${encodeURIComponent(error)}`);
+      logGhlOAuth("callback_failed", { reason: "provider_error", error, errorDescription });
+      renderErrorPage(res, 400, errorDescription || error);
       return;
     }
 
     if (!code || !state) {
-      res.redirect(302, `/oauth-failure?provider=gohighlevel&error=missing_params`);
+      logGhlOAuth("callback_failed", { reason: "missing_params" });
+      renderErrorPage(res, 400, "Missing GoHighLevel OAuth code or state.");
       return;
     }
 
     try {
-      // Decode state to get tenantId
-      let tenantId = "unknown";
-      try {
-        const decoded = JSON.parse(Buffer.from(state, "base64url").toString());
-        tenantId = decoded.tenantId || "unknown";
-      } catch {
-        console.warn("[GHL] Could not decode state, using fallback tenantId");
-      }
+      const statePayload = await validateOAuthState(state);
+      const tenantId = statePayload.tenantId;
+      logGhlOAuth("state_validated", { tenantId });
 
-      const redirectUri = ENV.ghlRedirectUri || `${req.protocol}://${req.get("host")}/api/ghl/callback`;
+      const redirectUri = getApprovedRedirectUri();
+      logGhlOAuth("token_exchange_started", { tenantId, redirectUri });
       const tokenData = await exchangeCodeForTokens(code, redirectUri);
-
-      const expiresAt = new Date(Date.now() + (tokenData.expires_in - 300) * 1000);
-
-      await upsertGhlToken({
+      logGhlOAuth("token_exchange_succeeded", {
         tenantId,
-        locationId: tokenData.locationId,
-        companyId: tokenData.companyId,
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token,
-        tokenType: tokenData.token_type || "Bearer",
-        scope: tokenData.scope,
-        expiresAt,
-        lastRefreshedAt: new Date(),
-        refreshFailCount: 0,
-        isActive: true,
-        connectedAt: new Date(),
+        locationId: readTokenLocationId(tokenData) || null,
+        companyId: readTokenCompanyId(tokenData) || null,
+        userType: readTokenUserType(tokenData),
       });
 
-      console.log(`[GHL] OAuth complete for tenant ${tenantId}, location ${tokenData.locationId}`);
-      res.redirect(302, `/oauth-success?provider=gohighlevel&locationId=${tokenData.locationId || ""}`);
+      const expiresAt = new Date(Date.now() + (tokenData.expires_in - 300) * 1000);
+      const locationId = readTokenLocationId(tokenData);
+      const companyId = readTokenCompanyId(tokenData);
+      const userType = readTokenUserType(tokenData);
+      const scopes = tokenData.scope?.split(/[,\s]+/).filter(Boolean) || [];
+
+      if (!locationId) {
+        throw new Error("GoHighLevel token response did not include a location ID.");
+      }
+
+      await upsertGhlTokenRecord({
+        membershipId: tenantId,
+        operationalDivisionId: locationId,
+        locationId,
+        encryptedPayload: encryptTokenPayload({
+          accessToken: tokenData.access_token,
+          refreshToken: tokenData.refresh_token,
+          tokenType: tokenData.token_type || "Bearer",
+          expiresAt: expiresAt.toISOString(),
+          scopes,
+          locationId,
+          companyId,
+          userType,
+        }),
+        expiresAt: expiresAt.toISOString(),
+        scopes,
+      });
+
+      await persistAuditEvent({
+        organizationId: tenantId,
+        source: "gohighlevel",
+        eventType: "oauth.connected",
+        locationId: locationId || null,
+        metadata: { companyId, userType, scopes },
+      });
+
+      logGhlOAuth("token_storage_succeeded", { tenantId, locationId: locationId || null });
+      renderSuccessPage(res, locationId);
     } catch (err) {
-      console.error("[GHL] OAuth callback error:", err);
-      res.redirect(302, `/oauth-failure?provider=gohighlevel&error=token_exchange_failed`);
+      logGhlOAuthError("callback_failed", err, { path: req.path });
+      renderErrorPage(res, 400, err instanceof Error ? err.message : "Token exchange failed.");
     }
-  });
+  };
+
+  app.get(APPROVED_GHL_CALLBACK_PATH, handleGhlOAuthCallback);
+  app.get("/api/ghl/callback", handleGhlOAuthCallback);
 
   /**
    * GET /api/ghl/status
