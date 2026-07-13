@@ -224,30 +224,51 @@ function buildProviderErrorMessage(error: string, errorDescription: string | und
 }
 
 function renderSuccessPage(res: Response, locationId: string) {
-  res.type("html").status(200).send(`<!doctype html>
+  const body = `<!doctype html>
 <html lang="en">
-  <head><meta charset="utf-8"><title>EEOS GoHighLevel Connected</title></head>
-  <body>
-    <main style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 48px;">
-      <h1>EEOS is now connected to GoHighLevel.</h1>
-      <p>You can close this window and return to GoHighLevel.</p>
-      ${locationId ? `<p>Connected location: ${escapeHtml(locationId)}</p>` : ""}
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EEOS GoHighLevel Connected</title>
+  </head>
+  <body style="margin:0;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;">
+    <main style="display:block;padding:48px;max-width:720px;">
+      <h1 style="margin:0 0 16px;font-size:32px;line-height:1.2;color:#000000;">EEOS is now connected to GoHighLevel.</h1>
+      <p style="margin:0 0 12px;font-size:18px;line-height:1.5;color:#000000;">You can close this window and return to GoHighLevel.</p>
+      ${locationId ? `<p style="margin:0;font-size:16px;line-height:1.5;color:#000000;">Connected location: ${escapeHtml(locationId)}</p>` : ""}
     </main>
   </body>
-</html>`);
+</html>`;
+
+  sendHtml(res, 200, body);
 }
 
 function renderErrorPage(res: Response, status: number, message: string) {
-  res.type("html").status(status).send(`<!doctype html>
+  const body = `<!doctype html>
 <html lang="en">
-  <head><meta charset="utf-8"><title>EEOS GoHighLevel Connection Error</title></head>
-  <body>
-    <main style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 48px;">
-      <h1>GoHighLevel connection failed.</h1>
-      <p>${escapeHtml(message)}</p>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EEOS GoHighLevel Connection Error</title>
+  </head>
+  <body style="margin:0;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;">
+    <main style="display:block;padding:48px;max-width:720px;">
+      <h1 style="margin:0 0 16px;font-size:32px;line-height:1.2;color:#000000;">GoHighLevel connection failed.</h1>
+      <p style="margin:0;font-size:16px;line-height:1.5;color:#000000;">${escapeHtml(message)}</p>
     </main>
   </body>
-</html>`);
+</html>`;
+
+  sendHtml(res, status, body);
+}
+
+function sendHtml(res: Response, status: number, body: string) {
+  res
+    .status(status)
+    .set("Content-Type", "text/html; charset=utf-8")
+    .set("Cache-Control", "no-store")
+    .set("Content-Length", String(Buffer.byteLength(body)))
+    .send(body);
 }
 
 function escapeHtml(value: string) {
@@ -364,6 +385,7 @@ export function registerGhlOAuthRoutes(app: Express) {
         path: req.path,
         statusCode: res.statusCode,
         contentType: res.getHeader("content-type") || null,
+        contentLength: res.getHeader("content-length") || null,
       });
     });
 
