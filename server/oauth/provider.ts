@@ -538,10 +538,6 @@ async function continueAuthorization(
 
   logOAuthAuthorize("consent_received", { requestId, clientId: client.clientId, redirectUri: request.redirect_uri || null });
 
-  logOAuthAuthorize("storage_check_started", { requestId, clientId: client.clientId });
-  await ensureOAuthProviderStorage(requestId);
-  logOAuthAuthorize("storage_check_completed", { requestId, clientId: client.clientId });
-
   const code = `eeos_code_${randomBytes(24).toString("base64url")}`;
   logOAuthAuthorize("authorization_code_created", { requestId, clientId: client.clientId });
 
@@ -886,10 +882,32 @@ async function storeAuthorizationCode(input: {
   scope: string;
 }, requestId?: string) {
   await withDatabase(async (db) => {
-    await runOAuthAuthorizeStorageStep("insert_authorization_code", requestId, () =>
+    await runOAuthAuthorizeStorageStep("create_authorization_codes_v2", requestId, () =>
+      db.query(`
+        create table if not exists eeos_oauth_authorization_codes_v2 (
+          id bigserial primary key,
+          code_hash text not null unique,
+          client_id text not null,
+          redirect_uri text not null,
+          code_challenge text not null,
+          scope text not null,
+          created_at timestamptz not null default now(),
+          expires_at timestamptz not null,
+          consumed_at timestamptz
+        )
+      `),
+    );
+    await runOAuthAuthorizeStorageStep("create_authorization_codes_v2_index", requestId, () =>
+      db.query(`
+        create index if not exists eeos_oauth_authorization_codes_v2_client_idx
+          on eeos_oauth_authorization_codes_v2 (client_id, expires_at)
+          where consumed_at is null
+      `),
+    );
+    await runOAuthAuthorizeStorageStep("insert_authorization_code_v2", requestId, () =>
       db.query(
         `
-          insert into eeos_oauth_authorization_codes (
+          insert into eeos_oauth_authorization_codes_v2 (
             code_hash,
             client_id,
             redirect_uri,
@@ -985,7 +1003,25 @@ async function rotateRefreshToken(input: {
 
 async function consumeAuthorizationCode(codeHash: string, clientId: string) {
   return withDatabase(async (db) => {
-    const result = await db.query<{ redirect_uri: string; code_challenge: string; scope: string }>(
+    const v2 = await db.query<{ redirect_uri: string; code_challenge: string; scope: string }>(
+      `
+        update eeos_oauth_authorization_codes_v2
+        set consumed_at = now()
+        where code_hash = $1
+          and client_id = $2
+          and consumed_at is null
+          and expires_at > now()
+        returning redirect_uri, code_challenge, scope
+      `,
+      [codeHash, clientId],
+    ).catch(() => ({ rows: [] as Array<{ redirect_uri: string; code_challenge: string; scope: string }> }));
+    const v2Row = v2.rows[0];
+
+    if (v2Row) {
+      return { redirectUri: v2Row.redirect_uri, codeChallenge: v2Row.code_challenge, scope: v2Row.scope };
+    }
+
+    const legacy = await db.query<{ redirect_uri: string; code_challenge: string; scope: string }>(
       `
         update eeos_oauth_authorization_codes
         set consumed_at = now()
@@ -996,8 +1032,8 @@ async function consumeAuthorizationCode(codeHash: string, clientId: string) {
         returning redirect_uri, code_challenge, scope
       `,
       [codeHash, clientId],
-    );
-    const row = result.rows[0];
+    ).catch(() => ({ rows: [] as Array<{ redirect_uri: string; code_challenge: string; scope: string }> }));
+    const row = legacy.rows[0];
 
     return row ? { redirectUri: row.redirect_uri, codeChallenge: row.code_challenge, scope: row.scope } : null;
   });
