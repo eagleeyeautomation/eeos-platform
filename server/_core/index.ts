@@ -11,6 +11,7 @@ import { registerOAuthProviderRoutes, sendOpenIdConfiguration } from "../oauth/p
 import { registerPrnPrivateGhlRoutes } from "../prn-private-ghl";
 import { registerBusinessMemoryRoutes } from "../business-memory";
 import { registerAthenaRoutes } from "../athena";
+import { registerAthenaLearningRoutes } from "../athena-learning";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -36,6 +37,7 @@ async function startServer() {
   registerOAuthProviderRoutes(app);  // EEOS OAuth Provider: /.well-known/*, /oauth/*
   registerBusinessMemoryRoutes(app); // EEOS Business Memory: /api/prn/business-memory
   registerAthenaRoutes(app);         // Project Athena: /api/prn/athena/executive-brief
+  registerAthenaLearningRoutes(app); // Athena Learning Loop: /api/prn/athena/learning
   registerPrnPrivateGhlRoutes(app);  // PRN Staffers live dashboard: /api/prn/gohighlevel/live-dashboard
 
   app.get("/health", (_req, res) => {

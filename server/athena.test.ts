@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { athenaInternals, type AthenaSnapshot } from "./athena";
 import type { BusinessMemorySnapshot } from "./business-memory";
 import type { PrnIntelligenceEngineRecommendation, PrnLiveData } from "./prn-private-ghl";
+import type { AthenaLearningContext } from "./athena-learning";
 
 const now = new Date("2026-07-14T14:00:00.000Z");
 
@@ -107,6 +108,56 @@ function intelligence(overrides: Partial<PrnIntelligenceEngineRecommendation> = 
       duplicateSuppressed: false,
     },
     ...overrides,
+  };
+}
+
+function learningContext(): AthenaLearningContext {
+  return {
+    businessId: "prn-staffers-south-carolina",
+    feedback: [],
+    measurements: [{
+      id: "measurement-1",
+      businessId: "prn-staffers-south-carolina",
+      recommendationId: "sales-high-open-opportunity-volume",
+      metricName: "Open opportunities reviewed",
+      baselineValue: 0,
+      targetValue: 10,
+      actualValue: 12,
+      unit: "count",
+      measurementSource: "user-entered evidence",
+      measuredAt: "2026-07-14T13:00:00.000Z",
+      verified: true,
+      verificationEvidence: "Executive confirmed review completion.",
+      createdAt: "2026-07-14T13:00:00.000Z",
+      updatedAt: "2026-07-14T13:00:00.000Z",
+    }],
+    lessons: [{
+      id: "lesson-1",
+      businessId: "prn-staffers-south-carolina",
+      recommendationId: "sales-high-open-opportunity-volume",
+      lessonType: "successful",
+      summary: "Verified reviews improved follow-up discipline.",
+      evidence: ["Executive confirmed review completion."],
+      confidenceAdjustment: 6,
+      rankingAdjustment: 8,
+      reusablePattern: "sales:successful",
+      approvedForReuse: true,
+      createdAt: "2026-07-14T13:00:00.000Z",
+      updatedAt: "2026-07-14T13:00:00.000Z",
+    }],
+    profiles: [{
+      id: "profile-1",
+      businessId: "prn-staffers-south-carolina",
+      category: "sales",
+      evidenceCount: 5,
+      successfulOutcomeCount: 3,
+      unsuccessfulOutcomeCount: 1,
+      inconclusiveOutcomeCount: 1,
+      reliabilityScore: 72,
+      lastUpdatedAt: "2026-07-14T13:00:00.000Z",
+    }],
+    adaptiveLearningReady: true,
+    adaptiveLearningReason: "Verified outcome thresholds met for at least one category.",
   };
 }
 
@@ -247,5 +298,20 @@ describe("Athena Executive Brain", () => {
     const current = athenaInternals.createAthenaSnapshot(liveData(), memory(), now.toISOString());
 
     expect(athenaInternals.buildWhatChanged(previous, current).join(" ")).toContain("Contacts increased by 9");
+  });
+
+  it("includes Athena learning influence when approved threshold evidence exists", () => {
+    const brief = athenaInternals.buildAthenaExecutiveBrief({
+      liveData: liveData(),
+      memory: memory(),
+      previousSnapshot: null,
+      executiveRecommendations: [],
+      intelligenceRecommendations: [intelligence()],
+      learningContext: learningContext(),
+      now,
+    });
+
+    expect(brief.topPriorities[0]?.learningInfluence.applied).toBe(true);
+    expect(brief.topPriorities[0]?.learningInfluence.approvedLessonsUsed).toContain("lesson-1");
   });
 });

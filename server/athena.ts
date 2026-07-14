@@ -4,6 +4,12 @@ import type { PoolClient } from "pg";
 import { PRN_BUSINESS_ID, loadBusinessMemorySnapshot, type BusinessMemorySnapshot } from "./business-memory";
 import { withDatabase, withTransaction } from "./db/postgres";
 import {
+  applyLearningAdjustment,
+  isDismissedByLearningWithoutNewEvidence,
+  loadAthenaLearningContext,
+  type AthenaLearningContext,
+} from "./athena-learning";
+import {
   buildB2BIntelligence,
   buildC2BIntelligence,
   buildExecutiveRecommendations,
@@ -52,6 +58,15 @@ export type AthenaPriority = {
   confidenceReason: string;
   measurement: string;
   memoryInfluence: string[];
+  learningInfluence: {
+    applied: boolean;
+    priorRecommendationCount?: number;
+    verifiedOutcomeCount?: number;
+    approvedLessonsUsed?: string[];
+    confidenceAdjustment?: number;
+    rankingAdjustment?: number;
+    explanation: string;
+  };
   dataTimestamp: string;
 };
 
@@ -103,6 +118,7 @@ export function registerAthenaRoutes(app: Express) {
       const liveData = await loadPrnLiveData();
       const memory = await loadBusinessMemorySnapshot(PRN_BUSINESS_ID);
       const previousSnapshot = await loadLatestAthenaSnapshot(PRN_BUSINESS_ID);
+      const learningContext = await loadAthenaLearningContext(PRN_BUSINESS_ID);
       const executiveRecommendations = buildExecutiveRecommendations(liveData);
       const intelligence = buildPrnIntelligenceEngine(liveData, memory);
       const b2b = buildB2BIntelligence(liveData);
@@ -115,6 +131,7 @@ export function registerAthenaRoutes(app: Express) {
         intelligenceRecommendations: intelligence.recommendations,
         b2bActions: b2b.recommendedActions,
         c2bActions: c2b.recommendedActions,
+        learningContext,
       });
 
       await persistAthenaRun(brief, liveData, memory, previousSnapshot);
@@ -143,6 +160,7 @@ export function buildAthenaExecutiveBrief(input: {
   intelligenceRecommendations: PrnIntelligenceEngineRecommendation[];
   b2bActions?: Array<{ id: string; label: string; observation: string; evidence: Array<{ metric: string; value: string; source: string }> }>;
   c2bActions?: Array<{ id: string; label: string; observation: string; evidence: Array<{ metric: string; value: string; source: string }> }>;
+  learningContext?: AthenaLearningContext;
   now?: Date;
 }): AthenaExecutiveBrief {
   const now = input.now ?? new Date();
@@ -359,16 +377,17 @@ export async function ensureAthenaSchema() {
 function buildTopPriorities(input: Parameters<typeof buildAthenaExecutiveBrief>[0], freshness: AthenaExecutiveBrief["dataFreshness"]) {
   const priorities = input.intelligenceRecommendations
     .filter((recommendation) => !isDismissedWithoutNewEvidence(recommendation, input.memory, input.liveData.lastSync))
-    .map((recommendation) => mapIntelligencePriority(recommendation, input.memory, freshness));
+    .filter((recommendation) => !isDismissedByLearningWithoutNewEvidence(recommendation.id, recommendation.dataTimestamp, input.learningContext))
+    .map((recommendation) => mapIntelligencePriority(recommendation, input.memory, freshness, input.learningContext));
 
   for (const action of input.b2bActions || []) {
     if (action.observation.startsWith("Insufficient data")) continue;
-    priorities.push(mapInsightPriority(action, "b2b", input.liveData.lastSync, 68));
+    priorities.push(mapInsightPriority(action, "b2b", input.liveData.lastSync, 68, input.learningContext));
   }
 
   for (const action of input.c2bActions || []) {
     if (action.observation.startsWith("Insufficient data")) continue;
-    priorities.push(mapInsightPriority(action, "customer_experience", input.liveData.lastSync, 62));
+    priorities.push(mapInsightPriority(action, "customer_experience", input.liveData.lastSync, 62, input.learningContext));
   }
 
   return priorities
@@ -383,11 +402,11 @@ function mapIntelligencePriority(
   recommendation: PrnIntelligenceEngineRecommendation,
   memory: BusinessMemorySnapshot,
   freshness: AthenaExecutiveBrief["dataFreshness"],
+  learningContext?: AthenaLearningContext,
 ): AthenaPriority {
   const memoryInfluence = flattenMemoryInfluence(recommendation.memoryInfluence);
   const confidence = freshness.status === "fresh" ? recommendation.confidence : Math.min(recommendation.confidence, freshness.status === "stale" ? 74 : 65);
-
-  return {
+  const basePriority: AthenaPriority = {
     id: recommendation.id,
     rank: 0,
     title: titleFromRecommendation(recommendation),
@@ -406,8 +425,14 @@ function mapIntelligencePriority(
     confidenceReason: freshness.status === "fresh" ? recommendation.confidenceReason : `${recommendation.confidenceReason} Confidence reduced because data freshness is ${freshness.status}.`,
     measurement: recommendation.measurement,
     memoryInfluence,
+    learningInfluence: {
+      applied: false,
+      explanation: "Insufficient verified outcome history for adaptive learning.",
+    },
     dataTimestamp: recommendation.dataTimestamp,
   };
+  const adjusted = applyLearningAdjustment(basePriority, learningContext);
+  return { ...adjusted.priority, learningInfluence: adjusted.learningInfluence };
 }
 
 function mapInsightPriority(
@@ -415,8 +440,9 @@ function mapInsightPriority(
   category: AthenaPriorityCategory,
   dataTimestamp: string,
   impactScore: number,
+  learningContext?: AthenaLearningContext,
 ): AthenaPriority {
-  return {
+  const basePriority: AthenaPriority = {
     id: action.id,
     rank: 0,
     title: action.label,
@@ -435,8 +461,14 @@ function mapInsightPriority(
     confidenceReason: "Medium confidence based on verified records, with no unsupported forecast.",
     measurement: "Success is measured by follow-up completion and updated supporting records.",
     memoryInfluence: [],
+    learningInfluence: {
+      applied: false,
+      explanation: "Insufficient verified outcome history for adaptive learning.",
+    },
     dataTimestamp,
   };
+  const adjusted = applyLearningAdjustment(basePriority, learningContext);
+  return { ...adjusted.priority, learningInfluence: adjusted.learningInfluence };
 }
 
 function buildDecisionOfTheDay(priorities: AthenaPriority[], freshness: AthenaExecutiveBrief["dataFreshness"], memory: BusinessMemorySnapshot): AthenaExecutiveBrief["decisionOfTheDay"] {

@@ -18,6 +18,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import BusinessMemoryCommandCenter from "@/components/BusinessMemoryCommandCenter";
 import AthenaExecutiveBrief from "@/components/AthenaExecutiveBrief";
+import AthenaLearningLoop from "@/components/AthenaLearningLoop";
 
 type EndpointHealth = {
   ok: boolean;
@@ -295,6 +296,8 @@ export default function ExecutiveDashboard() {
         ) : (
           <>
             <AthenaExecutiveBrief />
+
+            <AthenaLearningLoop />
 
             <ExecutiveRecommendations
               response={recommendationData}
