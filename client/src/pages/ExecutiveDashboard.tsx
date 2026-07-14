@@ -17,6 +17,7 @@ import {
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import BusinessMemoryCommandCenter from "@/components/BusinessMemoryCommandCenter";
+import AthenaExecutiveBrief from "@/components/AthenaExecutiveBrief";
 
 type EndpointHealth = {
   ok: boolean;
@@ -293,6 +294,8 @@ export default function ExecutiveDashboard() {
           <StatePanel title="No live records returned" message="The integration responded, but no dashboard records were available." tone="empty" />
         ) : (
           <>
+            <AthenaExecutiveBrief />
+
             <ExecutiveRecommendations
               response={recommendationData}
               error={recommendationError}

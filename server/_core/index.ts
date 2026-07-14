@@ -10,6 +10,7 @@ import { registerGhlPitRoutes } from "../ghl-pit";
 import { registerOAuthProviderRoutes, sendOpenIdConfiguration } from "../oauth/provider";
 import { registerPrnPrivateGhlRoutes } from "../prn-private-ghl";
 import { registerBusinessMemoryRoutes } from "../business-memory";
+import { registerAthenaRoutes } from "../athena";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -34,6 +35,7 @@ async function startServer() {
   registerGhlWebhookRoutes(app);     // GHL Webhooks: /api/webhooks/ghl
   registerOAuthProviderRoutes(app);  // EEOS OAuth Provider: /.well-known/*, /oauth/*
   registerBusinessMemoryRoutes(app); // EEOS Business Memory: /api/prn/business-memory
+  registerAthenaRoutes(app);         // Project Athena: /api/prn/athena/executive-brief
   registerPrnPrivateGhlRoutes(app);  // PRN Staffers live dashboard: /api/prn/gohighlevel/live-dashboard
 
   app.get("/health", (_req, res) => {

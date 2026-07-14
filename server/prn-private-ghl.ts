@@ -20,7 +20,7 @@ type GhlFetchAttempt = {
   errorSummary?: string;
 };
 
-type PrnLiveData = {
+export type PrnLiveData = {
   ok: boolean;
   mode: "private_token";
   source: string;
@@ -312,7 +312,7 @@ export function registerPrnPrivateGhlRoutes(app: Express) {
   });
 }
 
-async function loadPrnLiveData(): Promise<PrnLiveData> {
+export async function loadPrnLiveData(): Promise<PrnLiveData> {
   const token = process.env.GHL_PRN_SOUTH_CAROLINA_PRIVATE_TOKEN;
   const locationId = process.env.GHL_PRN_SOUTH_CAROLINA_LOCATION_ID;
 
