@@ -1,0 +1,14 @@
+{
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist/public",
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/((?!api(?:/|$)).*)",
+      "dest": "/index.html"
+    }
+  ]
+}
