@@ -2,7 +2,7 @@ import fs from "node:fs";
 import type { IncomingMessage } from "node:http";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { restoreExpressApiPath } from "../api";
+import { restoreExpressApiPath } from "./_core/vercel-path";
 
 type VercelRoute = {
   src?: string;
