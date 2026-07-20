@@ -7,16 +7,31 @@
  * Every token stored here feeds the IE pipeline with accurate, fresh data.
  */
 
-import { createCipheriv, createHash, randomBytes } from "crypto";
+import { createCipheriv, createHash, randomBytes, timingSafeEqual } from "crypto";
 import type { Express, Request, Response } from "express";
+import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./_core/env";
-import { upsertGhlToken, getGhlToken } from "./db";
+import { sdk } from "./_core/sdk";
+import { upsertGhlToken, getGhlToken, getMembershipById, getUserSubaccounts } from "./db";
 import { consumeOAuthState, persistAuditEvent, persistOAuthState, upsertGhlTokenRecord } from "./db/runtimePersistence";
 
 const GHL_AUTH_URL = "https://marketplace.gohighlevel.com/oauth/chooselocation";
 const GHL_TOKEN_URL = "https://services.leadconnectorhq.com/oauth/token";
 const APPROVED_GHL_CALLBACK_PATH = "/api/integrations/eea/oauth/callback";
 const APPROVED_GHL_CALLBACK_URL = "https://eeos-platform-production.up.railway.app/api/integrations/eea/oauth/callback";
+const EEOS_CSRF_COOKIE = "eeos_csrf";
+
+type GhlConnectSessionContext = {
+  userId: number;
+  userName: string;
+  userEmail: string;
+  userRole: string;
+  organizationId: string;
+  organizationName: string;
+  membershipId: number;
+  locationId: string;
+  locationName: string;
+};
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -345,6 +360,83 @@ export async function refreshGhlToken(tenantId: string): Promise<boolean> {
 
 /** Register GHL OAuth routes on the Express app */
 export function registerGhlOAuthRoutes(app: Express) {
+  app.get("/api/integrations/gohighlevel/session-context", async (req: Request, res: Response) => {
+    try {
+      const context = await resolveGhlConnectSessionContext(req, getQueryParam(req, "locationId"));
+      ensureCsrfCookie(req, res);
+
+      res.status(200).json({
+        authenticated: true,
+        user: {
+          id: context.userId,
+          name: context.userName,
+          email: context.userEmail,
+          role: context.userRole,
+        },
+        organization: {
+          id: context.organizationId,
+          name: context.organizationName,
+          membershipId: context.membershipId,
+        },
+        location: {
+          id: context.locationId,
+          name: context.locationName,
+        },
+        csrfCookieReady: true,
+      });
+    } catch (error) {
+      sendOAuthStartError(res, error);
+    }
+  });
+
+  app.get("/api/integrations/gohighlevel/oauth/start", (_req: Request, res: Response) => {
+    res.status(405).json({
+      error: "method_not_allowed",
+      message: "Use POST with a verified EEOS session and CSRF token to start GoHighLevel OAuth.",
+    });
+  });
+
+  app.post("/api/integrations/gohighlevel/oauth/start", async (req: Request, res: Response) => {
+    try {
+      const locationId = getQueryParam(req, "locationId");
+      validateCsrf(req);
+      const context = await resolveGhlConnectSessionContext(req, locationId);
+
+      if (!getGhlClientId()) {
+        res.status(503).json({ error: "GHL integration not configured" });
+        return;
+      }
+
+      const state = Buffer.from(JSON.stringify({
+        tenantId: context.organizationId,
+        locationId: context.locationId,
+        nonce: randomBytes(16).toString("hex"),
+        ts: Date.now(),
+      })).toString("base64url");
+
+      await persistOAuthState(
+        state,
+        {
+          tenantId: context.organizationId,
+          locationId: context.locationId,
+          membershipId: String(context.membershipId),
+          userId: String(context.userId),
+        },
+        new Date(Date.now() + 10 * 60_000),
+      );
+
+      logGhlOAuth("start.authorization_url_created", {
+        tenantId: context.organizationId,
+        locationId: context.locationId,
+        userId: context.userId,
+      });
+
+      res.status(200).json({ authorizationUrl: buildGhlAuthUrl(state) });
+    } catch (error) {
+      sendOAuthStartError(res, error);
+    }
+  });
+
   /**
    * GET /api/ghl/auth
    * Generates GHL OAuth authorization URL and redirects the browser to it.
@@ -527,4 +619,112 @@ export function registerGhlOAuthRoutes(app: Express) {
       connectedAt: token.connectedAt,
     });
   });
+}
+
+async function resolveGhlConnectSessionContext(req: Request, locationId: string | undefined): Promise<GhlConnectSessionContext> {
+  let user: Awaited<ReturnType<typeof sdk.authenticateRequest>>;
+
+  try {
+    user = await sdk.authenticateRequest(req);
+  } catch {
+    throw new GhlOAuthRequestError(401, "Authentication is required before connecting GoHighLevel.");
+  }
+
+  const subaccounts = await getUserSubaccounts(user.id);
+
+  if (subaccounts.length === 0) {
+    throw new GhlOAuthRequestError(403, "No active EEOS organization is available for this user.");
+  }
+
+  const selected = locationId
+    ? subaccounts.find((subaccount) => subaccount.ghlLocationId === locationId)
+    : subaccounts[0];
+
+  if (!selected) {
+    throw new GhlOAuthRequestError(403, "The selected GoHighLevel location is not available to this EEOS user.");
+  }
+
+  const membership = await getMembershipById(selected.membershipId);
+
+  if (!membership) {
+    throw new GhlOAuthRequestError(403, "The selected EEOS organization could not be verified.");
+  }
+
+  return {
+    userId: user.id,
+    userName: user.name || "EEOS user",
+    userEmail: user.email || "Email unavailable",
+    userRole: user.role,
+    organizationId: String(membership.organizationId),
+    organizationName: selected.orgName,
+    membershipId: selected.membershipId,
+    locationId: selected.ghlLocationId,
+    locationName: selected.name,
+  };
+}
+
+class GhlOAuthRequestError extends Error {
+  constructor(
+    readonly statusCode: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "GhlOAuthRequestError";
+  }
+}
+
+function sendOAuthStartError(res: Response, error: unknown) {
+  const statusCode = error instanceof GhlOAuthRequestError ? error.statusCode : 500;
+  const message = error instanceof Error ? error.message : "GoHighLevel OAuth could not be started.";
+
+  logGhlOAuthError("start.failed", error, { statusCode });
+  res.status(statusCode).json({
+    error: statusCode === 401 ? "unauthorized" : statusCode === 403 ? "forbidden" : "oauth_start_failed",
+    message,
+  });
+}
+
+function ensureCsrfCookie(req: Request, res: Response) {
+  const cookies = parseCookieHeader(req.headers.cookie || "");
+  const existing = cookies[EEOS_CSRF_COOKIE];
+
+  if (existing && existing.length >= 32) {
+    return;
+  }
+
+  const secure = isSecureRequest(req);
+  res.cookie(EEOS_CSRF_COOKIE, randomBytes(32).toString("base64url"), {
+    httpOnly: false,
+    path: "/",
+    sameSite: secure ? "none" : "lax",
+    secure,
+    maxAge: 10 * 60 * 1000,
+  });
+}
+
+function validateCsrf(req: Request) {
+  const cookies = parseCookieHeader(req.headers.cookie || "");
+  const cookieToken = cookies[EEOS_CSRF_COOKIE];
+  const headerToken = req.header("x-eeos-csrf-token");
+
+  if (!cookieToken || !headerToken || !safeEqual(cookieToken, headerToken)) {
+    throw new GhlOAuthRequestError(403, "A valid EEOS CSRF token is required before connecting GoHighLevel.");
+  }
+}
+
+function safeEqual(left: string, right: string) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function isSecureRequest(req: Request) {
+  if (req.protocol === "https") {
+    return true;
+  }
+
+  const forwardedProto = req.header("x-forwarded-proto");
+
+  return Boolean(forwardedProto?.split(",").some((proto) => proto.trim().toLowerCase() === "https"));
 }
