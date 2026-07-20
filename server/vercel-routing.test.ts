@@ -1,6 +1,8 @@
 import fs from "node:fs";
+import type { IncomingMessage } from "node:http";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { restoreExpressApiPath } from "../api";
 
 type VercelRoute = {
   src?: string;
@@ -21,6 +23,13 @@ function loadVercelConfig() {
 }
 
 function resolveDeploymentRoute(pathname: string, routes: VercelRoute[]) {
+  const apiRewrite = routes.find((route) => route.dest === "/api?path=$1");
+  const apiRewriteRegex = apiRewrite?.src ? new RegExp(`^${apiRewrite.src}$`) : null;
+
+  if (apiRewriteRegex?.test(pathname)) {
+    return "/api?path=:path*";
+  }
+
   const fallback = routes.find((route) => route.dest === "/index.html");
   const fallbackRegex = fallback?.src ? new RegExp(`^${fallback.src}$`) : null;
 
@@ -46,9 +55,20 @@ describe("Vercel deployment routing", () => {
     expect(resolveDeploymentRoute("/integrations/gohighlevel", config.routes || [])).toBe("/index.html");
   });
 
-  it("does not allow API routes to fall through to the SPA fallback", () => {
+  it("rewrites API routes to the stable Vercel function instead of the SPA", () => {
     const config = loadVercelConfig();
 
-    expect(resolveDeploymentRoute("/api/integrations/gohighlevel/oauth/start", config.routes || [])).toBe("filesystem");
+    expect(resolveDeploymentRoute("/api/integrations/gohighlevel/oauth/start", config.routes || [])).toBe("/api?path=:path*");
+  });
+
+  it("restores the original Express API pathname before invoking the shared app", () => {
+    const req = {
+      headers: { host: "app.geteeos.com" },
+      url: "/api?path=integrations/gohighlevel/oauth/start&locationId=loc_sc",
+    } as IncomingMessage;
+
+    restoreExpressApiPath(req);
+
+    expect(req.url).toBe("/api/integrations/gohighlevel/oauth/start?locationId=loc_sc");
   });
 });
