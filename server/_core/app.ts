@@ -12,6 +12,7 @@ import { registerAthenaRoutes } from "../athena";
 import { registerAthenaLearningRoutes } from "../athena-learning";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { getCoreReadiness } from "./startup";
 
 export function createEeosApp() {
   const app = express();
@@ -35,13 +36,30 @@ export function createEeosApp() {
   registerAthenaLearningRoutes(app);
   registerPrnPrivateGhlRoutes(app);
 
-  app.get("/health", (_req, res) => {
+  app.get("/health/live", (_req, res) => {
     res.status(200).json({
-      ok: true,
+      status: "ok",
       service: "eeos-platform",
       timestamp: new Date().toISOString(),
     });
   });
+
+  const readiness = async (_req: express.Request, res: express.Response) => {
+    const result = await getCoreReadiness();
+    res.status(result.ready ? 200 : 503).json({
+      status: result.ready ? "ready" : "not_ready",
+      service: "eeos-platform",
+      checks: {
+        configuration: result.configuration,
+        mysql: result.mysql,
+        postgres: result.postgres,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  app.get("/health/ready", readiness);
+  app.get("/health", readiness);
 
   app.use(
     "/api/trpc",

@@ -1,9 +1,11 @@
 import "dotenv/config";
 import { createServer } from "http";
 import { createEeosApp } from "./app";
+import { assertCoreProductionConfig } from "./startup";
 import { serveStatic, setupVite } from "./vite";
 
 async function startServer() {
+  assertCoreProductionConfig();
   const app = createEeosApp();
   const server = createServer(app);
 
@@ -22,4 +24,7 @@ async function startServer() {
   });
 }
 
-startServer().catch(console.error);
+startServer().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
