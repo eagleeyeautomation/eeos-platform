@@ -201,7 +201,12 @@ describe("EEOS Identity Service skeleton", () => {
   });
 
   it("fails closed on missing production security configuration and never reads DATABASE_URL", () => {
-    expect(() => loadIdentityServiceConfig({ IDENTITY_SERVICE_ENV: "production" })).toThrow(/IDENTITY_SERVICE_EXPECTED_AUDIENCE/);
+    expect(() => loadIdentityServiceConfig({
+      IDENTITY_SERVICE_ENV: "production",
+      IDENTITY_SERVICE_REPLAY_STORE: "redis",
+      UPSTASH_REDIS_REST_URL: "https://redis.invalid",
+      UPSTASH_REDIS_REST_TOKEN: "test-token",
+    })).toThrow(/IDENTITY_SERVICE_EXPECTED_AUDIENCE/);
     const config = loadIdentityServiceConfig({ IDENTITY_SERVICE_ENV: "test", DATABASE_URL: "must-not-be-read" });
     expect(config.legacyMysqlDatabaseUrl).toBeUndefined();
     expect(config.identityAdapterConfigured).toBe(false);

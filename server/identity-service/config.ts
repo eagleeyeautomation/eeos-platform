@@ -32,6 +32,9 @@ export type IdentityServiceConfig = {
 export function loadIdentityServiceConfig(env: NodeJS.ProcessEnv = process.env): IdentityServiceConfig {
   const environment = environmentSchema.parse(env.IDENTITY_SERVICE_ENV ?? env.NODE_ENV ?? "development");
   const replayStoreProvider = z.enum(["memory", "redis"]).parse(env.IDENTITY_SERVICE_REPLAY_STORE ?? "memory");
+  if (["staging", "production"].includes(environment) && replayStoreProvider === "memory") {
+    throw new Error(`IDENTITY_SERVICE_REPLAY_STORE must be redis for ${environment}; memory is not production-safe.`);
+  }
   const securityRequired = ["preview", "staging", "production"].includes(environment);
   const required = (name: string, value: string | undefined) => {
     if (securityRequired && !value) throw new Error(`${name} is required for ${environment}.`);

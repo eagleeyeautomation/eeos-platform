@@ -53,6 +53,21 @@ describe("Identity Service deployment readiness", () => {
       .toThrow(/UPSTASH_REDIS_REST_URL/);
   });
 
+  it("rejects memory in production while preserving Redis and development behavior", () => {
+    expect(() => loadIdentityServiceConfig({ IDENTITY_SERVICE_ENV: "production", IDENTITY_SERVICE_REPLAY_STORE: "memory" }))
+      .toThrow(/IDENTITY_SERVICE_REPLAY_STORE must be redis for production/);
+    expect(() => loadIdentityServiceConfig({ IDENTITY_SERVICE_ENV: "development", IDENTITY_SERVICE_REPLAY_STORE: "memory" }))
+      .not.toThrow();
+    expect(loadIdentityServiceConfig({
+      IDENTITY_SERVICE_ENV: "production", IDENTITY_SERVICE_REPLAY_STORE: "redis",
+      IDENTITY_SERVICE_EXPECTED_AUDIENCE: "eeos-identity-service", IDENTITY_SERVICE_EXPECTED_ISSUER: "eeos-core-platform",
+      IDENTITY_SERVICE_EXPECTED_CLIENT_ID: "eeos-core-platform", IDENTITY_SERVICE_TRUSTED_CLIENT_JWKS: jwks,
+      IDENTITY_SERVICE_ASSERTION_PRIVATE_KEY: privateKey, IDENTITY_SERVICE_ASSERTION_KEY_ID: "test-key",
+      LEGACY_MYSQL_DATABASE_URL: "mysql://test.invalid/database", JWT_SECRET: "test-session-secret",
+      UPSTASH_REDIS_REST_URL: "https://redis.invalid", UPSTASH_REDIS_REST_TOKEN: "test-token",
+    }).replayStoreProvider).toBe("redis");
+  });
+
   it("consumes memory replay IDs once and expires old entries", async () => {
     let now = 100;
     const store = new MemoryReplayStore(() => now);
