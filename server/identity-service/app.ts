@@ -17,7 +17,7 @@ import {
   UnconfiguredAssertionDecoder,
   type ServiceAssertionVerifier,
 } from "./security.js";
-import { createReplayStore, type ReplayStore } from "./replayStore.js";
+import { createRedisReplayClient, createReplayStore, type RedisReplayClient, type ReplayStore } from "./replayStore.js";
 import { createMysqlFactory, MysqlSessionIdentityAdapter, type SessionIdentityAdapter } from "./mysqlSessionAdapter.js";
 import { Es256IdentityAssertionSigner, Hs256BrowserSessionVerifier, SessionValidationService } from "./sessionValidation.js";
 
@@ -29,6 +29,7 @@ export type IdentityServiceDependencies = {
   identityAdapter?: SessionIdentityAdapter;
   replayProtectionProductionSafe?: boolean;
   replayStore?: ReplayStore;
+  redisClient?: RedisReplayClient;
   signerReadiness?: { ready(): Promise<boolean> };
 };
 
@@ -38,7 +39,11 @@ export function createIdentityServiceApp(
 ): Express {
   const logger = dependencies.logger ?? createIdentityLogger(config.logLevel);
   const rateLimiter = dependencies.rateLimiter ?? new InMemoryFixedWindowRateLimiter();
-  const replayStore = dependencies.replayStore ?? createReplayStore(config.replayStoreProvider);
+  const configuredRedisClient = config.replayStoreProvider === "redis" && config.redisRestUrl && config.redisRestToken
+    ? createRedisReplayClient(config.redisRestUrl, config.redisRestToken)
+    : undefined;
+  const replayStore = dependencies.replayStore
+    ?? createReplayStore(config.replayStoreProvider, dependencies.redisClient ?? configuredRedisClient);
   const assertionVerifier = dependencies.assertionVerifier ?? new ContractServiceAssertionVerifier(
     config.trustedClientJwks
       ? new JwksServiceAssertionDecoder(config.trustedClientJwks, config.expectedIssuer, config.expectedAudience, config.expectedClientId)

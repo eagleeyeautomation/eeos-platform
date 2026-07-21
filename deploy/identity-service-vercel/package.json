@@ -8,6 +8,7 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
+    "@upstash/redis": "^1.38.0",
     "cookie": "^1.0.2",
     "dotenv": "^17.4.2",
     "express": "^4.21.2",

@@ -49,6 +49,8 @@ describe("Identity Service deployment readiness", () => {
     expect(createReplayStore()).toBeInstanceOf(MemoryReplayStore);
     expect(createReplayStore("memory")).toBeInstanceOf(MemoryReplayStore);
     expect(createReplayStore("redis")).toBeInstanceOf(RedisReplayStore);
+    expect(() => loadIdentityServiceConfig({ IDENTITY_SERVICE_ENV: "test", IDENTITY_SERVICE_REPLAY_STORE: "redis" }))
+      .toThrow(/UPSTASH_REDIS_REST_URL/);
   });
 
   it("consumes memory replay IDs once and expires old entries", async () => {
@@ -91,5 +93,24 @@ describe("Identity Service deployment readiness", () => {
     const mysqlUnavailable = readyDependencies();
     mysqlUnavailable.identityAdapter.ready = vi.fn().mockResolvedValue(false);
     expect(await readiness(mysqlUnavailable)).toBe(503);
+  });
+
+  it("reports production-ready with a configured atomic Redis replay client", async () => {
+    const config = loadIdentityServiceConfig({ IDENTITY_SERVICE_ENV: "production", IDENTITY_SERVICE_REPLAY_STORE: "redis",
+      IDENTITY_SERVICE_EXPECTED_AUDIENCE: "eeos-identity-service", IDENTITY_SERVICE_EXPECTED_ISSUER: "eeos-core-platform",
+      IDENTITY_SERVICE_EXPECTED_CLIENT_ID: "eeos-core-platform", IDENTITY_SERVICE_TRUSTED_CLIENT_JWKS: jwks,
+      IDENTITY_SERVICE_ASSERTION_PRIVATE_KEY: privateKey, IDENTITY_SERVICE_ASSERTION_KEY_ID: "test-key",
+      LEGACY_MYSQL_DATABASE_URL: "mysql://test.invalid/database", JWT_SECRET: "test-session-secret",
+      UPSTASH_REDIS_REST_URL: "https://redis.invalid", UPSTASH_REDIS_REST_TOKEN: "test-token" });
+    const redisClient = { set: vi.fn().mockResolvedValue("OK"), ping: vi.fn().mockResolvedValue("PONG") };
+    const dependencies = readyDependencies();
+    const server = createServer(createIdentityServiceApp(config, { ...dependencies, replayStore: undefined, redisClient }));
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Test server did not start.");
+    try {
+      expect((await fetch(`http://127.0.0.1:${address.port}/health/ready`)).status).toBe(200);
+      expect(redisClient.ping).toHaveBeenCalledOnce();
+    } finally { await new Promise<void>((resolve) => server.close(() => resolve())); }
   });
 });

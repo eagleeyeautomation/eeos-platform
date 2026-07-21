@@ -1,3 +1,4 @@
+import { Redis } from "@upstash/redis";
 import { IDENTITY_CLOCK_SKEW_SECONDS } from "../../shared/identityServiceContract.js";
 import { IdentityServiceError } from "./errors.js";
 
@@ -49,6 +50,14 @@ export class RedisReplayStore implements ReplayStore {
 }
 
 export type ReplayStoreProvider = "memory" | "redis";
+
+export function createRedisReplayClient(url: string, token: string): RedisReplayClient {
+  const redis = new Redis({ url, token });
+  return {
+    set: (key, value, options) => redis.set(key, value, options),
+    ping: () => redis.ping(),
+  };
+}
 
 export function createReplayStore(provider: ReplayStoreProvider = "memory", redisClient?: RedisReplayClient): ReplayStore {
   return provider === "redis" ? new RedisReplayStore(redisClient) : new MemoryReplayStore();

@@ -115,6 +115,9 @@ importers:
       '@trpc/server':
         specifier: ^11.6.0
         version: 11.18.0(typescript@5.9.3)
+      '@upstash/redis':
+        specifier: ^1.38.0
+        version: 1.38.0
       axios:
         specifier: ^1.12.0
         version: 1.12.2
@@ -138,7 +141,7 @@ importers:
         version: 17.4.2
       drizzle-orm:
         specifier: ^0.44.5
-        version: 0.44.7(@types/pg@8.20.0)(mysql2@3.22.6(@types/node@24.7.0))(pg@8.22.0)
+        version: 0.44.7(@types/pg@8.20.0)(@upstash/redis@1.38.0)(mysql2@3.22.6(@types/node@24.7.0))(pg@8.22.0)
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@19.2.1)
@@ -290,6 +293,9 @@ importers:
 
   deploy/identity-service-vercel:
     dependencies:
+      '@upstash/redis':
+        specifier: ^1.38.0
+        version: 1.38.0
       cookie:
         specifier: ^1.0.2
         version: 1.1.1
@@ -2262,6 +2268,9 @@ packages:
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
     deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
+  '@upstash/redis@1.38.0':
+    resolution: {integrity: sha512-wu+dZBptlLy0+MCUEoHmzrY/TnmgDey3+c7EbIGwrLqAvkP8yi5MWZHYGIFtAygmL4Bkz2TdFu+eU0vFPncIcg==}
+
   '@vitejs/plugin-react@5.0.4':
     resolution: {integrity: sha512-La0KD0vGkVkSk6K+piWDKRUyg8Rl5iAIKRMH0vMJI0Eg47bq1eOxmoObAaQG37WMW9MSyk7Cs8EIWwJC1PtzKA==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -4069,6 +4078,9 @@ packages:
 
   ufo@1.6.1:
     resolution: {integrity: sha512-9a4/uxlTWJ4+a5i0ooc1rU7C7YOw3wT+UGqdeNNHWnOF9qcMBgLRS+4IYUqbczewFx4mLEig6gawh7X6mFlEkA==}
+
+  uncrypto@0.1.3:
+    resolution: {integrity: sha512-Ql87qFHB3s/De2ClA9e0gsnS6zXG27SkTiSJwjCc9MebbfapQfuPzumMIUMi38ezPZVNFcHI9sUIepeQfw8J8Q==}
 
   undici-types@7.14.0:
     resolution: {integrity: sha512-QQiYxHuyZ9gQUIrmPo3IA+hUl4KYk8uSA7cHrcKd/l3p1OTpZcM0Tbp9x7FAtXdAYhlasd60ncPpgu6ihG6TOA==}
@@ -6147,6 +6159,10 @@ snapshots:
 
   '@ungap/structured-clone@1.3.0': {}
 
+  '@upstash/redis@1.38.0':
+    dependencies:
+      uncrypto: 0.1.3
+
   '@vitejs/plugin-react@5.0.4(vite@7.1.9(@types/node@24.7.0)(jiti@2.6.1)(lightningcss@1.30.1)(tsx@4.20.6))':
     dependencies:
       '@babel/core': 7.28.4
@@ -6631,9 +6647,10 @@ snapshots:
       esbuild: 0.25.10
       tsx: 4.23.0
 
-  drizzle-orm@0.44.7(@types/pg@8.20.0)(mysql2@3.22.6(@types/node@24.7.0))(pg@8.22.0):
+  drizzle-orm@0.44.7(@types/pg@8.20.0)(@upstash/redis@1.38.0)(mysql2@3.22.6(@types/node@24.7.0))(pg@8.22.0):
     optionalDependencies:
       '@types/pg': 8.20.0
+      '@upstash/redis': 1.38.0
       mysql2: 3.22.6(@types/node@24.7.0)
       pg: 8.22.0
 
@@ -8317,6 +8334,8 @@ snapshots:
   typescript@5.9.3: {}
 
   ufo@1.6.1: {}
+
+  uncrypto@0.1.3: {}
 
   undici-types@7.14.0: {}
 

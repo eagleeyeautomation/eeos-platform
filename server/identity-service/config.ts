@@ -25,6 +25,8 @@ export type IdentityServiceConfig = {
   identityAdapterConfigured: boolean;
   contractVersion: string;
   replayStoreProvider: "memory" | "redis";
+  redisRestUrl?: string;
+  redisRestToken?: string;
 };
 
 export function loadIdentityServiceConfig(env: NodeJS.ProcessEnv = process.env): IdentityServiceConfig {
@@ -52,6 +54,11 @@ export function loadIdentityServiceConfig(env: NodeJS.ProcessEnv = process.env):
   }
   const legacyMysqlDatabaseUrl = required("LEGACY_MYSQL_DATABASE_URL", env.LEGACY_MYSQL_DATABASE_URL);
   const sessionSecret = required("JWT_SECRET", env.JWT_SECRET);
+  const redisRestUrl = env.UPSTASH_REDIS_REST_URL;
+  const redisRestToken = env.UPSTASH_REDIS_REST_TOKEN;
+  if (replayStoreProvider === "redis" && (!redisRestUrl || !redisRestToken)) {
+    throw new Error("UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required for the redis replay store.");
+  }
 
   return {
     host: env.IDENTITY_SERVICE_HOST ?? "127.0.0.1",
@@ -70,5 +77,7 @@ export function loadIdentityServiceConfig(env: NodeJS.ProcessEnv = process.env):
     identityAdapterConfigured: Boolean(legacyMysqlDatabaseUrl && sessionSecret),
     contractVersion: env.IDENTITY_SERVICE_CONTRACT_VERSION ?? IDENTITY_CONTRACT_VERSION,
     replayStoreProvider,
+    redisRestUrl,
+    redisRestToken,
   };
 }
