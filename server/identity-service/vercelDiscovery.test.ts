@@ -29,7 +29,7 @@ describe("dedicated Identity Service Vercel discovery root", () => {
   it("exports a callable delegate without creating another app or listener", async () => {
     expect(dedicatedHandler).toBeTypeOf("function");
     const source = await fs.readFile(path.resolve("deploy/identity-service-vercel/api/index.ts"), "utf8");
-    expect(source).toContain("server/identity-service/vercel");
+    expect(source).toContain("server/identity-service/vercel.js");
     expect(source).not.toContain("listen(");
     expect(source).not.toContain("createIdentityServiceApp");
   });

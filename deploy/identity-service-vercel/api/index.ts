@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "http";
-import identityServiceHandler from "../../../server/identity-service/vercel";
+import identityServiceHandler from "../../../server/identity-service/vercel.js";
 
 function restoreIdentityServicePath(req: IncomingMessage) {
   const url = new URL(req.url || "/", `https://${req.headers.host || "localhost"}`);
