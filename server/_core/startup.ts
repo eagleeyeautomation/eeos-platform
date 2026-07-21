@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { assertRuntimeStateStorageConfig, databaseHealthCheck } from "../db/postgres";
+import { assertOAuthSigningConfig } from "../oauth/provider";
 
 const REQUIRED_PRODUCTION_VARIABLES = [
   "DATABASE_URL",
@@ -20,6 +21,7 @@ export function assertCoreProductionConfig(env: NodeJS.ProcessEnv = process.env)
   }
 
   assertRuntimeStateStorageConfig(env);
+  assertOAuthSigningConfig(env);
 }
 
 export type CoreReadinessDependencies = {

@@ -1,4 +1,13 @@
-import { createHash, createSign, generateKeyPairSync, randomBytes, timingSafeEqual } from "crypto";
+import {
+  createHash,
+  createPrivateKey,
+  createPublicKey,
+  createSign,
+  generateKeyPairSync,
+  type KeyObject,
+  randomBytes,
+  timingSafeEqual,
+} from "crypto";
 import type { Express, Request } from "express";
 import { withDatabase } from "../db/postgres";
 
@@ -33,7 +42,7 @@ type AccessTokenRecord = {
 };
 
 const issuerFallback = "https://eeos-platform-production.up.railway.app";
-const ephemeralKeyPair = generateKeyPairSync("rsa", { modulusLength: 2048 });
+let ephemeralKeyPair: { publicKey: KeyObject; privateKey: KeyObject } | undefined;
 const oauthClientRegistrationTimeoutMs = 5_000;
 const oauthAccessTokenExpiresIn = 3_600;
 
@@ -485,17 +494,54 @@ function getPublicJwk() {
 }
 
 function getPrivateKey() {
-  const configured = process.env.EEOS_OAUTH_PRIVATE_KEY_PEM;
+  const configured = readConfiguredPrivateKey(process.env);
 
   if (configured) {
-    return configured.replace(/\\n/g, "\n");
+    return configured;
   }
 
-  return ephemeralKeyPair.privateKey;
+  return getEphemeralKeyPair().privateKey;
 }
 
 function getPublicKey() {
-  return ephemeralKeyPair.publicKey;
+  const configured = readConfiguredPrivateKey(process.env);
+  return configured ? createPublicKey(configured) : getEphemeralKeyPair().publicKey;
+}
+
+export function assertOAuthSigningConfig(env: NodeJS.ProcessEnv = process.env) {
+  if (!isProductionLike(env)) return;
+  readConfiguredPrivateKey(env, true);
+}
+
+function readConfiguredPrivateKey(env: NodeJS.ProcessEnv, required = isProductionLike(env)): KeyObject | undefined {
+  const pem = env.EEOS_OAUTH_PRIVATE_KEY_PEM?.trim().replace(/\\n/g, "\n");
+  if (!pem) {
+    if (required) {
+      throw new Error("OAuth signing configuration error: EEOS_OAUTH_PRIVATE_KEY_PEM is required in production-like environments.");
+    }
+    return undefined;
+  }
+
+  try {
+    const key = createPrivateKey(pem);
+    if (key.asymmetricKeyType !== "rsa") {
+      throw new Error("the key must be an RSA private key");
+    }
+    return key;
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "unknown key parsing error";
+    throw new Error(`OAuth signing configuration error: EEOS_OAUTH_PRIVATE_KEY_PEM is not a usable RSA private key (${reason}).`);
+  }
+}
+
+function getEphemeralKeyPair() {
+  ephemeralKeyPair ??= generateKeyPairSync("rsa", { modulusLength: 2048 });
+  return ephemeralKeyPair;
+}
+
+function isProductionLike(env: NodeJS.ProcessEnv) {
+  const environment = (env.APP_ENV || env.NODE_ENV || "development").toLowerCase();
+  return environment === "staging" || environment === "production";
 }
 
 function getKeyId() {

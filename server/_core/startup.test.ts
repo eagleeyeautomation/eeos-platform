@@ -1,7 +1,13 @@
+import { generateKeyPairSync } from "crypto";
 import { createServer } from "http";
 import { describe, expect, it } from "vitest";
 import { createEeosApp } from "./app";
 import { assertCoreProductionConfig, getCoreReadiness } from "./startup";
+
+const testPrivateKey = generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey.export({
+  format: "pem",
+  type: "pkcs8",
+}).toString();
 
 const productionConfig = {
   NODE_ENV: "production",
@@ -10,6 +16,7 @@ const productionConfig = {
   JWT_SECRET: "test-session-secret",
   VITE_APP_ID: "test-app",
   OAUTH_SERVER_URL: "https://auth.example.invalid",
+  EEOS_OAUTH_PRIVATE_KEY_PEM: testPrivateKey,
 };
 
 describe("Core startup and readiness", () => {
@@ -17,6 +24,12 @@ describe("Core startup and readiness", () => {
     expect(() => assertCoreProductionConfig({ NODE_ENV: "production" })).toThrow(
       /DATABASE_URL, POSTGRES_DATABASE_URL, JWT_SECRET, VITE_APP_ID, OAUTH_SERVER_URL/,
     );
+    const { EEOS_OAUTH_PRIVATE_KEY_PEM: _omittedKey, ...missingOAuthKey } = productionConfig;
+    expect(() => assertCoreProductionConfig(missingOAuthKey)).toThrow(/EEOS_OAUTH_PRIVATE_KEY_PEM is required/);
+    expect(() => assertCoreProductionConfig({
+      ...productionConfig,
+      EEOS_OAUTH_PRIVATE_KEY_PEM: "malformed",
+    })).toThrow(/not a usable RSA private key/);
     expect(() => assertCoreProductionConfig(productionConfig)).not.toThrow();
     expect(() => assertCoreProductionConfig({ NODE_ENV: "test" })).not.toThrow();
   });
