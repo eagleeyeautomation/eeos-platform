@@ -22,6 +22,7 @@ import {
   ieMetrics,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { resolveMysqlUserSubaccounts } from "./db/mysqlIdentityAuthorization";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Database Connection
@@ -603,25 +604,15 @@ export async function upsertMembershipUser(
 export async function getUserSubaccounts(userId: number): Promise<Array<Subaccount & { membershipId: number; orgName: string }>> {
   const db = await getDb();
   if (!db) return [];
-
-  // Get all active memberships the user belongs to
-  const userMemberships = await db.select().from(membershipUsers)
-    .where(and(eq(membershipUsers.userId, userId), eq(membershipUsers.isActive, true)));
-
-  if (userMemberships.length === 0) return [];
-
-  const results: Array<Subaccount & { membershipId: number; orgName: string }> = [];
-
-  for (const mu of userMemberships) {
-    const membership = await getMembershipById(mu.membershipId);
-    if (!membership) continue;
-    const org = membership ? await db.select().from(organizations)
-      .where(eq(organizations.id, membership.organizationId)).limit(1) : [];
-    const subs = await getSubaccountsByMembership(mu.membershipId);
-    for (const sub of subs) {
-      results.push({ ...sub, membershipId: mu.membershipId, orgName: org[0]?.name ?? "Unknown" });
-    }
-  }
-
-  return results;
+  return resolveMysqlUserSubaccounts(userId, {
+    getActiveMembershipLinks: async (requestedUserId) => db.select().from(membershipUsers)
+      .where(and(eq(membershipUsers.userId, requestedUserId), eq(membershipUsers.isActive, true))),
+    getMembershipById,
+    getOrganizationById: async (organizationId) => {
+      const result = await db.select().from(organizations)
+        .where(eq(organizations.id, organizationId)).limit(1);
+      return result[0];
+    },
+    getActiveSubaccountsByMembershipId: getSubaccountsByMembership,
+  });
 }

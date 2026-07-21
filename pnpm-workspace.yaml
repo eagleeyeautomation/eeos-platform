@@ -1,5 +1,6 @@
 packages:
   - .
+  - deploy/identity-service-vercel
 
 overrides:
   tailwindcss>nanoid: 3.3.7

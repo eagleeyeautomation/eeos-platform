@@ -6,6 +6,7 @@ import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
+import { observeIdentityShadow } from "../identity-shadow/observer";
 import { ENV } from "./env";
 import type {
   ExchangeTokenRequest,
@@ -259,6 +260,7 @@ class SDKServer {
     // 1. Prefer the session cookie (regular OAuth login).
     const cookies = this.parseCookies(req.headers.cookie);
     let sessionToken = cookies.get(COOKIE_NAME);
+    let sessionSource: "cookie" | "bearer" | undefined = sessionToken ? "cookie" : undefined;
 
     // 2. Fallback to the Authorization header (Preview auto-login via
     //    sessionStorage), used when the browser blocks iframe cookies such as
@@ -267,6 +269,7 @@ class SDKServer {
       const authHeader = req.headers.authorization;
       if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
         sessionToken = authHeader.slice(7);
+        sessionSource = "bearer";
       }
     }
 
@@ -315,6 +318,8 @@ class SDKServer {
       openId: user.openId,
       lastSignedIn: signedInAt,
     });
+
+    observeIdentityShadow(req, user, sessionSource === "cookie" ? { cookie: sessionToken } : { bearer: sessionToken });
 
     return user;
   }

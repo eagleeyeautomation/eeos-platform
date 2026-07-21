@@ -14,7 +14,11 @@
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "e2e": "playwright test",
     "format": "prettier --write .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "identity:dev": "IDENTITY_SERVICE_ENV=development tsx watch server/identity-service/index.ts",
+    "identity:build": "esbuild server/identity-service/index.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/identity-service/index.js --metafile=dist/identity-service/meta.json && esbuild server/identity-service/vercel.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/identity-service/vercel.js",
+    "identity:start": "IDENTITY_SERVICE_ENV=production node dist/identity-service/index.js",
+    "identity:test": "vitest run server/identity-service"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
