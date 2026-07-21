@@ -20,6 +20,8 @@ const binding = {
 };
 const header = { alg: "ES256", typ: "JWT", kid: "identity-key-1" };
 const identityClaims = {
+  schemaVersion: "v1",
+  authenticated: true,
   iss: "eeos-identity-service",
   aud: "eeos-core-platform",
   sub: "1",
@@ -34,6 +36,11 @@ const identityClaims = {
   subaccountId: "1000",
   platformRole: "admin",
   membershipRole: "owner",
+  authorizedGhlLocationId: "location-sc",
+  authorizedSubaccountIds: ["1000"],
+  displayName: "Administrator",
+  email: "admin@example.test",
+  expiresAt: "2026-07-21T17:01:00.000Z",
   scope: ["identity:validated"],
   request: binding,
 };

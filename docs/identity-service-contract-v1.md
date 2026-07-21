@@ -70,8 +70,10 @@ Identity assertions:
 
 - issuer `eeos-identity-service`; audience `eeos-core-platform`
 - maximum lifetime 60 seconds; clock tolerance 30 seconds
-- required claims: `sub`, `iat`, `nbf`, `exp`, `jti`, session version, canonical identity IDs, roles, narrow scope, and request binding
-- no email, display name, `openId`, provider data, or session token
+- required claims: signed `schemaVersion`, `authenticated`, `sub`, `iat`, `nbf`, `exp`, `jti`, session version,
+  canonical identity IDs, roles, authorized location and subaccount scope, display name, email, response expiration,
+  narrow scope, and request binding
+- no `openId`, provider data, session token, cookie, database information, or internal error detail
 
 Core Platform request assertions:
 
@@ -81,6 +83,12 @@ Core Platform request assertions:
 - binds HTTP method, exact versioned path, SHA-256 body hash, request ID, and nonce
 
 Every JTI is single-use. Replay records remain until `exp + 30 seconds`. Key rotation publishes old and new verification keys concurrently for the maximum token lifetime plus clock tolerance; signing switches only after consumers have loaded the new key. Revocation increments the session version, invalidating assertions derived from older versions.
+
+Core signs requests with `IDENTITY_SERVICE_REQUEST_PRIVATE_KEY`; Identity verifies them with
+`IDENTITY_SERVICE_TRUSTED_CLIENT_JWKS`. Identity signs responses with the separate
+`IDENTITY_SERVICE_ASSERTION_PRIVATE_KEY`; Core verifies them with `IDENTITY_SERVICE_TRUSTED_ASSERTION_JWKS`.
+The two private keys must always be different. Outer response fields exist only for wire compatibility and are not
+trusted by Core unless they match the verified signed assertion claims.
 
 ## Session and cookie ownership
 

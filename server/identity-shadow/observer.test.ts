@@ -11,9 +11,13 @@ const authoritative: ComparableIdentityResult = { category: "AUTHENTICATED", aut
 const response = { schemaVersion: "v1" as const, authenticated: true as const, userId: "1", organizationId: null,
   membershipId: null, subaccountId: null, platformRole: "admin" as const, membershipRole: null, authorizedGhlLocationId: null,
   authorizedSubaccountIds: ["30", "30"], displayName: "Sensitive Name", email: "sensitive@example.test", sessionVersion: "0",
-  assertion: "identity-assertion-value-1234567890", expiresAt: "2026-07-21T12:01:00.000Z" };
+  expiresAt: "2026-07-21T12:01:00.000Z", iss: "eeos-identity-service" as const, aud: "eeos-core-platform" as const,
+  sub: "1", iat: 1, nbf: 1, exp: 2, jti: "request_1234567890", scope: ["identity:validated" as const],
+  request: { requestId: "request_1234567890", method: "POST" as const, path: "/internal/v1/session/validate" as const,
+    bodySha256: "a".repeat(64), nonce: "nonce_1234567890123456" } };
 const complete = { enabled: true, complete: true, serviceUrl: "https://identity.example.test", clientId: "client",
-  requestPrivateKey: "key", requestKeyId: "kid", fingerprintKey: "fingerprint-key", timeoutMs: 100, sampleRate: 1 };
+  requestPrivateKey: "key", requestKeyId: "kid", trustedAssertionJwks: { keys: [{ kty: "EC" }] },
+  fingerprintKey: "fingerprint-key", timeoutMs: 100, sampleRate: 1 };
 const input = (overrides: Partial<ShadowRunInput> = {}): ShadowRunInput => ({ requestId: "request_1234567890", endpointCategory: "api_trpc",
   eligible: true, session: { cookie: "never-log-session" }, authoritative: async () => authoritative, ...overrides });
 const client = (result: ShadowServiceResult = { kind: "success", value: response }): IdentityShadowClient => ({ validate: vi.fn(async () => result) });
@@ -112,5 +116,13 @@ describe("identity shadow runner", () => {
     expect(loadIdentityShadowConfig({ NODE_ENV: "test" }).sampleRate).toBe(1);
     expect(loadIdentityShadowConfig({ IDENTITY_SHADOW_SAMPLE_RATE: "2" }).sampleRate).toBe(0);
     expect(loadIdentityShadowConfig({ IDENTITY_SHADOW_TIMEOUT_MS: "5000" }).timeoutMs).toBe(500);
+    expect(() => loadIdentityShadowConfig({ IDENTITY_SERVICE_TRUSTED_ASSERTION_JWKS: "{" })).toThrowError(
+      expect.objectContaining({ category: "invalid_trusted_jwks" }),
+    );
+    expect(loadIdentityShadowConfig({ ...process.env, IDENTITY_SERVICE_TRUSTED_ASSERTION_JWKS: '{"keys":[{"kty":"EC"}]}' }))
+      .toMatchObject({ trustedAssertionJwks: { keys: [{ kty: "EC" }] } });
+    expect(() => loadIdentityShadowConfig({ NODE_ENV: "production", IDENTITY_SHADOW_ENABLED: "true" })).toThrow(
+      /IDENTITY_SERVICE_TRUSTED_ASSERTION_JWKS/,
+    );
   });
 });

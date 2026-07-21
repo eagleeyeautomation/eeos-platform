@@ -2,21 +2,25 @@ import { createHash, randomBytes, randomUUID } from "crypto";
 import { importPKCS8, SignJWT } from "jose";
 import {
   IDENTITY_MAX_PAYLOAD_BYTES, SERVICE_REQUEST_AUDIENCE, SERVICE_REQUEST_ISSUER,
-  identityErrorResponseSchema, sessionValidationResponseSchema, type SessionValidationResponse,
+  identityErrorResponseSchema, sessionValidationResponseSchema, type IdentityAssertionClaims,
 } from "../../shared/identityServiceContract";
 import type { IdentityShadowConfig } from "./config";
+import { assertOuterResponseMatchesClaims, CoreIdentityAssertionVerifier, IdentityAssertionVerificationError } from "./assertionVerifier";
 
 const SESSION_PATH = "/internal/v1/session/validate" as const;
 export type ShadowSessionTransport = { cookie?: string; bearer?: string };
 export type ShadowValidationInput = { requestId: string; requestedGhlLocationId?: string; session: ShadowSessionTransport };
-export type ShadowServiceResult = { kind: "success"; value: SessionValidationResponse } | { kind: "identity_error"; category: string };
+export type ShadowServiceResult = { kind: "success"; value: IdentityAssertionClaims } | { kind: "identity_error"; category: string };
 export interface IdentityShadowClient { validate(input: ShadowValidationInput): Promise<ShadowServiceResult>; }
 
 export class HttpIdentityShadowClient implements IdentityShadowClient {
   private key?: ReturnType<typeof importPKCS8>;
+  private readonly responseVerifier: CoreIdentityAssertionVerifier;
   constructor(private readonly config: Required<Pick<IdentityShadowConfig,
-    "serviceUrl" | "clientId" | "requestPrivateKey" | "requestKeyId">> & Pick<IdentityShadowConfig, "timeoutMs">,
-    private readonly fetcher: typeof fetch = fetch, private readonly now = () => new Date()) {}
+    "serviceUrl" | "clientId" | "requestPrivateKey" | "requestKeyId" | "trustedAssertionJwks">> & Pick<IdentityShadowConfig, "timeoutMs">,
+    private readonly fetcher: typeof fetch = fetch, private readonly now = () => new Date()) {
+    this.responseVerifier = new CoreIdentityAssertionVerifier(config.trustedAssertionJwks, now);
+  }
 
   async validate(input: ShadowValidationInput): Promise<ShadowServiceResult> {
     const timestamp = this.now();
@@ -50,9 +54,19 @@ export class HttpIdentityShadowClient implements IdentityShadowClient {
         }
         throw new ShadowClientError(`HTTP_${response.status}`);
       }
-      const parsed = sessionValidationResponseSchema.safeParse(decoded);
-      if (!parsed.success) throw new ShadowClientError("RESPONSE_INVALID");
-      return { kind: "success", value: parsed.data };
+      if (!decoded || typeof decoded !== "object" || !("assertion" in decoded)) throw new ShadowClientError("missing_assertion");
+      const expectedRequest = { requestId: input.requestId, method: "POST" as const, path: SESSION_PATH, bodySha256, nonce };
+      try {
+        if (typeof decoded.assertion !== "string") throw new IdentityAssertionVerificationError("malformed_assertion");
+        const claims = await this.responseVerifier.verify(decoded.assertion, expectedRequest);
+        const parsed = sessionValidationResponseSchema.safeParse(decoded);
+        if (!parsed.success) throw new ShadowClientError("RESPONSE_INVALID");
+        assertOuterResponseMatchesClaims(parsed.data, claims);
+        return { kind: "success", value: claims };
+      } catch (error) {
+        if (error instanceof IdentityAssertionVerificationError) throw new ShadowClientError(error.category);
+        throw error;
+      }
     } catch (error) {
       if (error instanceof ShadowClientError) throw error;
       if (controller.signal.aborted) throw new ShadowClientError("TIMEOUT");

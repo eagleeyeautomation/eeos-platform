@@ -3,7 +3,8 @@ import type { Request } from "express";
 import { importPKCS8, jwtVerify, SignJWT } from "jose";
 import {
   IDENTITY_ASSERTION_AUDIENCE, IDENTITY_ASSERTION_ISSUER, IDENTITY_ASSERTION_MAX_LIFETIME_SECONDS,
-  sessionValidationResponseSchema, type SessionValidationRequest, type SessionValidationResponse,
+  identityAssertionClaimsSchema, sessionValidationResponseSchema, type IdentityAssertionClaims,
+  type SessionValidationRequest, type SessionValidationResponse,
 } from "../../shared/identityServiceContract.js";
 import { IdentityServiceError } from "./errors.js";
 import type { SessionIdentityAdapter } from "./mysqlSessionAdapter.js";
@@ -31,18 +32,34 @@ export class Es256IdentityAssertionSigner implements IdentityAssertionSigner {
   constructor(private readonly privateKey: string, private readonly keyId: string, private readonly nowSeconds = () => Math.floor(Date.now() / 1000)) {}
   async sign(input: Omit<SessionValidationResponse, "assertion">, binding: RequestBinding) {
     const now = this.nowSeconds();
+    const expiresAtSeconds = Math.floor(Date.parse(input.expiresAt) / 1_000);
     const key = await (this.key ??= importPKCS8(this.privateKey.replace(/\\n/g, "\n"), "ES256"));
-    return new SignJWT({ sessionVersion: input.sessionVersion, userId: input.userId,
+    const claims = identityAssertionClaimsSchema.parse({ schemaVersion: input.schemaVersion, authenticated: input.authenticated,
+      sessionVersion: input.sessionVersion, userId: input.userId,
       organizationId: input.organizationId, membershipId: input.membershipId, subaccountId: input.subaccountId,
-      platformRole: input.platformRole, membershipRole: input.membershipRole, scope: ["identity:validated"], request: binding })
+      platformRole: input.platformRole, membershipRole: input.membershipRole,
+      authorizedGhlLocationId: input.authorizedGhlLocationId, authorizedSubaccountIds: input.authorizedSubaccountIds,
+      displayName: input.displayName, email: input.email, expiresAt: input.expiresAt,
+      scope: ["identity:validated"], request: binding, iss: IDENTITY_ASSERTION_ISSUER, aud: IDENTITY_ASSERTION_AUDIENCE,
+      sub: input.userId, iat: now, nbf: now, exp: expiresAtSeconds, jti: binding.requestId });
+    assertResponseMatchesClaims(input, claims);
+    return new SignJWT(claims)
       .setProtectedHeader({ alg: "ES256", typ: "JWT", kid: this.keyId })
-      .setIssuer(IDENTITY_ASSERTION_ISSUER).setAudience(IDENTITY_ASSERTION_AUDIENCE).setSubject(input.userId)
-      .setIssuedAt(now).setNotBefore(now).setExpirationTime(now + IDENTITY_ASSERTION_MAX_LIFETIME_SECONDS)
-      .setJti(binding.requestId).sign(key);
+      .sign(key);
   }
   async ready() {
     try { await (this.key ??= importPKCS8(this.privateKey.replace(/\\n/g, "\n"), "ES256")); return true; }
     catch { return false; }
+  }
+}
+
+const COMPATIBILITY_FIELDS = ["schemaVersion", "authenticated", "userId", "organizationId", "membershipId", "subaccountId",
+  "platformRole", "membershipRole", "authorizedGhlLocationId", "authorizedSubaccountIds", "displayName", "email",
+  "sessionVersion", "expiresAt"] as const;
+
+export function assertResponseMatchesClaims(response: Omit<SessionValidationResponse, "assertion">, claims: IdentityAssertionClaims) {
+  for (const field of COMPATIBILITY_FIELDS) {
+    if (JSON.stringify(response[field]) !== JSON.stringify(claims[field])) throw new Error("assertion_response_mismatch");
   }
 }
 
@@ -64,7 +81,8 @@ export class SessionValidationService {
     if (!context) throw new IdentityServiceError(401, "IDENTITY_USER_NOT_FOUND", "Session is not valid.");
     const selected = body.requestedGhlLocationId ? context.scopes.find((scope) => scope.ghlLocationId === body.requestedGhlLocationId) : undefined;
     if (body.requestedGhlLocationId && !selected) throw new IdentityServiceError(403, "IDENTITY_LOCATION_UNAUTHORIZED", "Requested location is not authorized.");
-    const expiresAt = new Date(this.now().getTime() + IDENTITY_ASSERTION_MAX_LIFETIME_SECONDS * 1_000).toISOString();
+    const expiresAtSeconds = Math.floor(this.now().getTime() / 1_000) + IDENTITY_ASSERTION_MAX_LIFETIME_SECONDS;
+    const expiresAt = new Date(expiresAtSeconds * 1_000).toISOString();
     const unsigned = {
       schemaVersion: "v1" as const, authenticated: true as const, userId: String(context.user.id),
       organizationId: selected ? String(selected.organizationId) : null,

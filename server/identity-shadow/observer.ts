@@ -89,7 +89,7 @@ export async function buildAuthoritativeResult(user: User, requestedGhlLocationI
 const shadowConfig = loadIdentityShadowConfig();
 const shadowClient = shadowConfig.complete ? new HttpIdentityShadowClient({
   serviceUrl: shadowConfig.serviceUrl!, clientId: shadowConfig.clientId!, requestPrivateKey: shadowConfig.requestPrivateKey!,
-  requestKeyId: shadowConfig.requestKeyId!, timeoutMs: shadowConfig.timeoutMs,
+  requestKeyId: shadowConfig.requestKeyId!, trustedAssertionJwks: shadowConfig.trustedAssertionJwks!, timeoutMs: shadowConfig.timeoutMs,
 }) : undefined;
 const shadowRunner = new IdentityShadowRunner(shadowConfig, shadowClient);
 

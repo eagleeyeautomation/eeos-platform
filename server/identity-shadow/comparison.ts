@@ -1,5 +1,5 @@
 import { createHmac } from "crypto";
-import type { SessionValidationResponse } from "../../shared/identityServiceContract";
+import type { IdentityAssertionClaims } from "../../shared/identityServiceContract";
 
 export type ShadowResultCategory = "AUTHENTICATED" | "UNAUTHENTICATED" | "UNAUTHORIZED_LOCATION" | "ERROR";
 export type ComparableIdentityResult = {
@@ -18,8 +18,8 @@ export type ComparableIdentityResult = {
   errorCategory: string | null;
 };
 
-export const normalizeShadowResponse = (value: SessionValidationResponse): ComparableIdentityResult => ({
-  category: "AUTHENTICATED", authenticated: true, userId: value.userId, platformRole: value.platformRole,
+export const normalizeShadowResponse = (value: IdentityAssertionClaims): ComparableIdentityResult => ({
+  category: "AUTHENTICATED", authenticated: value.authenticated, userId: value.userId, platformRole: value.platformRole,
   organizationId: value.organizationId, membershipId: value.membershipId, subaccountId: value.subaccountId,
   authorizedSubaccountIds: [...value.authorizedSubaccountIds], authorizedGhlLocationId: value.authorizedGhlLocationId,
   displayName: value.displayName, email: value.email, sessionVersion: value.sessionVersion, errorCategory: null,

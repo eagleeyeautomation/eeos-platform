@@ -191,6 +191,8 @@ const requestBindingSchema = strictObject({
 });
 
 export const identityAssertionClaimsSchema = strictObject({
+  schemaVersion: z.literal(IDENTITY_CONTRACT_VERSION),
+  authenticated: z.boolean(),
   iss: z.literal(IDENTITY_ASSERTION_ISSUER),
   aud: z.literal(IDENTITY_ASSERTION_AUDIENCE),
   sub: decimalId,
@@ -205,6 +207,11 @@ export const identityAssertionClaimsSchema = strictObject({
   subaccountId: nullableId,
   platformRole: platformRoleSchema,
   membershipRole: membershipRoleSchema.nullable(),
+  authorizedGhlLocationId: identifier.nullable(),
+  authorizedSubaccountIds: z.array(decimalId).max(100),
+  displayName: z.string().min(1).max(256).nullable(),
+  email: z.string().max(320).nullable(),
+  expiresAt: timestamp,
   scope: z.array(identityActionSchema.or(z.literal("identity:validated"))).min(1).max(8),
   request: requestBindingSchema,
 });
@@ -281,6 +288,7 @@ function validateRequestBinding(
 
 export type SessionValidationRequest = z.infer<typeof sessionValidationRequestSchema>;
 export type SessionValidationResponse = z.infer<typeof sessionValidationResponseSchema>;
+export type IdentityAssertionClaims = z.infer<typeof identityAssertionClaimsSchema>;
 export type AuthorizationCheckRequest = z.infer<typeof authorizationCheckRequestSchema>;
 export type AuthorizationCheckResponse = z.infer<typeof authorizationCheckResponseSchema>;
 export type IdentityErrorResponse = z.infer<typeof identityErrorResponseSchema>;

@@ -1,3 +1,6 @@
+import type { JSONWebKeySet } from "jose";
+import { parseTrustedAssertionJwks } from "./assertionVerifier";
+
 export type IdentityShadowConfig = {
   enabled: boolean;
   complete: boolean;
@@ -5,6 +8,7 @@ export type IdentityShadowConfig = {
   clientId?: string;
   requestPrivateKey?: string;
   requestKeyId?: string;
+  trustedAssertionJwks?: JSONWebKeySet;
   fingerprintKey?: string;
   timeoutMs: number;
   sampleRate: number;
@@ -24,10 +28,15 @@ export function loadIdentityShadowConfig(env: NodeJS.ProcessEnv = process.env): 
   const clientId = value(env.IDENTITY_SERVICE_CLIENT_ID);
   const requestPrivateKey = value(env.IDENTITY_SERVICE_REQUEST_PRIVATE_KEY);
   const requestKeyId = value(env.IDENTITY_SERVICE_REQUEST_KEY_ID);
+  const trustedAssertionJwksValue = value(env.IDENTITY_SERVICE_TRUSTED_ASSERTION_JWKS);
+  const trustedAssertionJwks = trustedAssertionJwksValue ? parseTrustedAssertionJwks(trustedAssertionJwksValue) : undefined;
+  if (enabled && env.NODE_ENV === "production" && !trustedAssertionJwks) {
+    throw new Error("IDENTITY_SERVICE_TRUSTED_ASSERTION_JWKS is required when Identity shadow validation is enabled.");
+  }
   const fingerprintKey = value(env.IDENTITY_SHADOW_FINGERPRINT_KEY);
   return {
-    enabled, serviceUrl, clientId, requestPrivateKey, requestKeyId, fingerprintKey, timeoutMs, sampleRate,
-    complete: Boolean(serviceUrl && clientId && requestPrivateKey && requestKeyId && fingerprintKey),
+    enabled, serviceUrl, clientId, requestPrivateKey, requestKeyId, trustedAssertionJwks, fingerprintKey, timeoutMs, sampleRate,
+    complete: Boolean(serviceUrl && clientId && requestPrivateKey && requestKeyId && trustedAssertionJwks && fingerprintKey),
   };
 }
 

@@ -1,7 +1,7 @@
-import { SignJWT } from "jose";
+import { decodeProtectedHeader, generateKeyPair, exportPKCS8, jwtVerify, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
 import type { Request } from "express";
-import { Hs256BrowserSessionVerifier, SessionValidationService, type BrowserSessionVerifier, type IdentityAssertionSigner } from "./sessionValidation";
+import { Es256IdentityAssertionSigner, Hs256BrowserSessionVerifier, SessionValidationService, type BrowserSessionVerifier, type IdentityAssertionSigner } from "./sessionValidation";
 import type { SessionIdentityAdapter, SessionIdentityContext } from "./mysqlSessionAdapter";
 import { IdentityServiceError } from "./errors";
 
@@ -69,5 +69,18 @@ describe("read-only session validation adapter", () => {
     const expired = await new SignJWT({ openId: "open-1", appId: "app", name: "User" }).setProtectedHeader({ alg: "HS256" }).setExpirationTime(1).sign(key);
     await expect(verifier.verify(expired)).rejects.toMatchObject({ code: "IDENTITY_SESSION_EXPIRED" });
     await expect(verifier.verify(`${valid}x`)).rejects.toMatchObject({ code: "IDENTITY_SESSION_INVALID" });
+  });
+
+  it("signs every approved trusted response field with the frozen v1 contract", async () => {
+    const pair = await generateKeyPair("ES256", { extractable: true });
+    const signer = new Es256IdentityAssertionSigner(await exportPKCS8(pair.privateKey), "ephemeral-identity-key", () => 1_784_635_200);
+    const result = await new SessionValidationService(browser, adapter(), signer, () => new Date("2026-07-21T12:00:00Z"))
+      .validate(req("app_session_id=valid"), { ...request, requestedGhlLocationId: "loc-a" }, binding);
+    expect(decodeProtectedHeader(result.assertion)).toEqual({ alg: "ES256", typ: "JWT", kid: "ephemeral-identity-key" });
+    const { payload } = await jwtVerify(result.assertion, pair.publicKey, { algorithms: ["ES256"],
+      issuer: "eeos-identity-service", audience: "eeos-core-platform", currentDate: new Date("2026-07-21T12:00:00Z") });
+    expect(payload).toMatchObject({ schemaVersion: "v1", authenticated: true, authorizedGhlLocationId: "loc-a",
+      authorizedSubaccountIds: ["30"], displayName: "User", email: "user@example.test",
+      expiresAt: "2026-07-21T12:01:00.000Z" });
   });
 });
