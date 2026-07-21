@@ -4,10 +4,10 @@ import { importPKCS8, jwtVerify, SignJWT } from "jose";
 import {
   IDENTITY_ASSERTION_AUDIENCE, IDENTITY_ASSERTION_ISSUER, IDENTITY_ASSERTION_MAX_LIFETIME_SECONDS,
   sessionValidationResponseSchema, type SessionValidationRequest, type SessionValidationResponse,
-} from "../../shared/identityServiceContract";
-import { IdentityServiceError } from "./errors";
-import type { SessionIdentityAdapter } from "./mysqlSessionAdapter";
-import type { RequestBinding } from "./security";
+} from "../../shared/identityServiceContract.js";
+import { IdentityServiceError } from "./errors.js";
+import type { SessionIdentityAdapter } from "./mysqlSessionAdapter.js";
+import type { RequestBinding } from "./security.js";
 
 export type BrowserSession = { openId: string; appId: string; name: string };
 export interface BrowserSessionVerifier { verify(token: string): Promise<BrowserSession>; }

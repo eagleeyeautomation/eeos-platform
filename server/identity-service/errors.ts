@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
-import type { IdentityErrorResponse } from "../../shared/identityServiceContract";
-import type { IdentityLogger } from "./logging";
-import { getIdentityRequestId } from "./middleware";
+import type { IdentityErrorResponse } from "../../shared/identityServiceContract.js";
+import type { IdentityLogger } from "./logging.js";
+import { getIdentityRequestId } from "./middleware.js";
 
 export type IdentityErrorCode = IdentityErrorResponse["error"]["code"];
 

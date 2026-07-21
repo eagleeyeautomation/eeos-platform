@@ -1,6 +1,6 @@
 import type { Pool, RowDataPacket } from "mysql2/promise";
-import type { MembershipUserRole, UserRole } from "../db/identityRepository";
-import { IdentityServiceError } from "./errors";
+import type { MembershipUserRole, UserRole } from "../db/identityRepository.js";
+import { IdentityServiceError } from "./errors.js";
 
 export type SessionIdentityUser = { id: number; openId: string; name: string | null; email: string | null; role: UserRole };
 export type SessionIdentityScope = {

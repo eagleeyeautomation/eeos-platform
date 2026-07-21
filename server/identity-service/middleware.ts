@@ -4,11 +4,11 @@ import type { z } from "zod";
 import {
   authorizationCheckRequestSchema,
   sessionValidationRequestSchema,
-} from "../../shared/identityServiceContract";
-import { IdentityServiceError } from "./errors";
-import type { IdentityLogger } from "./logging";
-import type { IdentityRateLimiter } from "./rateLimit";
-import { requestBodySha256, type RequestBinding, type ServiceAssertionVerifier } from "./security";
+} from "../../shared/identityServiceContract.js";
+import { IdentityServiceError } from "./errors.js";
+import type { IdentityLogger } from "./logging.js";
+import type { IdentityRateLimiter } from "./rateLimit.js";
+import { requestBodySha256, type RequestBinding, type ServiceAssertionVerifier } from "./security.js";
 
 type IdentityRequest = Request & {
   identity?: { requestId: string; assertionId?: string; clientId?: string };

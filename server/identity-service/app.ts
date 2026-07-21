@@ -1,25 +1,25 @@
 import express, { type Express, type Request } from "express";
-import { IDENTITY_MAX_PAYLOAD_BYTES } from "../../shared/identityServiceContract";
-import type { IdentityServiceConfig } from "./config";
-import { identityErrorHandler, IdentityServiceError } from "./errors";
-import { createIdentityLogger, type IdentityLogger } from "./logging";
+import { IDENTITY_MAX_PAYLOAD_BYTES } from "../../shared/identityServiceContract.js";
+import type { IdentityServiceConfig } from "./config.js";
+import { identityErrorHandler, IdentityServiceError } from "./errors.js";
+import { createIdentityLogger, type IdentityLogger } from "./logging.js";
 import {
   adoptBodyRequestId,
   correlationMiddleware,
   rateLimitMiddleware,
   requestLoggingMiddleware,
-} from "./middleware";
-import { InMemoryFixedWindowRateLimiter, type IdentityRateLimiter } from "./rateLimit";
-import { createIdentityInternalRouter } from "./routes";
+} from "./middleware.js";
+import { InMemoryFixedWindowRateLimiter, type IdentityRateLimiter } from "./rateLimit.js";
+import { createIdentityInternalRouter } from "./routes.js";
 import {
   ContractServiceAssertionVerifier,
   JwksServiceAssertionDecoder,
   UnconfiguredAssertionDecoder,
   type ServiceAssertionVerifier,
-} from "./security";
-import { createReplayStore, type ReplayStore } from "./replayStore";
-import { createMysqlFactory, MysqlSessionIdentityAdapter, type SessionIdentityAdapter } from "./mysqlSessionAdapter";
-import { Es256IdentityAssertionSigner, Hs256BrowserSessionVerifier, SessionValidationService } from "./sessionValidation";
+} from "./security.js";
+import { createReplayStore, type ReplayStore } from "./replayStore.js";
+import { createMysqlFactory, MysqlSessionIdentityAdapter, type SessionIdentityAdapter } from "./mysqlSessionAdapter.js";
+import { Es256IdentityAssertionSigner, Hs256BrowserSessionVerifier, SessionValidationService } from "./sessionValidation.js";
 
 export type IdentityServiceDependencies = {
   logger?: IdentityLogger;

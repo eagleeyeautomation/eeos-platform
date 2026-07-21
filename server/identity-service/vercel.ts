@@ -1,9 +1,9 @@
 import "dotenv/config";
 import type { IncomingMessage, ServerResponse } from "http";
 import type { Express } from "express";
-import { createIdentityServiceApp } from "./app";
-import { loadIdentityServiceConfig } from "./config";
-import { validateIdentityServiceStartup } from "./startup";
+import { createIdentityServiceApp } from "./app.js";
+import { loadIdentityServiceConfig } from "./config.js";
+import { validateIdentityServiceStartup } from "./startup.js";
 
 let application: Promise<Express> | undefined;
 

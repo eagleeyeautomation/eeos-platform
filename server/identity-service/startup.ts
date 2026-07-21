@@ -1,6 +1,6 @@
 import { createLocalJWKSet, importPKCS8, type JSONWebKeySet } from "jose";
-import { IDENTITY_CONTRACT_VERSION } from "../../shared/identityServiceContract";
-import type { IdentityServiceConfig } from "./config";
+import { IDENTITY_CONTRACT_VERSION } from "../../shared/identityServiceContract.js";
+import type { IdentityServiceConfig } from "./config.js";
 
 export async function validateIdentityServiceStartup(config: IdentityServiceConfig) {
   if (config.contractVersion !== IDENTITY_CONTRACT_VERSION) {

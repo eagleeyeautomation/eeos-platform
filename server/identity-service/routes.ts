@@ -1,14 +1,14 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
-import { IdentityServiceError } from "./errors";
+import { IdentityServiceError } from "./errors.js";
 import {
   serviceAuthenticationMiddleware,
   validateAuthorizationEnvelope,
   validateSessionEnvelope,
-} from "./middleware";
-import type { ServiceAssertionVerifier } from "./security";
-import { requestBodySha256, type RequestBinding } from "./security";
-import type { SessionValidationService } from "./sessionValidation";
-import type { SessionValidationRequest } from "../../shared/identityServiceContract";
+} from "./middleware.js";
+import type { ServiceAssertionVerifier } from "./security.js";
+import { requestBodySha256, type RequestBinding } from "./security.js";
+import type { SessionValidationService } from "./sessionValidation.js";
+import type { SessionValidationRequest } from "../../shared/identityServiceContract.js";
 
 export function createIdentityInternalRouter(verifier: ServiceAssertionVerifier, sessions?: SessionValidationService) {
   const router = Router();

@@ -3,7 +3,7 @@ import {
   IDENTITY_CONTRACT_VERSION,
   SERVICE_REQUEST_AUDIENCE,
   SERVICE_REQUEST_ISSUER,
-} from "../../shared/identityServiceContract";
+} from "../../shared/identityServiceContract.js";
 
 const environmentSchema = z.enum(["local", "development", "test", "preview", "staging", "production"]);
 const logLevelSchema = z.enum(["debug", "info", "warn", "error"]);

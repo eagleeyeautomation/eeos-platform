@@ -1,5 +1,5 @@
-import { IDENTITY_CLOCK_SKEW_SECONDS } from "../../shared/identityServiceContract";
-import { IdentityServiceError } from "./errors";
+import { IDENTITY_CLOCK_SKEW_SECONDS } from "../../shared/identityServiceContract.js";
+import { IdentityServiceError } from "./errors.js";
 
 export interface ReplayStore {
   consume(jti: string, expiresAt: number): Promise<boolean>;

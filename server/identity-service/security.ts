@@ -1,11 +1,11 @@
 import { createHash } from "crypto";
 import type { Request } from "express";
 import { createLocalJWKSet, jwtVerify, type JSONWebKeySet } from "jose";
-import { validateServiceRequestAssertion } from "../../shared/identityServiceContract";
-import { IdentityServiceError } from "./errors";
-import { MemoryReplayStore, type ReplayStore } from "./replayStore";
+import { validateServiceRequestAssertion } from "../../shared/identityServiceContract.js";
+import { IdentityServiceError } from "./errors.js";
+import { MemoryReplayStore, type ReplayStore } from "./replayStore.js";
 
-export { MemoryReplayStore, MemoryReplayStore as InMemoryReplayStore } from "./replayStore";
+export { MemoryReplayStore, MemoryReplayStore as InMemoryReplayStore } from "./replayStore.js";
 
 export type RequestBinding = {
   requestId: string;

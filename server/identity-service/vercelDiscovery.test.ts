@@ -25,6 +25,21 @@ function invoke(pathname: string, init?: RequestInit) {
   return fetch(`${baseUrl}/api?path=${encodeURIComponent(pathname.replace(/^\//, ""))}`, init);
 }
 
+const vercelRuntimeModules = [
+  "deploy/identity-service-vercel/api/index.ts",
+  "server/identity-service/vercel.ts",
+  "server/identity-service/app.ts",
+  "server/identity-service/config.ts",
+  "server/identity-service/startup.ts",
+  "server/identity-service/errors.ts",
+  "server/identity-service/middleware.ts",
+  "server/identity-service/routes.ts",
+  "server/identity-service/security.ts",
+  "server/identity-service/replayStore.ts",
+  "server/identity-service/mysqlSessionAdapter.ts",
+  "server/identity-service/sessionValidation.ts",
+];
+
 describe("dedicated Identity Service Vercel discovery root", () => {
   it("exports a callable delegate without creating another app or listener", async () => {
     expect(dedicatedHandler).toBeTypeOf("function");
@@ -32,6 +47,17 @@ describe("dedicated Identity Service Vercel discovery root", () => {
     expect(source).toContain("server/identity-service/vercel.js");
     expect(source).not.toContain("listen(");
     expect(source).not.toContain("createIdentityServiceApp");
+  });
+
+  it("uses Node ESM-resolvable specifiers throughout the packaged runtime graph", async () => {
+    const violations: string[] = [];
+    for (const filename of vercelRuntimeModules) {
+      const source = await fs.readFile(path.resolve(filename), "utf8");
+      for (const match of source.matchAll(/(?:from\s+|import\s*\()\s*["'](\.{1,2}\/[^"']+)["']/g)) {
+        if (!match[1].endsWith(".js")) violations.push(`${filename}: ${match[1]}`);
+      }
+    }
+    expect(violations).toEqual([]);
   });
 
   it("preserves liveness and dependency-backed readiness", async () => {
