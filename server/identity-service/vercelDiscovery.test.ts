@@ -63,7 +63,7 @@ describe("dedicated Identity Service Vercel discovery root", () => {
     const config = JSON.parse(await fs.readFile(path.resolve("deploy/identity-service-vercel/vercel.json"), "utf8"));
     expect(config.framework).toBeNull();
     expect(config.builds).toBeUndefined();
-    expect(config.outputDirectory).toBeUndefined();
+    expect(config.outputDirectory).toBeNull();
     expect(config.rewrites).toEqual([{ source: "/:path*", destination: "/api?path=:path*" }]);
   });
 });
