@@ -23,8 +23,8 @@ export function getRuntimeStateStorageMode(env: NodeJS.ProcessEnv = process.env)
 export function assertRuntimeStateStorageConfig(env: NodeJS.ProcessEnv = process.env) {
   const mode = getRuntimeStateStorageMode(env);
 
-  if (mode === "postgres" && !env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is required for staging and production runtime persistence.");
+  if (mode === "postgres" && !env.POSTGRES_DATABASE_URL) {
+    throw new Error("POSTGRES_DATABASE_URL is required for staging and production runtime persistence.");
   }
 
   if (mode === "postgres" && env.GHL_TOKEN_VAULT_FILE) {
@@ -33,8 +33,8 @@ export function assertRuntimeStateStorageConfig(env: NodeJS.ProcessEnv = process
 }
 
 export function createDatabasePool(env: NodeJS.ProcessEnv = process.env) {
-  if (!env.DATABASE_URL) {
-    return null;
+  if (!env.POSTGRES_DATABASE_URL) {
+    throw new Error("POSTGRES_DATABASE_URL is required for PostgreSQL runtime persistence.");
   }
 
   const sslEnabled = readBoolean(env.DATABASE_SSL, true);
@@ -42,7 +42,7 @@ export function createDatabasePool(env: NodeJS.ProcessEnv = process.env) {
   const queryTimeoutMillis = readNumber(env.DATABASE_QUERY_TIMEOUT_MS, 5_000);
 
   const createdPool = new Pool({
-    connectionString: env.DATABASE_URL,
+    connectionString: env.POSTGRES_DATABASE_URL,
     max: readNumber(env.DATABASE_POOL_MAX, 10),
     idleTimeoutMillis: readNumber(env.DATABASE_IDLE_TIMEOUT_MS, 30_000),
     connectionTimeoutMillis,
@@ -86,7 +86,7 @@ export async function withDatabase<T>(callback: (client: PoolClient) => Promise<
   const activePool = getDatabasePool();
 
   if (!activePool) {
-    throw new Error("DATABASE_URL is not configured.");
+    throw new Error("POSTGRES_DATABASE_URL is not configured.");
   }
 
   const client = await activePool.connect();

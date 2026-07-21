@@ -8,16 +8,16 @@ describe("runtime persistence mode", () => {
   });
 
   it("forces PostgreSQL persistence for staging, production, and Railway", () => {
-    expect(getRuntimeStateStorageMode({ APP_ENV: "staging", DATABASE_URL: "postgres://example" })).toBe("postgres");
-    expect(getRuntimeStateStorageMode({ NODE_ENV: "production", DATABASE_URL: "postgres://example" })).toBe("postgres");
-    expect(getRuntimeStateStorageMode({ RAILWAY_ENVIRONMENT: "staging", DATABASE_URL: "postgres://example" })).toBe("postgres");
+    expect(getRuntimeStateStorageMode({ APP_ENV: "staging", POSTGRES_DATABASE_URL: "postgres://example" })).toBe("postgres");
+    expect(getRuntimeStateStorageMode({ NODE_ENV: "production", POSTGRES_DATABASE_URL: "postgres://example" })).toBe("postgres");
+    expect(getRuntimeStateStorageMode({ RAILWAY_ENVIRONMENT: "staging", POSTGRES_DATABASE_URL: "postgres://example" })).toBe("postgres");
   });
 
   it("rejects filesystem token vault configuration in staging and production", () => {
     expect(() =>
       assertRuntimeStateStorageConfig({
         APP_ENV: "staging",
-        DATABASE_URL: "postgres://example",
+        POSTGRES_DATABASE_URL: "postgres://example",
         GHL_TOKEN_VAULT_FILE: "/tmp/eeos-token-vault.json",
       }),
     ).toThrow(/GHL_TOKEN_VAULT_FILE/);
@@ -25,14 +25,14 @@ describe("runtime persistence mode", () => {
     expect(() =>
       assertRuntimeStateStorageConfig({
         NODE_ENV: "production",
-        DATABASE_URL: "postgres://example",
+        POSTGRES_DATABASE_URL: "postgres://example",
         GHL_TOKEN_VAULT_FILE: "/tmp/eeos-token-vault.json",
       }),
     ).toThrow(/GHL_TOKEN_VAULT_FILE/);
   });
 
-  it("requires DATABASE_URL when staging or production runtime state is persistent", () => {
-    expect(() => assertRuntimeStateStorageConfig({ APP_ENV: "staging" })).toThrow(/DATABASE_URL/);
-    expect(() => assertRuntimeStateStorageConfig({ NODE_ENV: "production" })).toThrow(/DATABASE_URL/);
+  it("requires POSTGRES_DATABASE_URL when staging or production runtime state is persistent", () => {
+    expect(() => assertRuntimeStateStorageConfig({ APP_ENV: "staging" })).toThrow(/POSTGRES_DATABASE_URL/);
+    expect(() => assertRuntimeStateStorageConfig({ NODE_ENV: "production" })).toThrow(/POSTGRES_DATABASE_URL/);
   });
 });

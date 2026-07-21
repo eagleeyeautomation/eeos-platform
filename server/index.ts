@@ -19,7 +19,7 @@ const __dirname = path.dirname(__filename);
 async function startServer() {
   assertRuntimeStateStorageConfig();
 
-  if (process.env.DATABASE_URL) {
+  if (process.env.POSTGRES_DATABASE_URL) {
     await waitForDatabase();
   }
 
@@ -52,7 +52,7 @@ async function startServer() {
       res.status(503).json({
         ok: false,
         service: "eeos-backend",
-        database: { configured: Boolean(process.env.DATABASE_URL), reachable: false },
+        database: { configured: Boolean(process.env.POSTGRES_DATABASE_URL), reachable: false },
         message: error instanceof Error ? error.message : "Health check failed.",
       });
     }
