@@ -27,6 +27,22 @@ type BootstrapMembership = { id: number; status: string };
 type BootstrapMembershipUser = { role: string; isActive: boolean };
 type BootstrapSubaccount = { ghlLocationId: string; name: string; isActive: boolean };
 
+type BootstrapOperationStage =
+  | "user_lookup"
+  | "organization_lookup"
+  | "membership_lookup"
+  | "south_carolina_authorization_lookup"
+  | "session_token_creation"
+  | "session_persistence"
+  | "cookie_creation"
+  | "unknown";
+
+type BootstrapAuditDetails = {
+  exceptionName?: string;
+  errorCode?: string;
+  stage?: BootstrapOperationStage;
+};
+
 export type AdminBootstrapDependencies = {
   getUserByEmail(email: string): Promise<BootstrapUser | undefined>;
   getOrganizationBySlug(slug: string): Promise<BootstrapOrganization | undefined>;
@@ -34,7 +50,13 @@ export type AdminBootstrapDependencies = {
   getMembershipUser(membershipId: number, userId: number): Promise<BootstrapMembershipUser | undefined>;
   getSubaccountsByMembership(membershipId: number): Promise<BootstrapSubaccount[]>;
   createSessionToken(openId: string, options: { name: string; expiresInMs: number }): Promise<string>;
-  audit(outcome: "success" | "failure", reason: string, userId?: number, locationId?: string): Promise<void>;
+  audit(
+    outcome: "success" | "failure",
+    reason: string,
+    userId?: number,
+    locationId?: string,
+    details?: BootstrapAuditDetails,
+  ): Promise<void>;
 };
 
 const productionDependencies: AdminBootstrapDependencies = {
@@ -44,7 +66,7 @@ const productionDependencies: AdminBootstrapDependencies = {
   getMembershipUser,
   getSubaccountsByMembership,
   createSessionToken: (openId, options) => sdk.createSessionToken(openId, options),
-  audit: async (outcome, reason, userId, locationId) => {
+  audit: async (outcome, reason, userId, locationId, details) => {
     await insertAuditEntry({
       tenantId: locationId || "admin-bootstrap",
       actor: "system",
@@ -52,7 +74,7 @@ const productionDependencies: AdminBootstrapDependencies = {
       entityType: "user",
       entityId: userId ? String(userId) : null,
       outcome,
-      details: { reason },
+      details: { reason, ...details },
     });
   },
 };
@@ -94,7 +116,9 @@ export function registerAdminBootstrapRoute(
       return;
     }
 
+    let stage: BootstrapOperationStage = "unknown";
     try {
+      stage = "user_lookup";
       const user = await dependencies.getUserByEmail(administratorEmail);
       if (!user || user.role !== "admin") {
         await auditSafely(dependencies, "failure", "administrator_not_found");
@@ -102,6 +126,7 @@ export function registerAdminBootstrapRoute(
         return;
       }
 
+      stage = "organization_lookup";
       const organization = await dependencies.getOrganizationBySlug("prn-staffers");
       if (!organization || !organization.isActive) {
         await auditSafely(dependencies, "failure", "organization_not_authorized", user.id);
@@ -109,6 +134,7 @@ export function registerAdminBootstrapRoute(
         return;
       }
 
+      stage = "membership_lookup";
       const membership = await dependencies.getMembershipByOrg(organization.id);
       const membershipUser = membership
         ? await dependencies.getMembershipUser(membership.id, user.id)
@@ -125,6 +151,7 @@ export function registerAdminBootstrapRoute(
         return;
       }
 
+      stage = "south_carolina_authorization_lookup";
       const subaccounts = await dependencies.getSubaccountsByMembership(membership.id);
       const southCarolina = subaccounts.find(
         (subaccount) => subaccount.isActive && subaccount.name.trim().toLowerCase() === "south carolina",
@@ -135,10 +162,12 @@ export function registerAdminBootstrapRoute(
         return;
       }
 
+      stage = "session_token_creation";
       const sessionToken = await dependencies.createSessionToken(user.openId, {
         name: user.name?.trim() || user.email || "EEOS administrator",
         expiresInMs: ONE_YEAR_MS,
       });
+      stage = "cookie_creation";
       res.cookie(COOKIE_NAME, sessionToken, {
         ...getSessionCookieOptions(req),
         maxAge: ONE_YEAR_MS,
@@ -150,9 +179,13 @@ export function registerAdminBootstrapRoute(
         redirectTo: "/integrations/gohighlevel",
         locationId: southCarolina.ghlLocationId,
       });
-    } catch {
-      await auditSafely(dependencies, "failure", "internal_error");
-      res.status(500).json({ error: "bootstrap_failed" });
+    } catch (error) {
+      await auditSafely(dependencies, "failure", "internal_error", undefined, undefined, {
+        exceptionName: sanitizeExceptionName(error),
+        errorCode: sanitizeErrorCode(error),
+        stage,
+      });
+      res.status(500).json({ error: "internal_error" });
     }
   });
 }
@@ -194,15 +227,32 @@ function normalizeOrigin(value: string) {
   return new URL(value.trim()).origin.replace(/\/$/, "");
 }
 
+function sanitizeExceptionName(error: unknown) {
+  if (!(error instanceof Error)) return "UnknownError";
+  return /^[A-Za-z][A-Za-z0-9]*$/.test(error.name) ? error.name.slice(0, 64) : "Error";
+}
+
+function sanitizeErrorCode(error: unknown) {
+  const code = typeof error === "object" && error !== null && "code" in error
+    ? (error as { code?: unknown }).code
+    : undefined;
+  return typeof code === "string" && /^[A-Za-z0-9_.-]{1,64}$/.test(code) ? code : "unknown";
+}
+
 async function auditSafely(
   dependencies: AdminBootstrapDependencies,
   outcome: "success" | "failure",
   reason: string,
   userId?: number,
   locationId?: string,
+  details?: BootstrapAuditDetails,
 ) {
   try {
-    await dependencies.audit(outcome, reason, userId, locationId);
+    if (details) {
+      await dependencies.audit(outcome, reason, userId, locationId, details);
+    } else {
+      await dependencies.audit(outcome, reason, userId, locationId);
+    }
   } catch {
     console.warn("[AdminBootstrap] Audit persistence failed");
   }

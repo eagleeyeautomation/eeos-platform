@@ -26,6 +26,7 @@ const dependencies = (): AdminBootstrapDependencies => ({
 const servers: Server[] = [];
 afterEach(async () => {
   audit.mockClear();
+  vi.restoreAllMocks();
   await Promise.all(servers.splice(0).map((server) => new Promise<void>((resolve) => server.close(() => resolve()))));
 });
 
@@ -152,5 +153,75 @@ describe("administrator session bootstrap", () => {
     const response = await invoke(dependencies(), baseEnv, { secret: "wrong-secret" });
     expect(await response.text()).not.toContain("wrong-secret");
     expect(JSON.stringify(audit.mock.calls)).not.toContain("wrong-secret");
+  });
+
+  it.each([
+    {
+      stage: "user_lookup",
+      configure: (deps: AdminBootstrapDependencies) => {
+        deps.getUserByEmail = vi.fn(async () => { throw Object.assign(new TypeError("private user data"), { code: "ER_USER_LOOKUP" }); });
+      },
+      exceptionName: "TypeError",
+      errorCode: "ER_USER_LOOKUP",
+    },
+    {
+      stage: "organization_lookup",
+      configure: (deps: AdminBootstrapDependencies) => {
+        deps.getOrganizationBySlug = vi.fn(async () => { throw new Error("private organization data"); });
+      },
+      exceptionName: "Error",
+      errorCode: "unknown",
+    },
+    {
+      stage: "membership_lookup",
+      configure: (deps: AdminBootstrapDependencies) => {
+        deps.getMembershipByOrg = vi.fn(async () => { throw new Error("private membership data"); });
+      },
+      exceptionName: "Error",
+      errorCode: "unknown",
+    },
+    {
+      stage: "south_carolina_authorization_lookup",
+      configure: (deps: AdminBootstrapDependencies) => {
+        deps.getSubaccountsByMembership = vi.fn(async () => { throw new Error("private subaccount data"); });
+      },
+      exceptionName: "Error",
+      errorCode: "unknown",
+    },
+    {
+      stage: "session_token_creation",
+      configure: (deps: AdminBootstrapDependencies) => {
+        deps.createSessionToken = vi.fn(async () => { throw new Error("signed-session-token"); });
+      },
+      exceptionName: "Error",
+      errorCode: "unknown",
+    },
+    {
+      stage: "cookie_creation",
+      configure: (_deps: AdminBootstrapDependencies) => {
+        vi.spyOn(express.response, "cookie").mockImplementationOnce(() => {
+          throw new TypeError("private cookie data");
+        });
+      },
+      exceptionName: "TypeError",
+      errorCode: "unknown",
+    },
+  ])("records sanitized diagnostics for $stage failures", async ({ stage, configure, exceptionName, errorCode }) => {
+    const deps = dependencies();
+    configure(deps);
+
+    const response = await invoke(deps);
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "internal_error" });
+    expect(audit).toHaveBeenCalledWith("failure", "internal_error", undefined, undefined, {
+      exceptionName,
+      errorCode,
+      stage,
+    });
+    const publicAndAuditMaterial = JSON.stringify(audit.mock.calls);
+    expect(publicAndAuditMaterial).not.toContain(baseEnv.EEOS_ADMIN_BOOTSTRAP_SECRET);
+    expect(publicAndAuditMaterial).not.toContain("signed-session-token");
+    expect(publicAndAuditMaterial).not.toContain("private ");
   });
 });
