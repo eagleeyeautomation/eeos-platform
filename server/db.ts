@@ -17,6 +17,10 @@ import {
   kgNodes, kgEdges,
   timelineEvents, TimelineEvent,
   auditLog,
+  authSessions,
+  passwordResetTokens,
+  authInvitations,
+  authAuditEvents,
   recommendations, Recommendation,
   recommendationFeedback,
   ieMetrics,
@@ -97,11 +101,121 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function getUserByEmail(email: string) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const normalized = email.trim().toLowerCase();
+  const result = await db.select().from(users).where(sql`lower(${users.email}) = ${normalized}`).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function countPlatformAdmins(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ count: sql<number>`count(*)` }).from(users)
+    .where(and(eq(users.role, "admin"), eq(users.isActive, true)));
+  return Number(result[0]?.count ?? 0);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EEOS First-Party Auth Persistence
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type InsertAuthSession = typeof authSessions.$inferInsert;
+export type AuthSession = typeof authSessions.$inferSelect;
+
+export async function createAuthSession(session: InsertAuthSession): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(authSessions).values({
+    ...session,
+    createdAt: session.createdAt ?? new Date(),
+    lastSeenAt: session.lastSeenAt ?? new Date(),
+  });
+}
+
+export async function getAuthSessionByTokenHash(tokenHash: string): Promise<AuthSession | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(authSessions).where(eq(authSessions.tokenHash, tokenHash)).limit(1);
+  return result[0];
+}
+
+export async function touchAuthSession(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(authSessions).set({ lastSeenAt: new Date() }).where(eq(authSessions.id, id));
+}
+
+export async function revokeAuthSession(tokenHash: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(authSessions).set({ revokedAt: new Date() }).where(eq(authSessions.tokenHash, tokenHash));
+}
+
+export async function revokeUserAuthSessions(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(authSessions).set({ revokedAt: new Date() }).where(eq(authSessions.userId, userId));
+}
+
+export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
+export async function createPasswordResetToken(token: InsertPasswordResetToken): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(passwordResetTokens).values({ ...token, createdAt: token.createdAt ?? new Date() });
+}
+
+export async function getPasswordResetTokenByHash(tokenHash: string): Promise<PasswordResetToken | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.tokenHash, tokenHash)).limit(1);
+  return result[0];
+}
+
+export async function markPasswordResetTokenUsed(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, id));
+}
+
+export type InsertAuthInvitation = typeof authInvitations.$inferInsert;
+export type AuthInvitation = typeof authInvitations.$inferSelect;
+
+export async function createAuthInvitation(invitation: InsertAuthInvitation): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(authInvitations).values({ ...invitation, createdAt: invitation.createdAt ?? new Date() });
+}
+
+export async function getAuthInvitationByTokenHash(tokenHash: string): Promise<AuthInvitation | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(authInvitations).where(eq(authInvitations.tokenHash, tokenHash)).limit(1);
+  return result[0];
+}
+
+export async function markAuthInvitationAccepted(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(authInvitations).set({ acceptedAt: new Date() }).where(eq(authInvitations.id, id));
+}
+
+export type InsertAuthAuditEvent = typeof authAuditEvents.$inferInsert;
+
+export async function insertAuthAuditEvent(event: InsertAuthAuditEvent): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(authAuditEvents).values({ ...event, createdAt: new Date() });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

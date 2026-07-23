@@ -17,7 +17,7 @@
 
 import {
   int, mysqlEnum, mysqlTable, text, timestamp, varchar,
-  boolean, json, float, bigint, index
+  boolean, json, float, bigint, index, uniqueIndex
 } from "drizzle-orm/mysql-core";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -152,6 +152,72 @@ export const membershipUsers = mysqlTable("membership_users", {
 }, (t) => [
   index("idx_membership_users_membership").on(t.membershipId),
   index("idx_membership_users_user").on(t.userId),
+]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EEOS First-Party Authentication
+// Opaque sessions, invitations, password resets, and auth audit events.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const authSessions = mysqlTable("auth_sessions", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  tokenHash: varchar("tokenHash", { length: 128 }).notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  lastSeenAt: timestamp("lastSeenAt").defaultNow().notNull(),
+  revokedAt: timestamp("revokedAt"),
+  ipAddress: varchar("ipAddress", { length: 128 }),
+  userAgent: text("userAgent"),
+}, (t) => [
+  uniqueIndex("auth_sessions_token_hash_unique").on(t.tokenHash),
+  index("idx_auth_sessions_user").on(t.userId),
+  index("idx_auth_sessions_expires").on(t.expiresAt),
+]);
+
+export const passwordResetTokens = mysqlTable("password_reset_tokens", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  tokenHash: varchar("tokenHash", { length: 128 }).notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  usedAt: timestamp("usedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex("password_reset_tokens_hash_unique").on(t.tokenHash),
+  index("idx_password_reset_user").on(t.userId),
+  index("idx_password_reset_expires").on(t.expiresAt),
+]);
+
+export const authInvitations = mysqlTable("auth_invitations", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  organizationId: int("organizationId").notNull(),
+  membershipId: int("membershipId").notNull(),
+  role: mysqlEnum("role", ["owner", "executive", "analyst", "viewer"]).default("viewer").notNull(),
+  tokenHash: varchar("tokenHash", { length: 128 }).notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  acceptedAt: timestamp("acceptedAt"),
+  invitedByUserId: int("invitedByUserId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex("auth_invitations_hash_unique").on(t.tokenHash),
+  index("idx_auth_invitations_email").on(t.email),
+  index("idx_auth_invitations_org").on(t.organizationId),
+]);
+
+export const authAuditEvents = mysqlTable("auth_audit_events", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  actorUserId: int("actorUserId"),
+  organizationId: int("organizationId"),
+  action: varchar("action", { length: 128 }).notNull(),
+  targetType: varchar("targetType", { length: 64 }),
+  targetId: varchar("targetId", { length: 128 }),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => [
+  index("idx_auth_audit_actor").on(t.actorUserId),
+  index("idx_auth_audit_org").on(t.organizationId),
+  index("idx_auth_audit_action").on(t.action),
 ]);
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,5 +1,4 @@
-import { createContext, useContext, type ReactNode } from "react";
-import { trpc } from "@/lib/trpc";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 export type ProductRole =
   | "PLATFORM_ADMIN"
@@ -41,18 +40,37 @@ const anonymousSession: SessionContextValue = {
 const ProductSessionContext = createContext<SessionContextValue>(anonymousSession);
 
 export function ProductSessionProvider({ children }: { children: ReactNode }) {
-  const sessionQuery = trpc.auth.session.useQuery(undefined, {
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
+  const [session, setSession] = useState<SessionContextValue>(anonymousSession);
 
-  const session = sessionQuery.data ?? {
-    ...anonymousSession,
-    loading: sessionQuery.isLoading,
-  };
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSession() {
+      setSession((current) => ({ ...current, loading: true }));
+      try {
+        const response = await fetch("/api/auth/session", {
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
+        const payload = await response.json();
+        if (!cancelled) {
+          setSession({ ...anonymousSession, ...payload, loading: false });
+        }
+      } catch {
+        if (!cancelled) {
+          setSession({ ...anonymousSession, loading: false });
+        }
+      }
+    }
+
+    loadSession();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
-    <ProductSessionContext.Provider value={{ ...session, loading: sessionQuery.isLoading }}>
+    <ProductSessionContext.Provider value={session}>
       {children}
     </ProductSessionContext.Provider>
   );

@@ -42,7 +42,9 @@ import IntegrationStatus from "./pages/IntegrationStatus";
 import ExecutiveTimeline from "./pages/ExecutiveTimeline";
 import KnowledgeGraphPreview from "./pages/KnowledgeGraphPreview";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
-import AdminBootstrap from "./pages/AdminBootstrap";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import AcceptInvitation from "./pages/AcceptInvitation";
 import AccessDenied from "./pages/AccessDenied";
 import PlatformAdmin from "./pages/PlatformAdmin";
 
@@ -92,7 +94,11 @@ function Router() {
       <Route path="/demo" component={Demo} />
       <Route path="/about" component={About} />
       <Route path="/contact" component={Contact} />
+      <Route path="/login" component={SignIn} />
       <Route path="/sign-in" component={SignIn} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/invitations/accept" component={AcceptInvitation} />
       <Route path="/onboarding" component={Onboarding} />
       <Route path="/integrations" component={Integrations} />
       <Route path="/integrations/gohighlevel" component={ownerOnboarding(GoHighLevelIntegration)} />
@@ -118,7 +124,6 @@ function Router() {
       <Route path="/executive-timeline" component={owner(ExecutiveTimeline)} />
       <Route path="/knowledge-graph" component={owner(KnowledgeGraphPreview)} />
       <Route path="/executive-dashboard" component={owner(ExecutiveDashboard)} />
-      <Route path="/admin-bootstrap" component={AdminBootstrap} />
       <Route path="/admin" component={admin(PlatformAdmin)} />
       <Route path="/admin/organizations" component={admin(PlatformAdmin)} />
       <Route path="/admin/organizations/:organizationId" component={admin(PlatformAdmin)} />

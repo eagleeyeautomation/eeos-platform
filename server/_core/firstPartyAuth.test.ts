@@ -5,17 +5,37 @@ import type { User } from "../../drizzle/schema";
 import { COOKIE_NAME } from "../../shared/const";
 import { registerFirstPartyAuthRoutes } from "./firstPartyAuth";
 import { hashPassword, verifyPassword } from "./passwordAuth";
+import { hashOpaqueToken } from "./sessionTokens";
 
 const dbMocks = vi.hoisted(() => ({
-  getUserByEmail: vi.fn(),
-  getUserByOpenId: vi.fn(),
-  upsertUser: vi.fn(),
-  getUserSubaccounts: vi.fn(),
+  createAuthInvitation: vi.fn(),
+  createAuthSession: vi.fn(),
+  createPasswordResetToken: vi.fn(),
+  getAuthInvitationByTokenHash: vi.fn(),
+  getAuthSessionByTokenHash: vi.fn(),
+  getGhlToken: vi.fn(),
   getMembershipById: vi.fn(),
-  getMembershipUser: vi.fn(),
+  getPasswordResetTokenByHash: vi.fn(),
+  getUserByEmail: vi.fn(),
+  getUserById: vi.fn(),
+  insertAuthAuditEvent: vi.fn(),
+  markAuthInvitationAccepted: vi.fn(),
+  markPasswordResetTokenUsed: vi.fn(),
+  revokeAuthSession: vi.fn(),
+  revokeUserAuthSessions: vi.fn(),
+  touchAuthSession: vi.fn(),
+  upsertMembershipUser: vi.fn(),
+  upsertUser: vi.fn(),
+}));
+
+const authorizationMocks = vi.hoisted(() => ({
+  listAuthorizedLocationsForMembership: vi.fn(),
+  requirePlatformAdmin: vi.fn(),
+  resolveAuthorizationContext: vi.fn(),
 }));
 
 vi.mock("../db", () => dbMocks);
+vi.mock("../authorization", () => authorizationMocks);
 
 const now = new Date("2026-07-23T12:00:00.000Z");
 
@@ -54,14 +74,51 @@ async function withServer<T>(callback: (baseUrl: string) => Promise<T>) {
 describe("EEOS first-party authentication", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.JWT_SECRET = "first-party-test-secret";
-    process.env.EEOS_SESSION_AUDIENCE = "eeos-platform";
-    dbMocks.upsertUser.mockResolvedValue(undefined);
+    dbMocks.createAuthSession.mockResolvedValue(undefined);
+    dbMocks.createPasswordResetToken.mockResolvedValue(undefined);
+    dbMocks.createAuthInvitation.mockResolvedValue(undefined);
+    dbMocks.getGhlToken.mockResolvedValue({ isActive: true, scope: "private_integration" });
     dbMocks.getMembershipById.mockResolvedValue({ id: 100, organizationId: 10 });
-    dbMocks.getMembershipUser.mockResolvedValue({ role: "owner" });
-    dbMocks.getUserSubaccounts.mockResolvedValue([
-      { membershipId: 100, orgName: "PRN Staffers", ghlLocationId: "loc-sc" },
-    ]);
+    dbMocks.insertAuthAuditEvent.mockResolvedValue(undefined);
+    dbMocks.markAuthInvitationAccepted.mockResolvedValue(undefined);
+    dbMocks.markPasswordResetTokenUsed.mockResolvedValue(undefined);
+    dbMocks.revokeAuthSession.mockResolvedValue(undefined);
+    dbMocks.revokeUserAuthSessions.mockResolvedValue(undefined);
+    dbMocks.touchAuthSession.mockResolvedValue(undefined);
+    dbMocks.upsertMembershipUser.mockResolvedValue(undefined);
+    dbMocks.upsertUser.mockResolvedValue(undefined);
+
+    authorizationMocks.listAuthorizedLocationsForMembership.mockResolvedValue([{ id: "loc-sc", name: "South Carolina" }]);
+    authorizationMocks.resolveAuthorizationContext.mockImplementation(async (account: User) => (
+      account.role === "admin"
+        ? {
+            userId: String(account.id),
+            role: "PLATFORM_ADMIN",
+            organizationId: null,
+            organizationName: "Eagle Eye Automation",
+            membershipId: null,
+            authorizedLocationIds: [],
+          }
+        : {
+            userId: String(account.id),
+            role: "ORGANIZATION_OWNER",
+            organizationId: "10",
+            organizationName: "PRN Staffers",
+            membershipId: "100",
+            authorizedLocationIds: ["loc-sc"],
+          }
+    ));
+    authorizationMocks.requirePlatformAdmin.mockImplementation(async (account: User | null | undefined) => {
+      if (account?.role !== "admin") throw new Error("Platform administrator access is required.");
+      return {
+        userId: String(account.id),
+        role: "PLATFORM_ADMIN",
+        organizationId: null,
+        organizationName: "Eagle Eye Automation",
+        membershipId: null,
+        authorizedLocationIds: [],
+      };
+    });
   });
 
   it("verifies EEOS-controlled password hashes", async () => {
@@ -71,11 +128,11 @@ describe("EEOS first-party authentication", () => {
     await expect(verifyPassword("anything", null)).resolves.toBe(false);
   });
 
-  it("creates an owner session and returns /executive-home after valid credentials", async () => {
+  it("creates an opaque owner session and returns /executive-home after valid credentials", async () => {
     const stored = await hashPassword("valid-password");
     const account = user({ passwordHash: stored });
     dbMocks.getUserByEmail.mockResolvedValue(account);
-    dbMocks.getUserByOpenId.mockResolvedValue(account);
+    dbMocks.getUserById.mockResolvedValue(account);
 
     await withServer(async (baseUrl) => {
       const response = await fetch(`${baseUrl}/api/auth/login`, {
@@ -85,8 +142,13 @@ describe("EEOS first-party authentication", () => {
       });
 
       expect(response.status).toBe(200);
-      await expect(response.json()).resolves.toEqual({ success: true, redirectTo: "/executive-home" });
+      const payload = await response.json();
+      expect(payload).toMatchObject({ success: true, redirectTo: "/executive-home", role: "ORGANIZATION_OWNER" });
       expect(response.headers.get("set-cookie")).toContain(`${COOKIE_NAME}=`);
+      expect(dbMocks.createAuthSession).toHaveBeenCalledWith(expect.objectContaining({
+        userId: account.id,
+        tokenHash: expect.any(String),
+      }));
       expect(dbMocks.upsertUser).toHaveBeenCalledWith(expect.objectContaining({
         openId: account.openId,
         loginMethod: "eeos",
@@ -98,7 +160,7 @@ describe("EEOS first-party authentication", () => {
     const stored = await hashPassword("valid-password");
     const account = user({ role: "admin", passwordHash: stored });
     dbMocks.getUserByEmail.mockResolvedValue(account);
-    dbMocks.getUserByOpenId.mockResolvedValue(account);
+    dbMocks.getUserById.mockResolvedValue(account);
 
     await withServer(async (baseUrl) => {
       const response = await fetch(`${baseUrl}/api/auth/login`, {
@@ -108,7 +170,8 @@ describe("EEOS first-party authentication", () => {
       });
 
       expect(response.status).toBe(200);
-      await expect(response.json()).resolves.toEqual({ success: true, redirectTo: "/admin" });
+      const payload = await response.json();
+      expect(payload).toMatchObject({ success: true, redirectTo: "/admin", role: "PLATFORM_ADMIN" });
       expect(response.headers.get("set-cookie")).toContain(`${COOKIE_NAME}=`);
     });
   });
@@ -126,23 +189,145 @@ describe("EEOS first-party authentication", () => {
 
       expect(response.status).toBe(401);
       expect(response.headers.get("set-cookie")).toBeNull();
+      expect(dbMocks.createAuthSession).not.toHaveBeenCalled();
       await expect(response.json()).resolves.toEqual({ success: false, error: "Invalid email or password." });
     });
   });
 
-  it("rejects inactive users without issuing a session", async () => {
-    const stored = await hashPassword("valid-password");
-    dbMocks.getUserByEmail.mockResolvedValue(user({ passwordHash: stored, isActive: false }));
+  it("returns authenticated session context from a stored opaque session", async () => {
+    const account = user();
+    const token = "browser-session-token";
+    dbMocks.getAuthSessionByTokenHash.mockResolvedValue({
+      id: 20,
+      userId: account.id,
+      tokenHash: hashOpaqueToken(token),
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null,
+      createdAt: now,
+      lastSeenAt: now,
+      ipAddress: null,
+      userAgent: null,
+    });
+    dbMocks.getUserById.mockResolvedValue(account);
 
     await withServer(async (baseUrl) => {
-      const response = await fetch(`${baseUrl}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "owner@example.com", password: "valid-password" }),
+      const response = await fetch(`${baseUrl}/api/auth/session`, {
+        headers: { Cookie: `${COOKIE_NAME}=${token}` },
       });
 
-      expect(response.status).toBe(401);
-      expect(response.headers.get("set-cookie")).toBeNull();
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        authenticated: true,
+        role: "ORGANIZATION_OWNER",
+        organization: { id: "10", name: "PRN Staffers" },
+        ghlConnected: true,
+      });
+      expect(dbMocks.touchAuthSession).toHaveBeenCalledWith(20);
+    });
+  });
+
+  it("revokes all user sessions after password reset", async () => {
+    const account = user();
+    const token = "reset-token-value";
+    dbMocks.getPasswordResetTokenByHash.mockResolvedValue({
+      id: 50,
+      userId: account.id,
+      tokenHash: hashOpaqueToken(token),
+      expiresAt: new Date(Date.now() + 60_000),
+      usedAt: null,
+      createdAt: now,
+    });
+    dbMocks.getUserById.mockResolvedValue(account);
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password: "new-valid-password" }),
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({ success: true });
+      expect(dbMocks.upsertUser).toHaveBeenCalledWith(expect.objectContaining({
+        openId: account.openId,
+        passwordHash: expect.any(String),
+      }));
+      expect(dbMocks.markPasswordResetTokenUsed).toHaveBeenCalledWith(50);
+      expect(dbMocks.revokeUserAuthSessions).toHaveBeenCalledWith(account.id);
+    });
+  });
+
+  it("accepts invitations without returning the raw invitation token", async () => {
+    const token = "invitation-token-value";
+    const acceptedUser = user({ id: 2, email: "new.owner@example.com", openId: "eeos-new-owner" });
+    dbMocks.getAuthInvitationByTokenHash.mockResolvedValue({
+      id: 80,
+      email: "new.owner@example.com",
+      organizationId: 10,
+      membershipId: 100,
+      role: "owner",
+      tokenHash: hashOpaqueToken(token),
+      expiresAt: new Date(Date.now() + 60_000),
+      acceptedAt: null,
+      invitedByUserId: 1,
+      createdAt: now,
+    });
+    dbMocks.getUserByEmail.mockResolvedValueOnce(undefined).mockResolvedValueOnce(acceptedUser);
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/invitations/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, displayName: "New Owner", password: "new-valid-password" }),
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({ success: true, redirectTo: "/login" });
+      expect(dbMocks.upsertMembershipUser).toHaveBeenCalledWith(100, acceptedUser.id, "owner");
+      expect(dbMocks.markAuthInvitationAccepted).toHaveBeenCalledWith(80);
+    });
+  });
+
+  it("creates admin invitations only for authenticated platform admins", async () => {
+    const admin = user({ id: 9, role: "admin", openId: "eeos-admin", email: "admin@example.com" });
+    const token = "admin-session-token";
+    dbMocks.getAuthSessionByTokenHash.mockResolvedValue({
+      id: 90,
+      userId: admin.id,
+      tokenHash: hashOpaqueToken(token),
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null,
+      createdAt: now,
+      lastSeenAt: now,
+      ipAddress: null,
+      userAgent: null,
+    });
+    dbMocks.getUserById.mockResolvedValue(admin);
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/admin/invitations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: `${COOKIE_NAME}=${token}`,
+        },
+        body: JSON.stringify({
+          email: "owner@example.com",
+          organizationId: 10,
+          membershipId: 100,
+          role: "owner",
+        }),
+      });
+
+      expect(response.status).toBe(202);
+      await expect(response.json()).resolves.toEqual({ success: true, delivery: "email_provider_not_configured" });
+      expect(dbMocks.createAuthInvitation).toHaveBeenCalledWith(expect.objectContaining({
+        email: "owner@example.com",
+        organizationId: 10,
+        membershipId: 100,
+        role: "owner",
+        tokenHash: expect.any(String),
+      }));
     });
   });
 });

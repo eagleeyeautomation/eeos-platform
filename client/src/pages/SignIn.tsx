@@ -1,6 +1,5 @@
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
-import { trpc } from "@/lib/trpc";
 import { ArrowRight, Lock, Loader2 } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { Link } from "wouter";
@@ -16,7 +15,6 @@ function readReturnTo() {
 }
 
 export default function SignIn() {
-  const utils = trpc.useUtils();
   const returnTo = useMemo(readReturnTo, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,7 +37,6 @@ export default function SignIn() {
       if (!response.ok || !payload.success) {
         throw new Error(payload.error || "Sign in failed.");
       }
-      await utils.auth.session.invalidate();
       window.location.href = payload.redirectTo || "/executive-home";
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Sign in failed.");
@@ -113,10 +110,12 @@ export default function SignIn() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-[#FFFFFF]/45">
-            Need access?{" "}
+          <div className="mt-6 flex items-center justify-between text-sm text-[#FFFFFF]/45">
+            <Link href="/forgot-password" className="font-semibold text-[#C9A227] hover:text-[#D8B84A]">
+              Forgot Password?
+            </Link>
             <Link href="/contact" className="font-semibold text-[#C9A227] hover:text-[#D8B84A]">
-              Contact Eagle Eye Automation
+              Need access?
             </Link>
           </div>
         </section>

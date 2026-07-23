@@ -7,7 +7,7 @@ function currentReturnTo() {
 
 export const startLogin = () => {
   if (typeof window === "undefined") return false;
-  const url = new URL("/sign-in", window.location.origin);
+  const url = new URL("/login", window.location.origin);
   url.searchParams.set("returnTo", currentReturnTo());
   window.location.href = url.toString();
   return true;

@@ -212,10 +212,14 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+const requireForgeApiUrl = () => {
+  if (!ENV.forgeApiUrl || ENV.forgeApiUrl.trim().length === 0) {
+    throw new Error("BUILT_IN_FORGE_API_URL is not configured");
+  }
+  return ENV.forgeApiUrl.replace(/\/$/, "");
+};
+
+const resolveApiUrl = () => `${requireForgeApiUrl()}/v1/chat/completions`;
 
 const assertApiKey = () => {
   if (!ENV.forgeApiKey) {
@@ -435,9 +439,7 @@ export type ModelsResponse = {
 export async function listLLMModels(): Promise<ModelsResponse> {
   assertApiKey();
 
-  const url = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/models`
-    : "https://forge.manus.im/v1/models";
+  const url = `${requireForgeApiUrl()}/v1/models`;
 
   const response = await fetchWithBackoff(url, {
     headers: { authorization: `Bearer ${ENV.forgeApiKey}` },

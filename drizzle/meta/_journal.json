@@ -15,6 +15,13 @@
       "when": 1783612569301,
       "tag": "0001_hot_flatman",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1784835481855,
+      "tag": "0002_secret_mojo",
+      "breakpoints": true
     }
   ]
 }

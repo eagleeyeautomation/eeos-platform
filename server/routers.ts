@@ -7,10 +7,11 @@
  */
 
 import { z } from "zod";
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { sdk } from "./_core/sdk";
+import { getSessionCookieOptions } from "./_core/cookies";
+import { COOKIE_NAME } from "@shared/const";
 import {
   getGhlToken, getActiveRecommendations, getRecommendationById,
   getBusinessMemory, getTimeline, getKnowledgeGraph,
@@ -76,7 +77,8 @@ export const appRouter = router({
         ghlConnected: connectedTokens.some((token) => token?.isActive && token.scope === "private_integration"),
       };
     }),
-    logout: publicProcedure.mutation(({ ctx }) => {
+    logout: publicProcedure.mutation(async ({ ctx }) => {
+      await sdk.revokeCurrentSession(ctx.req);
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;

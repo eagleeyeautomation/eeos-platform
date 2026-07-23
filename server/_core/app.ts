@@ -13,7 +13,6 @@ import { registerAthenaLearningRoutes } from "../athena-learning";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { getCoreReadiness } from "./startup";
-import { registerAdminBootstrapRoute } from "./adminBootstrap";
 
 export function createEeosApp() {
   const app = express();
@@ -28,7 +27,6 @@ export function createEeosApp() {
 
   registerStorageProxy(app);
   registerFirstPartyAuthRoutes(app);
-  registerAdminBootstrapRoute(app);
   registerGhlOAuthRoutes(app);
   registerGhlPitRoutes(app);
   registerGhlWebhookRoutes(app);
