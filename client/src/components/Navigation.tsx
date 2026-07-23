@@ -1,11 +1,56 @@
 // EEOS Navigation — Sovereign Night Design System
 // Full-screen mobile drawer, scroll-aware glass bar, active route highlighting
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { Menu, X, ChevronDown, ArrowRight, Zap, Plug, Activity } from "lucide-react";
 
-const NAV_LINKS = [
+export const AVAILABLE_NAV_ROUTES = new Set([
+  "/",
+  "/why-eeos",
+  "/features",
+  "/industries",
+  "/pricing",
+  "/security",
+  "/demo",
+  "/about",
+  "/contact",
+  "/onboarding",
+  "/integrations",
+  "/integrations/gohighlevel",
+  "/connect-ghl",
+  "/dashboard",
+  "/oauth-success",
+  "/oauth-failure",
+  "/integration-health",
+  "/tenant-confirmation",
+  "/prn-onboarding",
+  "/executive-home",
+  "/live-status",
+  "/connected-apps",
+  "/system-health",
+  "/notifications",
+  "/business-health",
+  "/ai-recommendations",
+  "/live-signals",
+  "/integration-status",
+  "/executive-timeline",
+  "/knowledge-graph",
+  "/executive-dashboard",
+  "/admin-bootstrap",
+  "/404",
+]);
+
+type NavItem = {
+  label: string;
+  href: string;
+  children?: Array<{
+    label: string;
+    href: string;
+  }>;
+};
+
+export const NAV_LINKS: NavItem[] = [
   { label: "Why EEOS", href: "/why-eeos" },
   { label: "Features", href: "/features" },
   { label: "Industries", href: "/industries" },
@@ -49,11 +94,29 @@ const NAV_LINKS = [
   },
 ];
 
+export function buildDropdownRouteInventory(
+  links: NavItem[] = NAV_LINKS,
+  routes: Set<string> = AVAILABLE_NAV_ROUTES,
+) {
+  return links.flatMap((link) =>
+    (link.children ?? []).map((child) => ({
+      parent: link.label,
+      label: child.label,
+      href: child.href,
+      routeExists: routes.has(child.href),
+      disabled: !routes.has(child.href),
+      deadClickable: false,
+    })),
+  );
+}
+
 export default function Navigation() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [location] = useLocation();
+  const headerRef = useRef<HTMLElement | null>(null);
+  const dropdownInventory = useMemo(() => buildDropdownRouteInventory(), []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -65,6 +128,27 @@ export default function Navigation() {
     setMobileOpen(false);
     setDropdownOpen(null);
   }, [location]);
+
+  useEffect(() => {
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (!dropdownOpen) return;
+      if (headerRef.current?.contains(event.target as Node)) return;
+      setDropdownOpen(null);
+    };
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setDropdownOpen(null);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [dropdownOpen]);
 
   // Prevent body scroll when mobile menu open
   useEffect(() => {
@@ -79,6 +163,7 @@ export default function Navigation() {
   return (
     <>
       <header
+        ref={headerRef}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled || mobileOpen ? "nav-glass shadow-lg" : "bg-transparent"
         }`}
@@ -118,28 +203,17 @@ export default function Navigation() {
                     key={link.label}
                     className="relative"
                     onMouseEnter={() => setDropdownOpen(link.label)}
-                    onMouseLeave={() => setDropdownOpen(null)}
                   >
-                    {link.href !== "#" ? (
-                      <Link
-                        href={link.href}
-                        className={`flex items-center gap-1 px-4 py-2 text-sm transition-colors duration-200 font-medium ${
-                          location === link.href
-                            ? "text-[#00D4C8]"
-                            : "text-[#E8EDF5]/75 hover:text-[#00D4C8]"
-                        }`}
-                        style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                      >
-                        {link.label}
-                        <ChevronDown
-                          className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                            dropdownOpen === link.label ? "rotate-180" : ""
-                          }`}
-                        />
-                      </Link>
-                    ) : (
-                      <button
-                      className="flex items-center gap-1 px-4 py-2 text-sm text-[#E8EDF5]/75 hover:text-[#00D4C8] transition-colors duration-200 font-medium"
+                    <button
+                      type="button"
+                      aria-haspopup="menu"
+                      aria-expanded={dropdownOpen === link.label}
+                      onClick={() => setDropdownOpen((open) => open === link.label ? null : link.label)}
+                      className={`flex items-center gap-1 px-4 py-2 text-sm transition-colors duration-200 font-medium focus:outline-none ${
+                        link.href !== "#" && location === link.href
+                          ? "text-[#00D4C8]"
+                          : "text-[#E8EDF5]/75 hover:text-[#00D4C8] focus:text-[#00D4C8]"
+                      }`}
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
                       {link.label}
@@ -149,19 +223,39 @@ export default function Navigation() {
                         }`}
                       />
                     </button>
-                    )}
                     {dropdownOpen === link.label && (
-                      <div className="absolute top-full left-0 mt-1 w-52 glass-card rounded-lg overflow-hidden shadow-xl">
-                        {link.children.map((child) => (
-                          <Link
-                            key={child.href}
-                            href={child.href}
-                            className="flex items-center gap-2 px-4 py-3 text-sm text-[#E8EDF5]/75 hover:text-[#00D4C8] hover:bg-[rgba(0,212,200,0.06)] transition-all duration-150"
-                            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                          >
-                            {child.label}
-                          </Link>
-                        ))}
+                      <div
+                        className="absolute top-full left-0 z-[60] pt-2"
+                        onMouseEnter={() => setDropdownOpen(link.label)}
+                      >
+                        <div className="w-56 glass-card rounded-lg overflow-hidden shadow-xl" role="menu" aria-label={`${link.label} menu`}>
+                          {link.children.map((child) => {
+                            const routeExists = AVAILABLE_NAV_ROUTES.has(child.href);
+                            return routeExists ? (
+                              <Link
+                                key={child.href}
+                                href={child.href}
+                                role="menuitem"
+                                onClick={() => setDropdownOpen(null)}
+                                className="flex items-center gap-2 px-4 py-3 text-sm text-[#E8EDF5]/75 hover:text-[#00D4C8] hover:bg-[rgba(0,212,200,0.06)] focus:text-[#00D4C8] focus:bg-[rgba(0,212,200,0.06)] focus:outline-none transition-all duration-150"
+                                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                              >
+                                {child.label}
+                              </Link>
+                            ) : (
+                              <span
+                                key={child.href}
+                                role="menuitem"
+                                aria-disabled="true"
+                                className="flex cursor-not-allowed items-center justify-between gap-2 px-4 py-3 text-sm text-[#E8EDF5]/35"
+                                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                              >
+                                {child.label}
+                                <span className="text-[10px] uppercase tracking-[0.14em] text-[#E8EDF5]/25">Coming soon</span>
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -244,17 +338,33 @@ export default function Navigation() {
                       {link.label}
                     </div>
                   )}
-                  {link.children.map((child) => (
-                    <Link
-                      key={child.href}
-                      href={child.href}
-                      className="flex items-center gap-2 px-3 py-3 text-base text-[#E8EDF5]/75 hover:text-[#00D4C8] hover:bg-[rgba(0,212,200,0.05)] rounded-lg transition-all"
-                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                    >
-                      <ChevronDown className="w-3.5 h-3.5 -rotate-90 opacity-40" />
-                      {child.label}
-                    </Link>
-                  ))}
+                  {link.children.map((child) => {
+                    const routeExists = dropdownInventory.some((item) => item.href === child.href && item.routeExists);
+                    return routeExists ? (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        className="flex items-center gap-2 px-3 py-3 text-base text-[#E8EDF5]/75 hover:text-[#00D4C8] hover:bg-[rgba(0,212,200,0.05)] rounded-lg transition-all"
+                        style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                      >
+                        <ChevronDown className="w-3.5 h-3.5 -rotate-90 opacity-40" />
+                        {child.label}
+                      </Link>
+                    ) : (
+                      <span
+                        key={child.href}
+                        aria-disabled="true"
+                        className="flex cursor-not-allowed items-center justify-between gap-2 px-3 py-3 text-base text-[#E8EDF5]/35 rounded-lg"
+                        style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                      >
+                        <span className="flex items-center gap-2">
+                          <ChevronDown className="w-3.5 h-3.5 -rotate-90 opacity-25" />
+                          {child.label}
+                        </span>
+                        <span className="text-[10px] uppercase tracking-[0.14em] text-[#E8EDF5]/25">Coming soon</span>
+                      </span>
+                    );
+                  })}
                 </div>
               ) : (
                 <Link
