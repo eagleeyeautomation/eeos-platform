@@ -80,16 +80,16 @@ const MILESTONES = [
 
 export default function About() {
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* Hero */}
-      <section className="pt-32 pb-20 bg-[#050C1A] scan-grid">
+      <section className="pt-32 pb-20 bg-[#0B0B0B] scan-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="max-w-3xl">
             <div className="section-label mb-4">About Eagle Eye Automation</div>
             <h1
-              className="text-5xl sm:text-6xl font-bold text-[#E8EDF5] tracking-tight mb-6"
+              className="text-5xl sm:text-6xl font-bold text-[#FFFFFF] tracking-tight mb-6"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               AI software that helps
@@ -98,7 +98,7 @@ export default function About() {
               <br />
               <span className="gradient-text">grow.</span>
             </h1>
-            <p className="text-xl text-[#E8EDF5]/65 leading-relaxed">
+            <p className="text-xl text-[#FFFFFF]/65 leading-relaxed">
               Eagle Eye Automation builds AI software for service businesses. Our flagship product, EEOS, helps business owners stop reacting to today's problems and start making tomorrow's decisions with confidence.
             </p>
           </AnimatedSection>
@@ -106,13 +106,13 @@ export default function About() {
       </section>
 
       {/* Mission */}
-      <section className="bg-[#0A1628] py-20">
+      <section className="bg-[#141414] py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <AnimatedSection>
               <div className="section-label mb-4">Our Mission</div>
               <h2
-                className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight mb-6"
+                className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight mb-6"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 Help every service
@@ -121,10 +121,10 @@ export default function About() {
                 <br />
                 <span className="gradient-text">with certainty.</span>
               </h2>
-              <p className="text-[#E8EDF5]/65 leading-relaxed mb-6">
+              <p className="text-[#FFFFFF]/65 leading-relaxed mb-6">
                 We believe that when leaders have complete, timely, and accurate intelligence, they make better decisions — for their organizations, their people, and the world. EEOS is our contribution to that vision.
               </p>
-              <p className="text-[#E8EDF5]/65 leading-relaxed">
+              <p className="text-[#FFFFFF]/65 leading-relaxed">
                 Founded in Washington D.C. in 2019, Eagle Eye Automation has grown to serve 42 enterprise clients across aerospace, financial services, healthcare, manufacturing, energy, and technology — with a team of 180 people across four global offices.
               </p>
             </AnimatedSection>
@@ -142,12 +142,12 @@ export default function About() {
                     className="glass-card rounded-xl p-6 text-center"
                   >
                     <div
-                      className="text-3xl font-bold text-[#00D4C8] mb-1"
+                      className="text-3xl font-bold text-[#C9A227] mb-1"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
                       {stat.value}
                     </div>
-                    <div className="text-sm text-[#E8EDF5]/55">{stat.label}</div>
+                    <div className="text-sm text-[#FFFFFF]/55">{stat.label}</div>
                   </div>
                 ))}
               </div>
@@ -157,11 +157,11 @@ export default function About() {
       </section>
 
       {/* Values */}
-      <section className="bg-[#050C1A] py-24 scan-grid">
+      <section className="bg-[#0B0B0B] py-24 scan-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center mb-16">
             <h2
-              className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight"
+              className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               What we believe
@@ -172,16 +172,16 @@ export default function About() {
             {VALUES.map((value, i) => (
               <AnimatedSection key={value.title} delay={i * 100}>
                 <div className="glass-card rounded-xl p-8 h-full">
-                  <div className="w-10 h-10 rounded-lg bg-[rgba(0,212,200,0.1)] border border-[rgba(0,212,200,0.2)] flex items-center justify-center mb-4">
-                    <value.icon className="w-5 h-5 text-[#00D4C8]" />
+                  <div className="w-10 h-10 rounded-lg bg-[rgba(201,162,39,0.1)] border border-[rgba(201,162,39,0.2)] flex items-center justify-center mb-4">
+                    <value.icon className="w-5 h-5 text-[#C9A227]" />
                   </div>
                   <h3
-                    className="text-xl font-semibold text-[#E8EDF5] mb-3"
+                    className="text-xl font-semibold text-[#FFFFFF] mb-3"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     {value.title}
                   </h3>
-                  <p className="text-[#E8EDF5]/60 leading-relaxed">{value.description}</p>
+                  <p className="text-[#FFFFFF]/60 leading-relaxed">{value.description}</p>
                 </div>
               </AnimatedSection>
             ))}
@@ -190,12 +190,12 @@ export default function About() {
       </section>
 
       {/* Leadership */}
-      <section className="bg-[#0A1628] py-24">
+      <section className="bg-[#141414] py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center mb-16">
             <div className="section-label mb-4">Leadership</div>
             <h2
-              className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight"
+              className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               The team behind EEOS
@@ -207,9 +207,9 @@ export default function About() {
               <AnimatedSection key={person.name} delay={i * 80}>
                 <div className="glass-card rounded-xl p-6 flex items-start gap-4">
                   <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold text-[#050C1A] shrink-0"
+                    className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold text-[#0B0B0B] shrink-0"
                     style={{
-                      background: "linear-gradient(135deg, #00D4C8, #60efea)",
+                      background: "linear-gradient(135deg, #C9A227, #F2E2A6)",
                       fontFamily: "'Space Grotesk', sans-serif",
                     }}
                   >
@@ -217,13 +217,13 @@ export default function About() {
                   </div>
                   <div>
                     <h3
-                      className="text-base font-semibold text-[#E8EDF5] mb-0.5"
+                      className="text-base font-semibold text-[#FFFFFF] mb-0.5"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
                       {person.name}
                     </h3>
-                    <div className="text-xs text-[#00D4C8] mb-2">{person.title}</div>
-                    <p className="text-xs text-[#E8EDF5]/50 leading-relaxed">{person.background}</p>
+                    <div className="text-xs text-[#C9A227] mb-2">{person.title}</div>
+                    <p className="text-xs text-[#FFFFFF]/50 leading-relaxed">{person.background}</p>
                   </div>
                 </div>
               </AnimatedSection>
@@ -233,12 +233,12 @@ export default function About() {
       </section>
 
       {/* Timeline */}
-      <section className="bg-[#050C1A] py-24">
+      <section className="bg-[#0B0B0B] py-24">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center mb-16">
             <div className="section-label mb-4">Company History</div>
             <h2
-              className="text-3xl font-bold text-[#E8EDF5] tracking-tight"
+              className="text-3xl font-bold text-[#FFFFFF] tracking-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               From idea to industry standard
@@ -246,20 +246,20 @@ export default function About() {
           </AnimatedSection>
 
           <div className="relative">
-            <div className="absolute left-16 top-0 bottom-0 w-px bg-gradient-to-b from-[rgba(0,212,200,0.5)] via-[rgba(0,212,200,0.2)] to-transparent" />
+            <div className="absolute left-16 top-0 bottom-0 w-px bg-gradient-to-b from-[rgba(201,162,39,0.5)] via-[rgba(201,162,39,0.2)] to-transparent" />
             <div className="space-y-8">
               {MILESTONES.map((milestone, i) => (
                 <AnimatedSection key={milestone.year} delay={i * 80}>
                   <div className="flex items-start gap-6">
                     <div
-                      className="w-14 text-right text-sm font-bold text-[#00D4C8] shrink-0 pt-0.5"
+                      className="w-14 text-right text-sm font-bold text-[#C9A227] shrink-0 pt-0.5"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}
                     >
                       {milestone.year}
                     </div>
                     <div className="relative flex items-start gap-4">
-                      <div className="w-3 h-3 rounded-full bg-[#00D4C8] border-2 border-[#050C1A] mt-1 shrink-0 shadow-[0_0_8px_rgba(0,212,200,0.6)]" />
-                      <p className="text-[#E8EDF5]/70 leading-relaxed">{milestone.event}</p>
+                      <div className="w-3 h-3 rounded-full bg-[#C9A227] border-2 border-[#0B0B0B] mt-1 shrink-0 shadow-[0_0_8px_rgba(201,162,39,0.6)]" />
+                      <p className="text-[#FFFFFF]/70 leading-relaxed">{milestone.event}</p>
                     </div>
                   </div>
                 </AnimatedSection>
@@ -270,28 +270,28 @@ export default function About() {
       </section>
 
       {/* CTA */}
-      <section className="bg-[#050C1A] border-t border-[rgba(0,212,200,0.1)] py-20">
+      <section className="bg-[#0B0B0B] border-t border-[rgba(201,162,39,0.1)] py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
             <div className="flex flex-col lg:flex-row items-start lg:items-center gap-10 lg:gap-20">
               <div className="flex-1">
                 <div className="section-label mb-3">Engage Eagle Eye</div>
                 <h2
-                  className="text-3xl font-bold text-[#E8EDF5] tracking-tight mb-4 leading-tight"
+                  className="text-3xl font-bold text-[#FFFFFF] tracking-tight mb-4 leading-tight"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Enterprise leaders. Investors.
                   <br />
                   <span className="gradient-text">The people who build what's next.</span>
                 </h2>
-                <p className="text-[#E8EDF5]/55 max-w-lg">
+                <p className="text-[#FFFFFF]/55 max-w-lg">
                   Whether you're evaluating EEOS for your organization, exploring a strategic partnership, or joining our team — we operate at the intersection of intelligence and action.
                 </p>
               </div>
               <div className="flex flex-col gap-3 shrink-0">
                 <Link
                   href="/contact"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200 shadow-[0_0_24px_rgba(0,212,200,0.4)]"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200 shadow-[0_0_24px_rgba(201,162,39,0.4)]"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Open a Channel
@@ -299,7 +299,7 @@ export default function About() {
                 </Link>
                 <Link
                   href="/demo"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] transition-all duration-200"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] transition-all duration-200"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Enter the Demo

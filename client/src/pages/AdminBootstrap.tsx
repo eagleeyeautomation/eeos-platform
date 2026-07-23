@@ -27,7 +27,7 @@ export default function AdminBootstrap() {
   }
 
   return (
-    <main className="min-h-screen bg-[#050C1A] text-[#E8EDF5] grid place-items-center px-6">
+    <main className="min-h-screen bg-[#0B0B0B] text-[#FFFFFF] grid place-items-center px-6">
       <form onSubmit={submit} className="w-full max-w-md rounded-xl border border-white/10 bg-white/5 p-8 space-y-5">
         <h1 className="text-2xl font-semibold">EEOS administrator activation</h1>
         <p className="text-sm text-white/60">This one-time page is not linked from public navigation.</p>
@@ -46,7 +46,7 @@ export default function AdminBootstrap() {
         <button
           type="submit"
           disabled={submitting || !secret}
-          className="w-full rounded-md bg-[#00D4C8] px-4 py-2 font-semibold text-[#050C1A] disabled:opacity-50"
+          className="w-full rounded-md bg-[#C9A227] px-4 py-2 font-semibold text-[#0B0B0B] disabled:opacity-50"
         >
           {submitting ? "Creating session…" : "Create administrator session"}
         </button>

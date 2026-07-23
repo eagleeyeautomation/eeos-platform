@@ -181,13 +181,13 @@ export default function Navigation() {
               </div>
               <div className="flex flex-col leading-none">
                 <span
-                  className="text-[#E8EDF5] font-bold text-base tracking-tight leading-none"
+                  className="text-[#FFFFFF] font-bold text-base tracking-tight leading-none"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Eagle Eye Automation
                 </span>
                 <span
-                  className="text-[#00D4C8] text-[9px] tracking-[0.15em] uppercase font-medium hidden sm:block mt-0.5"
+                  className="text-[#C9A227] text-[9px] tracking-[0.15em] uppercase font-medium hidden sm:block mt-0.5"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 >
                   EEOS · Don't Build More. Build Accurate.
@@ -211,8 +211,8 @@ export default function Navigation() {
                       onClick={() => setDropdownOpen((open) => open === link.label ? null : link.label)}
                       className={`flex items-center gap-1 px-4 py-2 text-sm transition-colors duration-200 font-medium focus:outline-none ${
                         link.href !== "#" && location === link.href
-                          ? "text-[#00D4C8]"
-                          : "text-[#E8EDF5]/75 hover:text-[#00D4C8] focus:text-[#00D4C8]"
+                          ? "text-[#C9A227]"
+                          : "text-[#FFFFFF]/75 hover:text-[#C9A227] focus:text-[#C9A227]"
                       }`}
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
@@ -237,7 +237,7 @@ export default function Navigation() {
                                 href={child.href}
                                 role="menuitem"
                                 onClick={() => setDropdownOpen(null)}
-                                className="flex items-center gap-2 px-4 py-3 text-sm text-[#E8EDF5]/75 hover:text-[#00D4C8] hover:bg-[rgba(0,212,200,0.06)] focus:text-[#00D4C8] focus:bg-[rgba(0,212,200,0.06)] focus:outline-none transition-all duration-150"
+                                className="flex items-center gap-2 px-4 py-3 text-sm text-[#FFFFFF]/75 hover:text-[#C9A227] hover:bg-[rgba(201,162,39,0.06)] focus:text-[#C9A227] focus:bg-[rgba(201,162,39,0.06)] focus:outline-none transition-all duration-150"
                                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                               >
                                 {child.label}
@@ -247,11 +247,11 @@ export default function Navigation() {
                                 key={child.href}
                                 role="menuitem"
                                 aria-disabled="true"
-                                className="flex cursor-not-allowed items-center justify-between gap-2 px-4 py-3 text-sm text-[#E8EDF5]/35"
+                                className="flex cursor-not-allowed items-center justify-between gap-2 px-4 py-3 text-sm text-[#FFFFFF]/35"
                                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                               >
                                 {child.label}
-                                <span className="text-[10px] uppercase tracking-[0.14em] text-[#E8EDF5]/25">Coming soon</span>
+                                <span className="text-[10px] uppercase tracking-[0.14em] text-[#FFFFFF]/25">Coming soon</span>
                               </span>
                             );
                           })}
@@ -265,8 +265,8 @@ export default function Navigation() {
                     href={link.href}
                     className={`px-4 py-2 text-sm font-medium transition-colors duration-200 ${
                       location === link.href
-                        ? "text-[#00D4C8]"
-                        : "text-[#E8EDF5]/75 hover:text-[#00D4C8]"
+                        ? "text-[#C9A227]"
+                        : "text-[#FFFFFF]/75 hover:text-[#C9A227]"
                     }`}
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
@@ -280,14 +280,14 @@ export default function Navigation() {
             <div className="hidden lg:flex items-center gap-2">
               <Link
                 href="/demo"
-                className="px-4 py-2 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.3)] rounded-md hover:bg-[rgba(0,212,200,0.08)] hover:border-[rgba(0,212,200,0.6)] transition-all duration-200"
+                className="px-4 py-2 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-md hover:bg-[rgba(201,162,39,0.08)] hover:border-[rgba(201,162,39,0.6)] transition-all duration-200"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 Request Demo
               </Link>
               <Link
                 href="/connect-ghl"
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-md hover:bg-[#00E8DB] transition-all duration-200 shadow-[0_0_16px_rgba(0,212,200,0.35)]"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-md hover:bg-[#D8B84A] transition-all duration-200 shadow-[0_0_16px_rgba(201,162,39,0.35)]"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 <Zap className="w-3.5 h-3.5" />
@@ -297,7 +297,7 @@ export default function Navigation() {
 
             {/* Mobile menu toggle */}
             <button
-              className="lg:hidden p-2 text-[#E8EDF5]/80 hover:text-[#00D4C8] transition-colors rounded-md"
+              className="lg:hidden p-2 text-[#FFFFFF]/80 hover:text-[#C9A227] transition-colors rounded-md"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Toggle menu"
               aria-expanded={mobileOpen}
@@ -313,7 +313,7 @@ export default function Navigation() {
         className={`fixed inset-0 z-40 lg:hidden transition-all duration-300 ${
           mobileOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
-        style={{ background: "rgba(5, 12, 26, 0.98)", backdropFilter: "blur(20px)" }}
+        style={{ background: "rgba(11, 11, 11, 0.98)", backdropFilter: "blur(20px)" }}
       >
         <div className="flex flex-col h-full pt-20 pb-8 px-6 overflow-y-auto">
           {/* Nav Links */}
@@ -324,7 +324,7 @@ export default function Navigation() {
                   {link.href !== "#" ? (
                     <Link
                       href={link.href}
-                      className="mb-2 flex items-center justify-between rounded-lg px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#00D4C8] hover:bg-[rgba(0,212,200,0.05)]"
+                      className="mb-2 flex items-center justify-between rounded-lg px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#C9A227] hover:bg-[rgba(201,162,39,0.05)]"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}
                     >
                       {link.label}
@@ -332,7 +332,7 @@ export default function Navigation() {
                     </Link>
                   ) : (
                     <div
-                      className="text-[10px] font-semibold text-[#00D4C8] uppercase tracking-[0.2em] mb-2 px-2"
+                      className="text-[10px] font-semibold text-[#C9A227] uppercase tracking-[0.2em] mb-2 px-2"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}
                     >
                       {link.label}
@@ -344,7 +344,7 @@ export default function Navigation() {
                       <Link
                         key={child.href}
                         href={child.href}
-                        className="flex items-center gap-2 px-3 py-3 text-base text-[#E8EDF5]/75 hover:text-[#00D4C8] hover:bg-[rgba(0,212,200,0.05)] rounded-lg transition-all"
+                        className="flex items-center gap-2 px-3 py-3 text-base text-[#FFFFFF]/75 hover:text-[#C9A227] hover:bg-[rgba(201,162,39,0.05)] rounded-lg transition-all"
                         style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                       >
                         <ChevronDown className="w-3.5 h-3.5 -rotate-90 opacity-40" />
@@ -354,14 +354,14 @@ export default function Navigation() {
                       <span
                         key={child.href}
                         aria-disabled="true"
-                        className="flex cursor-not-allowed items-center justify-between gap-2 px-3 py-3 text-base text-[#E8EDF5]/35 rounded-lg"
+                        className="flex cursor-not-allowed items-center justify-between gap-2 px-3 py-3 text-base text-[#FFFFFF]/35 rounded-lg"
                         style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                       >
                         <span className="flex items-center gap-2">
                           <ChevronDown className="w-3.5 h-3.5 -rotate-90 opacity-25" />
                           {child.label}
                         </span>
-                        <span className="text-[10px] uppercase tracking-[0.14em] text-[#E8EDF5]/25">Coming soon</span>
+                        <span className="text-[10px] uppercase tracking-[0.14em] text-[#FFFFFF]/25">Coming soon</span>
                       </span>
                     );
                   })}
@@ -372,8 +372,8 @@ export default function Navigation() {
                   href={link.href}
                   className={`flex items-center justify-between px-3 py-3.5 text-base font-medium rounded-lg transition-all ${
                     location === link.href
-                      ? "text-[#00D4C8] bg-[rgba(0,212,200,0.08)]"
-                      : "text-[#E8EDF5]/80 hover:text-[#00D4C8] hover:bg-[rgba(0,212,200,0.05)]"
+                      ? "text-[#C9A227] bg-[rgba(201,162,39,0.08)]"
+                      : "text-[#FFFFFF]/80 hover:text-[#C9A227] hover:bg-[rgba(201,162,39,0.05)]"
                   }`}
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
@@ -385,10 +385,10 @@ export default function Navigation() {
           </nav>
 
           {/* Mobile CTAs */}
-          <div className="mt-8 space-y-3 border-t border-[rgba(0,212,200,0.1)] pt-6">
+          <div className="mt-8 space-y-3 border-t border-[rgba(201,162,39,0.1)] pt-6">
             <Link
               href="/connect-ghl"
-              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-xl hover:bg-[#00E8DB] transition-all shadow-[0_0_20px_rgba(0,212,200,0.4)]"
+              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-xl hover:bg-[#D8B84A] transition-all shadow-[0_0_20px_rgba(201,162,39,0.4)]"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               <Plug className="w-4 h-4" />
@@ -396,7 +396,7 @@ export default function Navigation() {
             </Link>
             <Link
               href="/integration-health"
-              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-xl hover:bg-[rgba(0,212,200,0.08)] transition-all"
+              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-xl hover:bg-[rgba(201,162,39,0.08)] transition-all"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               <Activity className="w-4 h-4" />
@@ -404,7 +404,7 @@ export default function Navigation() {
             </Link>
             <Link
               href="/dashboard"
-              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#E8EDF5]/70 hover:text-[#E8EDF5] transition-all"
+              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#FFFFFF]/70 hover:text-[#FFFFFF] transition-all"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               aria-label="Open Executive Dashboard"
             >
@@ -418,7 +418,7 @@ export default function Navigation() {
             {["SOC 2 Type II", "ISO 27001", "FedRAMP Ready"].map((badge) => (
               <span
                 key={badge}
-                className="text-[10px] text-[#E8EDF5]/30 tracking-wide"
+                className="text-[10px] text-[#FFFFFF]/30 tracking-wide"
                 style={{ fontFamily: "'JetBrains Mono', monospace" }}
               >
                 • {badge}

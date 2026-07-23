@@ -49,10 +49,10 @@ function BusinessScoreRing({ score, size = 120 }: { score: number; size?: number
 
   return (
     <svg width={size} height={size} className="transform -rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(0,212,200,0.1)" strokeWidth={8} />
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(201,162,39,0.1)" strokeWidth={8} />
       <circle
         cx={size / 2} cy={size / 2} r={radius}
-        fill="none" stroke="#00D4C8" strokeWidth={8} strokeLinecap="round"
+        fill="none" stroke="#C9A227" strokeWidth={8} strokeLinecap="round"
         strokeDasharray={circumference} strokeDashoffset={animatedOffset}
         style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.23, 1, 0.32, 1)" }}
         filter="url(#tealGlow)"
@@ -116,7 +116,7 @@ type PrnLiveDashboard = {
 const RISK_COLOR: Record<string, string> = {
   critical: "#EF4444",
   high: "#F59E0B",
-  medium: "#00D4C8",
+  medium: "#C9A227",
   low: "#10B981",
 };
 
@@ -130,7 +130,7 @@ function RecommendationCard({ rec, index, tenantId }: { rec: LiveRec; index: num
     },
   });
 
-  const color = RISK_COLOR[rec.riskLevel] ?? "#00D4C8";
+  const color = RISK_COLOR[rec.riskLevel] ?? "#C9A227";
   const evidence = Array.isArray(rec.evidence) ? rec.evidence as string[] : [];
   const timeAgo = (() => {
     const diffMs = Date.now() - new Date(rec.createdAt).getTime();
@@ -143,7 +143,7 @@ function RecommendationCard({ rec, index, tenantId }: { rec: LiveRec; index: num
 
   return (
     <div
-      className="glass-card rounded-xl p-5 cursor-pointer transition-all duration-250 hover:border-[rgba(0,212,200,0.3)]"
+      className="glass-card rounded-xl p-5 cursor-pointer transition-all duration-250 hover:border-[rgba(201,162,39,0.3)]"
       style={{ animationDelay: `${index * 80}ms` }}
       onClick={() => setExpanded(!expanded)}
     >
@@ -161,54 +161,54 @@ function RecommendationCard({ rec, index, tenantId }: { rec: LiveRec; index: num
               >
                 {rec.priority}
               </span>
-              <span className="text-[10px] text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <span className="text-[10px] text-[#FFFFFF]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 {rec.category} · {timeAgo}
               </span>
             </div>
-            <div className="text-[10px] text-[#00D4C8] shrink-0" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <div className="text-[10px] text-[#C9A227] shrink-0" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               {rec.confidenceScore}% confidence
             </div>
           </div>
-          <h4 className="text-sm font-semibold text-[#E8EDF5] mb-1 leading-snug" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <h4 className="text-sm font-semibold text-[#FFFFFF] mb-1 leading-snug" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {rec.title}
           </h4>
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-[#E8EDF5]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <span className="text-[10px] text-[#FFFFFF]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               IE · {rec.riskLevel} risk
             </span>
           </div>
 
           {expanded && (
-            <div className="mt-4 pt-4 border-t border-[rgba(0,212,200,0.08)] space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div className="mt-4 pt-4 border-t border-[rgba(201,162,39,0.08)] space-y-3" onClick={(e) => e.stopPropagation()}>
               <div>
                 <div className="text-[10px] font-bold text-[#F59E0B] uppercase tracking-wider mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Why This Matters</div>
-                <p className="text-xs text-[#E8EDF5]/65 leading-relaxed">{rec.why}</p>
+                <p className="text-xs text-[#FFFFFF]/65 leading-relaxed">{rec.why}</p>
               </div>
               <div>
                 <div className="text-[10px] font-bold text-[#EF4444] uppercase tracking-wider mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Why Now</div>
-                <p className="text-xs text-[#E8EDF5]/65 leading-relaxed">{rec.whyNow}</p>
+                <p className="text-xs text-[#FFFFFF]/65 leading-relaxed">{rec.whyNow}</p>
               </div>
               <div>
                 <div className="text-[10px] font-bold text-[#10B981] uppercase tracking-wider mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Business Impact</div>
-                <p className="text-xs text-[#E8EDF5]/65 leading-relaxed">{rec.businessImpact}</p>
+                <p className="text-xs text-[#FFFFFF]/65 leading-relaxed">{rec.businessImpact}</p>
               </div>
               <div>
-                <div className="text-[10px] font-bold text-[#00D4C8] uppercase tracking-wider mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Recommended Action</div>
-                <p className="text-xs text-[#E8EDF5]/65 leading-relaxed">{rec.recommendedAction}</p>
+                <div className="text-[10px] font-bold text-[#C9A227] uppercase tracking-wider mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Recommended Action</div>
+                <p className="text-xs text-[#FFFFFF]/65 leading-relaxed">{rec.recommendedAction}</p>
               </div>
               {evidence.length > 0 && (
                 <div>
-                  <div className="text-[10px] font-bold text-[#00D4C8] uppercase tracking-wider mb-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Supporting Signals</div>
+                  <div className="text-[10px] font-bold text-[#C9A227] uppercase tracking-wider mb-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Supporting Signals</div>
                   <div className="flex flex-wrap gap-1.5">
                     {evidence.map((s, i) => (
-                      <span key={i} className="text-[10px] px-2 py-0.5 rounded bg-[rgba(0,212,200,0.08)] border border-[rgba(0,212,200,0.15)] text-[#00D4C8]/70" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s}</span>
+                      <span key={i} className="text-[10px] px-2 py-0.5 rounded bg-[rgba(201,162,39,0.08)] border border-[rgba(201,162,39,0.15)] text-[#C9A227]/70" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s}</span>
                     ))}
                   </div>
                 </div>
               )}
               <div className="pt-1">
                 <div className="flex items-center justify-between mb-1">
-                  <div className="text-[10px] font-bold text-[#E8EDF5]/40 uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>IE Confidence</div>
+                  <div className="text-[10px] font-bold text-[#FFFFFF]/40 uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>IE Confidence</div>
                   <div className="text-[10px] font-bold" style={{ color: rec.confidenceScore >= 85 ? "#10B981" : "#F59E0B", fontFamily: "'JetBrains Mono', monospace" }}>{rec.confidenceScore}%</div>
                 </div>
                 <div className="h-1 rounded-full bg-[rgba(255,255,255,0.06)] overflow-hidden">
@@ -216,14 +216,14 @@ function RecommendationCard({ rec, index, tenantId }: { rec: LiveRec; index: num
                 </div>
               </div>
               <div className="p-3 rounded-lg border border-[rgba(99,102,241,0.2)] bg-[rgba(99,102,241,0.05)]">
-                <div className="text-[10px] font-bold text-[#6366F1] uppercase tracking-wider mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Measurement Plan</div>
-                <p className="text-[11px] text-[#E8EDF5]/60 leading-relaxed">{rec.measurementPlan}</p>
+                <div className="text-[10px] font-bold text-[#0F2747] uppercase tracking-wider mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Measurement Plan</div>
+                <p className="text-[11px] text-[#FFFFFF]/60 leading-relaxed">{rec.measurementPlan}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <button
                   onClick={() => feedbackMutation.mutate({ recommendationId: rec.id, tenantId, decision: "accepted" })}
                   disabled={feedbackMutation.isPending}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#050C1A] bg-[#00D4C8] rounded-md hover:bg-[#00E8DB] transition-all duration-200 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-md hover:bg-[#D8B84A] transition-all duration-200 disabled:opacity-50"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   <Zap className="w-3 h-3" />
@@ -232,7 +232,7 @@ function RecommendationCard({ rec, index, tenantId }: { rec: LiveRec; index: num
                 <button
                   onClick={() => feedbackMutation.mutate({ recommendationId: rec.id, tenantId, decision: "deferred" })}
                   disabled={feedbackMutation.isPending}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#E8EDF5]/60 border border-[rgba(255,255,255,0.1)] rounded-md hover:text-[#E8EDF5]/90 transition-all duration-200 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#FFFFFF]/60 border border-[rgba(255,255,255,0.1)] rounded-md hover:text-[#FFFFFF]/90 transition-all duration-200 disabled:opacity-50"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Defer
@@ -240,7 +240,7 @@ function RecommendationCard({ rec, index, tenantId }: { rec: LiveRec; index: num
                 <button
                   onClick={() => feedbackMutation.mutate({ recommendationId: rec.id, tenantId, decision: "rejected" })}
                   disabled={feedbackMutation.isPending}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#E8EDF5]/30 hover:text-[#EF4444] transition-all duration-200 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#FFFFFF]/30 hover:text-[#EF4444] transition-all duration-200 disabled:opacity-50"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Dismiss
@@ -249,7 +249,7 @@ function RecommendationCard({ rec, index, tenantId }: { rec: LiveRec; index: num
             </div>
           )}
         </div>
-        <ChevronRight className={`w-4 h-4 text-[#E8EDF5]/30 shrink-0 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`} />
+        <ChevronRight className={`w-4 h-4 text-[#FFFFFF]/30 shrink-0 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`} />
       </div>
     </div>
   );
@@ -357,8 +357,8 @@ export default function ExecutiveHome() {
   const healthComponents = liveMetrics
     ? [
       { label: "Location", score: prnLiveData?.endpointHealth.location?.ok ? 100 : 0, color: "#10B981" },
-      { label: "Users", score: prnLiveData?.endpointHealth.users?.ok ? 100 : 0, color: "#00D4C8" },
-      { label: "Contacts", score: Math.min(100, liveMetrics.totalContacts > 0 ? 85 : 0), color: "#6366F1" },
+      { label: "Users", score: prnLiveData?.endpointHealth.users?.ok ? 100 : 0, color: "#C9A227" },
+      { label: "Contacts", score: Math.min(100, liveMetrics.totalContacts > 0 ? 85 : 0), color: "#0F2747" },
       { label: "Pipeline", score: Math.min(100, liveMetrics.openOpportunities > 0 ? 90 : 0), color: "#F59E0B" },
     ]
     : (memory?.healthScoreComponents as Array<{ label: string; score: number; color: string }> | null) ?? [];
@@ -375,13 +375,13 @@ export default function ExecutiveHome() {
         {
           id: "k2", label: "Total Contacts", value: liveMetrics.totalContacts.toLocaleString(),
           delta: "Live", trend: "up" as const, sub: "PRN Staffers South Carolina",
-          color: "#00D4C8", icon: Users,
+          color: "#C9A227", icon: Users,
           sparkline: [0, 0, 0, 0, 0, 0, 0, liveMetrics.totalContacts],
         },
         {
           id: "k3", label: "GHL Users", value: liveMetrics.users.toString(),
           delta: "Live", trend: "up" as const, sub: prnLiveData?.location?.name ?? prnLiveData?.division ?? "South Carolina",
-          color: "#00D4C8", icon: Shield,
+          color: "#C9A227", icon: Shield,
           sparkline: [0, 0, 0, 0, 0, 0, 0, liveMetrics.users],
         },
         {
@@ -393,7 +393,7 @@ export default function ExecutiveHome() {
         {
           id: "k5", label: "Data Source", value: "Live",
           delta: "", trend: "up" as const, sub: "Private GHL integration",
-          color: "#6366F1", icon: Activity,
+          color: "#0F2747", icon: Activity,
           sparkline: [0, 1, 1, 1, 1, 1, 1, 1],
         },
         {
@@ -417,13 +417,13 @@ export default function ExecutiveHome() {
       {
         id: "k2", label: "Total Contacts", value: (memory.totalContacts ?? 0).toLocaleString(),
         delta: `+${memory.newContactsLast7d ?? 0} this week`, trend: "up" as const,
-        sub: `${memory.newContactsLast30d ?? 0} new last 30 days`, color: "#00D4C8", icon: Users,
+        sub: `${memory.newContactsLast30d ?? 0} new last 30 days`, color: "#C9A227", icon: Users,
         sparkline: [0, 0, 0, 0, 0, 0, 0, memory.totalContacts ?? 0],
       },
       {
         id: "k3", label: "Appointments (7d)", value: (memory.appointmentsLast7d ?? 0).toString(),
         delta: "", trend: "up" as const, sub: `${memory.appointmentsLast30d ?? 0} last 30 days`,
-        color: "#00D4C8", icon: Calendar,
+        color: "#C9A227", icon: Calendar,
         sparkline: [0, 0, 0, 0, 0, 0, 0, memory.appointmentsLast7d ?? 0],
       },
       {
@@ -435,7 +435,7 @@ export default function ExecutiveHome() {
       {
         id: "k5", label: "Signals (24h)", value: (memory.signalCount24h ?? 0).toString(),
         delta: "", trend: "up" as const, sub: `${memory.signalCount7d ?? 0} this week`,
-        color: "#6366F1", icon: Activity,
+        color: "#0F2747", icon: Activity,
         sparkline: [0, 0, 0, 0, 0, 0, 0, memory.signalCount24h ?? 0],
       },
       {
@@ -457,26 +457,26 @@ export default function ExecutiveHome() {
     : "??";
 
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* Executive Header Bar */}
       <div className="pt-16">
-        <div className="bg-[#0A1628] border-b border-[rgba(0,212,200,0.08)]">
+        <div className="bg-[#141414] border-b border-[rgba(201,162,39,0.08)]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between gap-4">
               {/* Identity */}
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-[rgba(0,212,200,0.15)] border border-[rgba(0,212,200,0.3)] flex items-center justify-center shrink-0">
-                  <span className="text-sm font-bold text-[#00D4C8]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <div className="w-10 h-10 rounded-full bg-[rgba(201,162,39,0.15)] border border-[rgba(201,162,39,0.3)] flex items-center justify-center shrink-0">
+                  <span className="text-sm font-bold text-[#C9A227]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                     {userInitials}
                   </span>
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  <div className="text-sm font-semibold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                     {greeting}{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
                   </div>
-                  <div className="text-[10px] text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <div className="text-[10px] text-[#FFFFFF]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     {dateStr}
                   </div>
                 </div>
@@ -489,7 +489,7 @@ export default function ExecutiveHome() {
                   <div className="relative">
                     <button
                       onClick={() => setShowSubaccountPicker(!showSubaccountPicker)}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[rgba(0,212,200,0.2)] bg-[rgba(0,212,200,0.04)] text-[#E8EDF5]/70 hover:text-[#00D4C8] hover:border-[rgba(0,212,200,0.4)] transition-all duration-200"
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[rgba(201,162,39,0.2)] bg-[rgba(201,162,39,0.04)] text-[#FFFFFF]/70 hover:text-[#C9A227] hover:border-[rgba(201,162,39,0.4)] transition-all duration-200"
                     >
                       <Database className="w-3.5 h-3.5" />
                       <span className="text-[11px] font-medium" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
@@ -498,19 +498,19 @@ export default function ExecutiveHome() {
                       <ChevronDown className="w-3 h-3" />
                     </button>
                     {showSubaccountPicker && (
-                      <div className="absolute right-0 top-full mt-1 z-50 min-w-[200px] bg-[#0A1628] border border-[rgba(0,212,200,0.2)] rounded-xl shadow-xl overflow-hidden">
+                      <div className="absolute right-0 top-full mt-1 z-50 min-w-[200px] bg-[#141414] border border-[rgba(201,162,39,0.2)] rounded-xl shadow-xl overflow-hidden">
                         {subaccounts.map((sub) => (
                           <button
                             key={sub.ghlLocationId}
                             onClick={() => { setSelectedTenantId(sub.ghlLocationId); setShowSubaccountPicker(false); }}
-                            className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[rgba(0,212,200,0.06)] transition-colors ${
-                              sub.ghlLocationId === tenantId ? "bg-[rgba(0,212,200,0.08)] text-[#00D4C8]" : "text-[#E8EDF5]/70"
+                            className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[rgba(201,162,39,0.06)] transition-colors ${
+                              sub.ghlLocationId === tenantId ? "bg-[rgba(201,162,39,0.08)] text-[#C9A227]" : "text-[#FFFFFF]/70"
                             }`}
                           >
-                            <div className={`w-1.5 h-1.5 rounded-full ${sub.ghlLocationId === tenantId ? "bg-[#00D4C8]" : "bg-[rgba(255,255,255,0.2)]"}`} />
+                            <div className={`w-1.5 h-1.5 rounded-full ${sub.ghlLocationId === tenantId ? "bg-[#C9A227]" : "bg-[rgba(255,255,255,0.2)]"}`} />
                             <div>
                               <div className="text-xs font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{sub.name}</div>
-                              <div className="text-[9px] text-[#E8EDF5]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{sub.orgName}</div>
+                              <div className="text-[9px] text-[#FFFFFF]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{sub.orgName}</div>
                             </div>
                           </button>
                         ))}
@@ -546,13 +546,13 @@ export default function ExecutiveHome() {
 
                 <Link
                   href="/integration-health"
-                  className="hidden sm:flex items-center gap-1.5 p-2 rounded-lg border border-[rgba(0,212,200,0.15)] text-[#E8EDF5]/60 hover:text-[#00D4C8] hover:border-[rgba(0,212,200,0.35)] transition-all duration-200"
+                  className="hidden sm:flex items-center gap-1.5 p-2 rounded-lg border border-[rgba(201,162,39,0.15)] text-[#FFFFFF]/60 hover:text-[#C9A227] hover:border-[rgba(201,162,39,0.35)] transition-all duration-200"
                 >
                   <Activity className="w-4 h-4" />
                 </Link>
                 <Link
                   href="/settings"
-                  className="hidden sm:flex items-center gap-1.5 p-2 rounded-lg border border-[rgba(0,212,200,0.15)] text-[#E8EDF5]/60 hover:text-[#E8EDF5]/80 hover:border-[rgba(0,212,200,0.2)] transition-all duration-200"
+                  className="hidden sm:flex items-center gap-1.5 p-2 rounded-lg border border-[rgba(201,162,39,0.15)] text-[#FFFFFF]/60 hover:text-[#FFFFFF]/80 hover:border-[rgba(201,162,39,0.2)] transition-all duration-200"
                 >
                   <Settings className="w-4 h-4" />
                 </Link>
@@ -568,16 +568,16 @@ export default function ExecutiveHome() {
         {/* ── No Subaccount State ── */}
         {!user && (
           <div className="glass-card rounded-2xl p-12 text-center">
-            <Brain className="w-12 h-12 text-[#00D4C8]/40 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-[#E8EDF5] mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <Brain className="w-12 h-12 text-[#C9A227]/40 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-[#FFFFFF] mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Sign in to access your EEOS dashboard
             </h3>
-            <p className="text-sm text-[#E8EDF5]/50 mb-6">
+            <p className="text-sm text-[#FFFFFF]/50 mb-6">
               The Intelligence Engine is ready. Connect your GoHighLevel account to begin.
             </p>
             <Link
               href="/connect-ghl"
-              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200"
+              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               <Plug className="w-4 h-4" />
@@ -588,16 +588,16 @@ export default function ExecutiveHome() {
 
         {user && !tenantId && (
           <div className="glass-card rounded-2xl p-12 text-center">
-            <Database className="w-12 h-12 text-[#00D4C8]/40 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-[#E8EDF5] mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <Database className="w-12 h-12 text-[#C9A227]/40 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-[#FFFFFF] mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               No GoHighLevel subaccounts connected
             </h3>
-            <p className="text-sm text-[#E8EDF5]/50 mb-6">
+            <p className="text-sm text-[#FFFFFF]/50 mb-6">
               Connect a GoHighLevel location to activate the EEOS Intelligence Engine for your business.
             </p>
             <Link
               href="/connect-ghl"
-              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200"
+              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               <Plug className="w-4 h-4" />
@@ -615,13 +615,13 @@ export default function ExecutiveHome() {
               <div className="lg:col-span-1 glass-card rounded-2xl p-6 flex flex-col items-center text-center">
                 <div className="section-label mb-4">Business Score</div>
                 {memoryLoading || prnLiveLoading ? (
-                  <div className="w-[140px] h-[140px] rounded-full bg-[rgba(0,212,200,0.05)] animate-pulse" />
+                  <div className="w-[140px] h-[140px] rounded-full bg-[rgba(201,162,39,0.05)] animate-pulse" />
                 ) : (
                   <>
                     <div className="relative">
                       <BusinessScoreRing score={healthScore} size={140} />
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-4xl font-bold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                        <span className="text-4xl font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                           {healthScore}
                         </span>
                         <div className={`flex items-center gap-1 text-xs mt-0.5 ${
@@ -635,18 +635,18 @@ export default function ExecutiveHome() {
                     <div className="mt-4 w-full space-y-2">
                       {healthComponents.length > 0 ? healthComponents.map((c) => (
                         <div key={c.label} className="flex items-center gap-2">
-                          <div className="text-[10px] text-[#E8EDF5]/50 flex-1 text-left truncate" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          <div className="text-[10px] text-[#FFFFFF]/50 flex-1 text-left truncate" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                             {c.label}
                           </div>
                           <div className="w-16 h-1 rounded-full bg-[rgba(255,255,255,0.06)] overflow-hidden">
                             <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${c.score}%`, background: c.color }} />
                           </div>
-                          <div className="text-[10px] font-semibold text-[#E8EDF5]/70 w-6 text-right" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          <div className="text-[10px] font-semibold text-[#FFFFFF]/70 w-6 text-right" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                             {c.score}
                           </div>
                         </div>
                       )) : (
-                        <p className="text-[10px] text-[#E8EDF5]/30 text-center" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        <p className="text-[10px] text-[#FFFFFF]/30 text-center" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           Awaiting signals from GoHighLevel
                         </p>
                       )}
@@ -668,8 +668,8 @@ export default function ExecutiveHome() {
                 ) : kpiCards.map((kpi) => (
                   <div key={kpi.id} className="metric-card rounded-xl p-4">
                     <div className="flex items-start justify-between mb-2">
-                      <div className="p-1.5 rounded-lg bg-[rgba(0,212,200,0.08)]">
-                        <kpi.icon className="w-3.5 h-3.5 text-[#00D4C8]" />
+                      <div className="p-1.5 rounded-lg bg-[rgba(201,162,39,0.08)]">
+                        <kpi.icon className="w-3.5 h-3.5 text-[#C9A227]" />
                       </div>
                       {kpi.delta && (
                         <div className={`flex items-center gap-0.5 text-xs font-medium ${
@@ -680,10 +680,10 @@ export default function ExecutiveHome() {
                         </div>
                       )}
                     </div>
-                    <div className="text-xl font-bold text-[#E8EDF5] mb-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    <div className="text-xl font-bold text-[#FFFFFF] mb-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                       {kpi.value}
                     </div>
-                    <div className="text-[10px] text-[#E8EDF5]/40 mb-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div className="text-[10px] text-[#FFFFFF]/40 mb-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       {kpi.label}
                     </div>
                     <ResponsiveContainer width="100%" height={28}>
@@ -691,7 +691,7 @@ export default function ExecutiveHome() {
                         <Line type="monotone" dataKey="v" stroke={kpi.color} strokeWidth={1.5} dot={false} />
                       </LineChart>
                     </ResponsiveContainer>
-                    <div className="text-[9px] text-[#E8EDF5]/25 mt-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div className="text-[9px] text-[#FFFFFF]/25 mt-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       {kpi.sub}
                     </div>
                   </div>
@@ -707,7 +707,7 @@ export default function ExecutiveHome() {
                 <div className="flex items-center justify-between mb-5">
                   <div>
                     <div className="section-label mb-1">IE Recommendations</div>
-                    <div className="text-xs text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div className="text-xs text-[#FFFFFF]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       {recommendations.length} active · Intelligence Engine
                     </div>
                   </div>
@@ -715,7 +715,7 @@ export default function ExecutiveHome() {
                     <button
                       onClick={() => generateMutation.mutate({ tenantId })}
                       disabled={generateMutation.isPending || !isConnected}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.25)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] transition-all duration-200 disabled:opacity-40"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.25)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] transition-all duration-200 disabled:opacity-40"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                       title={!isConnected ? "Connect GoHighLevel first" : "Run Intelligence Engine"}
                     >
@@ -724,7 +724,7 @@ export default function ExecutiveHome() {
                     </button>
                     <Link
                       href="/ai-recommendations"
-                      className="flex items-center gap-1 text-xs text-[#00D4C8] hover:text-[#00E8DB] transition-colors"
+                      className="flex items-center gap-1 text-xs text-[#C9A227] hover:text-[#D8B84A] transition-colors"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
                       View all <ArrowRight className="w-3 h-3" />
@@ -743,11 +743,11 @@ export default function ExecutiveHome() {
                   </div>
                 ) : recommendations.length === 0 ? (
                   <div className="text-center py-12">
-                    <Brain className="w-10 h-10 text-[#E8EDF5]/15 mx-auto mb-3" />
-                    <p className="text-sm text-[#E8EDF5]/40 mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    <Brain className="w-10 h-10 text-[#FFFFFF]/15 mx-auto mb-3" />
+                    <p className="text-sm text-[#FFFFFF]/40 mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                       {isConnected ? "No active recommendations" : "GoHighLevel not connected"}
                     </p>
-                    <p className="text-xs text-[#E8EDF5]/25">
+                    <p className="text-xs text-[#FFFFFF]/25">
                       {isConnected
                         ? "Click \"Run IE\" to generate recommendations from your live data."
                         : "Connect GoHighLevel to activate the Intelligence Engine."}
@@ -755,7 +755,7 @@ export default function ExecutiveHome() {
                     {!isConnected && (
                       <Link
                         href="/connect-ghl"
-                        className="inline-flex items-center gap-2 mt-4 px-4 py-2 text-xs font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200"
+                        className="inline-flex items-center gap-2 mt-4 px-4 py-2 text-xs font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200"
                         style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                       >
                         <Plug className="w-3 h-3" />
@@ -771,7 +771,7 @@ export default function ExecutiveHome() {
                     {recommendations.length > 3 && (
                       <Link
                         href="/ai-recommendations"
-                        className="flex items-center justify-center gap-2 w-full py-2.5 text-xs font-semibold text-[#00D4C8]/70 hover:text-[#00D4C8] border border-[rgba(0,212,200,0.1)] hover:border-[rgba(0,212,200,0.25)] rounded-xl transition-all duration-200"
+                        className="flex items-center justify-center gap-2 w-full py-2.5 text-xs font-semibold text-[#C9A227]/70 hover:text-[#C9A227] border border-[rgba(201,162,39,0.1)] hover:border-[rgba(201,162,39,0.25)] rounded-xl transition-all duration-200"
                         style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                       >
                         View {recommendations.length - 3} more recommendations
@@ -787,11 +787,11 @@ export default function ExecutiveHome() {
                 <div className="flex items-center justify-between mb-5">
                   <div>
                     <div className="section-label mb-1">Recent Activity</div>
-                    <div className="text-xs text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div className="text-xs text-[#FFFFFF]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       {dateStr}
                     </div>
                   </div>
-                  <Link href="/executive-timeline" className="text-[10px] text-[#00D4C8] hover:text-[#00E8DB] transition-colors" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <Link href="/executive-timeline" className="text-[10px] text-[#C9A227] hover:text-[#D8B84A] transition-colors" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     Full timeline →
                   </Link>
                 </div>
@@ -810,33 +810,33 @@ export default function ExecutiveHome() {
                   </div>
                 ) : timelineEvents.length === 0 ? (
                   <div className="text-center py-8">
-                    <Clock className="w-8 h-8 text-[#E8EDF5]/15 mx-auto mb-2" />
-                    <p className="text-xs text-[#E8EDF5]/35">No activity yet. Signals will appear here as GoHighLevel events are processed.</p>
+                    <Clock className="w-8 h-8 text-[#FFFFFF]/15 mx-auto mb-2" />
+                    <p className="text-xs text-[#FFFFFF]/35">No activity yet. Signals will appear here as GoHighLevel events are processed.</p>
                   </div>
                 ) : (
                   <div className="space-y-0">
                     {timelineEvents.map((event, i) => {
                       const sigColor = event.significance === "critical" ? "#EF4444"
                         : event.significance === "high" ? "#F59E0B"
-                        : event.significance === "medium" ? "#00D4C8" : "#E8EDF5";
+                        : event.significance === "medium" ? "#C9A227" : "#FFFFFF";
                       const timeStr = new Date(event.occurredAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
                       return (
-                        <div key={event.id} className="flex items-start gap-3 py-3 border-b border-[rgba(0,212,200,0.05)] last:border-0">
+                        <div key={event.id} className="flex items-start gap-3 py-3 border-b border-[rgba(201,162,39,0.05)] last:border-0">
                           <div className="flex flex-col items-center shrink-0 mt-0.5">
                             <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: `${sigColor}12`, border: `1px solid ${sigColor}25` }}>
                               <Activity className="w-3 h-3" style={{ color: sigColor }} />
                             </div>
                             {i < timelineEvents.length - 1 && (
-                              <div className="w-px h-full mt-1 bg-[rgba(0,212,200,0.06)]" style={{ minHeight: "12px" }} />
+                              <div className="w-px h-full mt-1 bg-[rgba(201,162,39,0.06)]" style={{ minHeight: "12px" }} />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-[#E8EDF5]/75 leading-snug">{event.title}</p>
+                            <p className="text-xs text-[#FFFFFF]/75 leading-snug">{event.title}</p>
                             {event.entityName && (
-                              <p className="text-[10px] text-[#E8EDF5]/35 mt-0.5">{event.entityName}</p>
+                              <p className="text-[10px] text-[#FFFFFF]/35 mt-0.5">{event.entityName}</p>
                             )}
                           </div>
-                          <div className="text-[9px] text-[#E8EDF5]/25 shrink-0 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          <div className="text-[9px] text-[#FFFFFF]/25 shrink-0 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                             {timeStr}
                           </div>
                         </div>
@@ -868,8 +868,8 @@ export default function ExecutiveHome() {
                       href={action.href}
                       className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                         action.primary
-                          ? "bg-[rgba(0,212,200,0.12)] border border-[rgba(0,212,200,0.3)] text-[#00D4C8] hover:bg-[rgba(0,212,200,0.18)]"
-                          : "text-[#E8EDF5]/65 hover:text-[#E8EDF5]/90 hover:bg-[rgba(255,255,255,0.04)] border border-transparent hover:border-[rgba(0,212,200,0.1)]"
+                          ? "bg-[rgba(201,162,39,0.12)] border border-[rgba(201,162,39,0.3)] text-[#C9A227] hover:bg-[rgba(201,162,39,0.18)]"
+                          : "text-[#FFFFFF]/65 hover:text-[#FFFFFF]/90 hover:bg-[rgba(255,255,255,0.04)] border border-transparent hover:border-[rgba(201,162,39,0.1)]"
                       }`}
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
@@ -885,7 +885,7 @@ export default function ExecutiveHome() {
               <div className="glass-card rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="section-label">System Status</div>
-                  <Link href="/integration-health" className="text-[10px] text-[#00D4C8] hover:text-[#00E8DB] transition-colors" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <Link href="/integration-health" className="text-[10px] text-[#C9A227] hover:text-[#D8B84A] transition-colors" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     Full report →
                   </Link>
                 </div>
@@ -913,7 +913,7 @@ export default function ExecutiveHome() {
                     },
                   ].map((s) => (
                     <div key={s.label} className="flex items-center justify-between">
-                      <span className="text-[11px] text-[#E8EDF5]/60" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      <span className="text-[11px] text-[#FFFFFF]/60" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                         {s.label}
                       </span>
                       <div className="flex items-center gap-1.5">
@@ -938,19 +938,19 @@ export default function ExecutiveHome() {
 
         {/* ── BOTTOM CTA ── */}
         {!isConnected && user && (
-          <div className="border-t border-[rgba(0,212,200,0.08)] pt-8 pb-4">
+          <div className="border-t border-[rgba(201,162,39,0.08)] pt-8 pb-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <p className="text-sm font-semibold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   Connect your GoHighLevel account. The IE turns approved signals into executive recommendations.
                 </p>
-                <p className="text-xs text-[#E8EDF5]/40 mt-0.5">
+                <p className="text-xs text-[#FFFFFF]/40 mt-0.5">
                   Engineering Principle: "Don't Build More. Build Accurate." — Every recommendation is grounded in real data.
                 </p>
               </div>
               <Link
                 href="/connect-ghl"
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(0,212,200,0.35)] shrink-0"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(201,162,39,0.35)] shrink-0"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 <Plug className="w-4 h-4" />
@@ -976,8 +976,8 @@ function IeAccuracyPanel({ tenantId }: { tenantId: string }) {
   if (!metrics) {
     return (
       <div className="text-center py-6">
-        <Cpu className="w-8 h-8 text-[#E8EDF5]/15 mx-auto mb-2" />
-        <p className="text-xs text-[#E8EDF5]/30">
+        <Cpu className="w-8 h-8 text-[#FFFFFF]/15 mx-auto mb-2" />
+        <p className="text-xs text-[#FFFFFF]/30">
           IE accuracy metrics will appear here after executive feedback is recorded.
         </p>
       </div>
@@ -988,13 +988,13 @@ function IeAccuracyPanel({ tenantId }: { tenantId: string }) {
     <div className="space-y-3">
       {[
         { label: "Acceptance Rate", value: `${((metrics.acceptanceRate ?? 0) * 100).toFixed(0)}%`, color: "#10B981" },
-        { label: "Avg Confidence", value: `${((metrics.avgPredictedConfidence ?? 0) * 100).toFixed(0)}%`, color: "#00D4C8" },
+        { label: "Avg Confidence", value: `${((metrics.avgPredictedConfidence ?? 0) * 100).toFixed(0)}%`, color: "#C9A227" },
         { label: "Calibration Error", value: `${((metrics.calibrationError ?? 0) * 100).toFixed(1)}%`, color: (metrics.calibrationError ?? 0) < 0.1 ? "#10B981" : "#F59E0B" },
-        { label: "F1 Score", value: (metrics.f1Score ?? 0).toFixed(2), color: "#6366F1" },
-        { label: "Total Feedback", value: (metrics.totalRecommendations ?? 0).toString(), color: "#E8EDF5" },
+        { label: "F1 Score", value: (metrics.f1Score ?? 0).toFixed(2), color: "#0F2747" },
+        { label: "Total Feedback", value: (metrics.totalRecommendations ?? 0).toString(), color: "#FFFFFF" },
       ].map((m) => (
         <div key={m.label} className="flex items-center justify-between">
-          <span className="text-[11px] text-[#E8EDF5]/50" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{m.label}</span>
+          <span className="text-[11px] text-[#FFFFFF]/50" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{m.label}</span>
           <span className="text-[11px] font-bold" style={{ color: m.color, fontFamily: "'JetBrains Mono', monospace" }}>{m.value}</span>
         </div>
       ))}

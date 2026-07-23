@@ -6,19 +6,19 @@ import { Shield, Mail, Phone, MapPin, Zap, ArrowRight } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="bg-[#050C1A] border-t border-[rgba(0,212,200,0.1)]">
+    <footer className="bg-[#0B0B0B] border-t border-[rgba(201,162,39,0.1)]">
       {/* Mini CTA Bar */}
-      <div className="border-b border-[rgba(0,212,200,0.08)] bg-[#0A1628]">
+      <div className="border-b border-[rgba(201,162,39,0.08)] bg-[#141414]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <p className="text-sm text-[#E8EDF5]/60">
-              <span className="text-[#E8EDF5] font-semibold">EEOS Private Beta is open.</span>{" "}
+            <p className="text-sm text-[#FFFFFF]/60">
+              <span className="text-[#FFFFFF] font-semibold">EEOS Private Beta is open.</span>{" "}
               Connect your business systems and go live in 6 weeks.
             </p>
             <div className="flex items-center gap-3 shrink-0">
               <Link
                 href="/connect-ghl"
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(0,212,200,0.35)]"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.35)]"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 <Zap className="w-3 h-3" />
@@ -26,7 +26,7 @@ export default function Footer() {
               </Link>
               <Link
                 href="/demo"
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.3)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 Request Demo
@@ -48,30 +48,30 @@ export default function Footer() {
               />
               <div>
                 <div
-                  className="text-[#E8EDF5] font-bold text-base tracking-tight leading-none"
+                  className="text-[#FFFFFF] font-bold text-base tracking-tight leading-none"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Eagle Eye Automation
                 </div>
                 <div
-                  className="text-[#00D4C8] text-[9px] tracking-[0.15em] uppercase mt-0.5"
+                  className="text-[#C9A227] text-[9px] tracking-[0.15em] uppercase mt-0.5"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 >
                   EEOS · Don't Build More. Build Accurate.
                 </div>
               </div>
             </div>
-            <p className="text-[#E8EDF5]/55 text-sm leading-relaxed max-w-xs mb-3">
+            <p className="text-[#FFFFFF]/55 text-sm leading-relaxed max-w-xs mb-3">
               Eagle Eye Automation builds AI software that helps service businesses grow. EEOS connects to your business systems, reads approved signals, and turns them into executive recommendations.
             </p>
-            <p className="text-[#00D4C8]/70 text-xs italic mb-5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <p className="text-[#C9A227]/70 text-xs italic mb-5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               “Transcend Your Business. Stop Managing. Start Leading.”
             </p>
             <div
-              className="flex items-center gap-2 text-xs text-[#E8EDF5]/35"
+              className="flex items-center gap-2 text-xs text-[#FFFFFF]/35"
               style={{ fontFamily: "'JetBrains Mono', monospace" }}
             >
-              <Shield className="w-3.5 h-3.5 text-[#00D4C8]" />
+              <Shield className="w-3.5 h-3.5 text-[#C9A227]" />
               <span>SOC 2 Type II · ISO 27001 · FedRAMP Ready</span>
             </div>
           </div>
@@ -79,7 +79,7 @@ export default function Footer() {
           {/* Platform */}
           <div>
             <h4
-              className="text-[#E8EDF5] font-semibold text-xs mb-4 tracking-[0.1em] uppercase"
+              className="text-[#FFFFFF] font-semibold text-xs mb-4 tracking-[0.1em] uppercase"
               style={{ fontFamily: "'JetBrains Mono', monospace" }}
             >
               Platform
@@ -96,7 +96,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-[#E8EDF5]/50 hover:text-[#00D4C8] transition-colors duration-200"
+                    className="text-sm text-[#FFFFFF]/50 hover:text-[#C9A227] transition-colors duration-200"
                   >
                     {link.label}
                   </Link>
@@ -108,7 +108,7 @@ export default function Footer() {
           {/* Company */}
           <div>
             <h4
-              className="text-[#E8EDF5] font-semibold text-xs mb-4 tracking-[0.1em] uppercase"
+              className="text-[#FFFFFF] font-semibold text-xs mb-4 tracking-[0.1em] uppercase"
               style={{ fontFamily: "'JetBrains Mono', monospace" }}
             >
               Company
@@ -124,7 +124,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-[#E8EDF5]/50 hover:text-[#00D4C8] transition-colors duration-200"
+                    className="text-sm text-[#FFFFFF]/50 hover:text-[#C9A227] transition-colors duration-200"
                   >
                     {link.label}
                   </Link>
@@ -136,23 +136,23 @@ export default function Footer() {
           {/* Contact */}
           <div className="col-span-2 sm:col-span-1">
             <h4
-              className="text-[#E8EDF5] font-semibold text-xs mb-4 tracking-[0.1em] uppercase"
+              className="text-[#FFFFFF] font-semibold text-xs mb-4 tracking-[0.1em] uppercase"
               style={{ fontFamily: "'JetBrains Mono', monospace" }}
             >
               Contact
             </h4>
             <ul className="space-y-3">
               <li className="flex items-start gap-2.5">
-                <Mail className="w-4 h-4 text-[#00D4C8] mt-0.5 shrink-0" />
-                <span className="text-sm text-[#E8EDF5]/50 break-all">intelligence@eagleeyeautomation.com</span>
+                <Mail className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
+                <span className="text-sm text-[#FFFFFF]/50 break-all">intelligence@eagleeyeautomation.com</span>
               </li>
               <li className="flex items-start gap-2.5">
-                <Phone className="w-4 h-4 text-[#00D4C8] mt-0.5 shrink-0" />
-                <span className="text-sm text-[#E8EDF5]/50">+1 (888) EEOS-NOW</span>
+                <Phone className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
+                <span className="text-sm text-[#FFFFFF]/50">+1 (888) EEOS-NOW</span>
               </li>
               <li className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-[#00D4C8] mt-0.5 shrink-0" />
-                <span className="text-sm text-[#E8EDF5]/50">Washington D.C. · New York · London · Singapore</span>
+                <MapPin className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
+                <span className="text-sm text-[#FFFFFF]/50">Washington D.C. · New York · London · Singapore</span>
               </li>
             </ul>
           </div>
@@ -162,7 +162,7 @@ export default function Footer() {
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <p
-            className="text-xs text-[#E8EDF5]/30"
+            className="text-xs text-[#FFFFFF]/30"
             style={{ fontFamily: "'JetBrains Mono', monospace" }}
           >
             © 2026 Eagle Eye Automation, Inc. All rights reserved. · AI Software for Service Businesses
@@ -171,7 +171,7 @@ export default function Footer() {
             {["Privacy Policy", "Terms of Service", "Security Policy", "Cookie Settings"].map((item) => (
               <button
                 key={item}
-                className="text-xs text-[#E8EDF5]/30 hover:text-[#00D4C8] transition-colors duration-200"
+                className="text-xs text-[#FFFFFF]/30 hover:text-[#C9A227] transition-colors duration-200"
                 onClick={() => {}}
               >
                 {item}

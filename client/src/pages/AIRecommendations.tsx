@@ -63,7 +63,7 @@ type LiveRec = {
 const RISK_CONFIG: Record<RiskLevel, { color: string; bg: string; border: string; label: string; icon: React.ComponentType<{ className?: string }> }> = {
   critical: { color: "#EF4444", bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.25)", label: "Critical Risk", icon: XCircle },
   high: { color: "#F59E0B", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)", label: "High Risk", icon: AlertTriangle },
-  medium: { color: "#6366F1", bg: "rgba(99,102,241,0.08)", border: "rgba(99,102,241,0.2)", label: "Medium Risk", icon: Activity },
+  medium: { color: "#0F2747", bg: "rgba(99,102,241,0.08)", border: "rgba(99,102,241,0.2)", label: "Medium Risk", icon: Activity },
   low: { color: "#10B981", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.2)", label: "Low Risk", icon: CheckCircle2 },
 };
 
@@ -71,7 +71,7 @@ const CATEGORY_CONFIG: Record<string, { color: string; label: string }> = {
   revenue: { color: "#10B981", label: "Revenue" },
   retention: { color: "#EF4444", label: "Retention" },
   operations: { color: "#F59E0B", label: "Operations" },
-  growth: { color: "#00D4C8", label: "Growth" },
+  growth: { color: "#C9A227", label: "Growth" },
   risk: { color: "#7C3AED", label: "Risk" },
 };
 
@@ -98,7 +98,7 @@ function ConfidenceBar({ value, rationale }: { value: number; rationale: string 
           style={{ width: `${value}%`, background: `linear-gradient(90deg, ${color}80, ${color})` }}
         />
       </div>
-      <p className="text-[11px] text-[#E8EDF5]/45 leading-relaxed italic" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+      <p className="text-[11px] text-[#FFFFFF]/45 leading-relaxed italic" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
         {rationale}
       </p>
     </div>
@@ -110,16 +110,16 @@ function EvidenceRow({ source, field, value, interpretation }: {
 }) {
   return (
     <div className="flex items-start gap-3 py-2.5 border-b border-[rgba(255,255,255,0.04)] last:border-0">
-      <div className="w-1.5 h-1.5 rounded-full bg-[#00D4C8] mt-1.5 shrink-0" />
+      <div className="w-1.5 h-1.5 rounded-full bg-[#C9A227] mt-1.5 shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2 mb-0.5">
-          <span className="text-[10px] font-semibold text-[#00D4C8]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{source}</span>
-          <span className="text-[10px] text-[#E8EDF5]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>·</span>
-          <span className="text-[10px] text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{field}</span>
+          <span className="text-[10px] font-semibold text-[#C9A227]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{source}</span>
+          <span className="text-[10px] text-[#FFFFFF]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>·</span>
+          <span className="text-[10px] text-[#FFFFFF]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{field}</span>
         </div>
         <div className="flex flex-wrap items-start gap-2">
-          <span className="text-xs font-semibold text-[#E8EDF5]/80">{value}</span>
-          <span className="text-xs text-[#E8EDF5]/45">— {interpretation}</span>
+          <span className="text-xs font-semibold text-[#FFFFFF]/80">{value}</span>
+          <span className="text-xs text-[#FFFFFF]/45">— {interpretation}</span>
         </div>
       </div>
     </div>
@@ -138,7 +138,7 @@ function RecommendationCard({
   const [expanded, setExpanded] = useState(false);
   const riskLevel = (rec.riskLevel ?? "medium") as RiskLevel;
   const rConfig = RISK_CONFIG[riskLevel] ?? RISK_CONFIG.medium;
-  const cConfig = CATEGORY_CONFIG[rec.category] ?? { color: "#E8EDF5", label: rec.category };
+  const cConfig = CATEGORY_CONFIG[rec.category] ?? { color: "#FFFFFF", label: rec.category };
   const RiskIcon = rConfig.icon;
 
   const utils = trpc.useUtils();
@@ -212,11 +212,11 @@ function RecommendationCard({
                   REJECTED
                 </span>
               )}
-              <span className="text-[10px] text-[#E8EDF5]/30 ml-auto" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <span className="text-[10px] text-[#FFFFFF]/30 ml-auto" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 {timeAgo(rec.createdAt)}
               </span>
             </div>
-            <h3 className="text-base sm:text-lg font-bold text-[#E8EDF5] leading-snug mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <h3 className="text-base sm:text-lg font-bold text-[#FFFFFF] leading-snug mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               {rec.title}
             </h3>
             <div className="flex flex-wrap items-center gap-4">
@@ -229,7 +229,7 @@ function RecommendationCard({
               {rec.expiresAt && (
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-[#F59E0B]" />
-                  <span className="text-xs text-[#E8EDF5]/60">
+                  <span className="text-xs text-[#FFFFFF]/60">
                     Expires {new Date(rec.expiresAt).toLocaleDateString()}
                   </span>
                 </div>
@@ -237,7 +237,7 @@ function RecommendationCard({
             </div>
           </div>
           <div className="shrink-0 mt-1">
-            {expanded ? <ChevronUp className="w-5 h-5 text-[#E8EDF5]/40" /> : <ChevronDown className="w-5 h-5 text-[#E8EDF5]/40" />}
+            {expanded ? <ChevronUp className="w-5 h-5 text-[#FFFFFF]/40" /> : <ChevronDown className="w-5 h-5 text-[#FFFFFF]/40" />}
           </div>
         </div>
       </button>
@@ -254,32 +254,32 @@ function RecommendationCard({
                   <Lightbulb className="w-4 h-4 text-[#F59E0B]" />
                   <span className="text-xs font-bold text-[#F59E0B] uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Why This Matters</span>
                 </div>
-                <p className="text-sm text-[#E8EDF5]/75 leading-relaxed">{rec.why}</p>
+                <p className="text-sm text-[#FFFFFF]/75 leading-relaxed">{rec.why}</p>
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Clock className="w-4 h-4 text-[#EF4444]" />
                   <span className="text-xs font-bold text-[#EF4444] uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Why Now</span>
                 </div>
-                <p className="text-sm text-[#E8EDF5]/75 leading-relaxed">{rec.whyNow}</p>
+                <p className="text-sm text-[#FFFFFF]/75 leading-relaxed">{rec.whyNow}</p>
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="w-4 h-4 text-[#10B981]" />
                   <span className="text-xs font-bold text-[#10B981] uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Business Impact</span>
                 </div>
-                <p className="text-sm text-[#E8EDF5]/75 leading-relaxed">{rec.businessImpact}</p>
+                <p className="text-sm text-[#FFFFFF]/75 leading-relaxed">{rec.businessImpact}</p>
               </div>
             </div>
 
             {/* Right column */}
             <div className="space-y-5">
-              <div className="p-4 rounded-xl border border-[rgba(0,212,200,0.2)] bg-[rgba(0,212,200,0.05)]">
+              <div className="p-4 rounded-xl border border-[rgba(201,162,39,0.2)] bg-[rgba(201,162,39,0.05)]">
                 <div className="flex items-center gap-2 mb-2">
-                  <Target className="w-4 h-4 text-[#00D4C8]" />
-                  <span className="text-xs font-bold text-[#00D4C8] uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Recommended Action</span>
+                  <Target className="w-4 h-4 text-[#C9A227]" />
+                  <span className="text-xs font-bold text-[#C9A227] uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Recommended Action</span>
                 </div>
-                <p className="text-sm text-[#E8EDF5]/80 leading-relaxed">{rec.recommendedAction}</p>
+                <p className="text-sm text-[#FFFFFF]/80 leading-relaxed">{rec.recommendedAction}</p>
               </div>
 
               <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)]">
@@ -289,10 +289,10 @@ function RecommendationCard({
               {evidenceItems.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Database className="w-4 h-4 text-[#00D4C8]" />
-                    <span className="text-xs font-bold text-[#00D4C8] uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Supporting Business Signals</span>
+                    <Database className="w-4 h-4 text-[#C9A227]" />
+                    <span className="text-xs font-bold text-[#C9A227] uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Supporting Business Signals</span>
                   </div>
-                  <div className="rounded-xl bg-[rgba(0,212,200,0.03)] border border-[rgba(0,212,200,0.1)] overflow-hidden">
+                  <div className="rounded-xl bg-[rgba(201,162,39,0.03)] border border-[rgba(201,162,39,0.1)] overflow-hidden">
                     {evidenceItems.map((item, i) => (
                       <EvidenceRow key={i} {...item} />
                     ))}
@@ -303,10 +303,10 @@ function RecommendationCard({
               {rec.measurementPlan && (
                 <div className="p-4 rounded-xl border border-[rgba(99,102,241,0.2)] bg-[rgba(99,102,241,0.05)]">
                   <div className="flex items-center gap-2 mb-2">
-                    <ClipboardCheck className="w-4 h-4 text-[#6366F1]" />
-                    <span className="text-xs font-bold text-[#6366F1] uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Measurement Plan</span>
+                    <ClipboardCheck className="w-4 h-4 text-[#0F2747]" />
+                    <span className="text-xs font-bold text-[#0F2747] uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Measurement Plan</span>
                   </div>
-                  <p className="text-xs text-[#E8EDF5]/65 leading-relaxed" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  <p className="text-xs text-[#FFFFFF]/65 leading-relaxed" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                     {rec.measurementPlan}
                   </p>
                 </div>
@@ -324,7 +324,7 @@ function RecommendationCard({
                   decision: "accepted",
                 })}
                 disabled={feedbackMutation.isPending}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(0,212,200,0.3)] disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)] disabled:opacity-50"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 {feedbackMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
@@ -337,7 +337,7 @@ function RecommendationCard({
                   decision: "deferred",
                 })}
                 disabled={feedbackMutation.isPending}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#E8EDF5]/60 border border-[rgba(255,255,255,0.1)] rounded-lg hover:text-[#E8EDF5]/90 hover:border-[rgba(255,255,255,0.2)] active:scale-[0.97] transition-all duration-200 disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#FFFFFF]/60 border border-[rgba(255,255,255,0.1)] rounded-lg hover:text-[#FFFFFF]/90 hover:border-[rgba(255,255,255,0.2)] active:scale-[0.97] transition-all duration-200 disabled:opacity-50"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 Defer
@@ -349,7 +349,7 @@ function RecommendationCard({
                   decision: "rejected",
                 })}
                 disabled={feedbackMutation.isPending}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#E8EDF5]/40 hover:text-[#EF4444]/70 active:scale-[0.97] transition-all duration-200 ml-auto disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#FFFFFF]/40 hover:text-[#EF4444]/70 active:scale-[0.97] transition-all duration-200 ml-auto disabled:opacity-50"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 Dismiss
@@ -359,7 +359,7 @@ function RecommendationCard({
 
           {isActioned && (
             <div className="mt-5 pt-5 border-t border-[rgba(255,255,255,0.06)]">
-              <p className="text-xs text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <p className="text-xs text-[#FFFFFF]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 Feedback recorded — IE will incorporate this into future recommendations.
               </p>
             </div>
@@ -417,11 +417,11 @@ export default function AIRecommendations() {
   const noTenant = isAuthenticated && subaccounts.length > 0 && !tenantId;
 
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* Header */}
-      <section className="pt-24 pb-6 bg-[#050C1A] scan-grid">
+      <section className="pt-24 pb-6 bg-[#0B0B0B] scan-grid">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -433,14 +433,14 @@ export default function AIRecommendations() {
                     LIVE
                   </div>
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <h1 className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   Executive Recommendations
                 </h1>
-                <p className="text-sm text-[#E8EDF5]/50 mt-1 max-w-xl">
-                  Every recommendation answers: <span className="text-[#00D4C8]">Why?</span>{" "}
-                  <span className="text-[#00D4C8]">Why now?</span>{" "}
-                  <span className="text-[#00D4C8]">Why trust this?</span>{" "}
-                  <span className="text-[#00D4C8]">What if I ignore it?</span>
+                <p className="text-sm text-[#FFFFFF]/50 mt-1 max-w-xl">
+                  Every recommendation answers: <span className="text-[#C9A227]">Why?</span>{" "}
+                  <span className="text-[#C9A227]">Why now?</span>{" "}
+                  <span className="text-[#C9A227]">Why trust this?</span>{" "}
+                  <span className="text-[#C9A227]">What if I ignore it?</span>
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -448,7 +448,7 @@ export default function AIRecommendations() {
                   <button
                     onClick={() => generateMutation.mutate({ tenantId })}
                     disabled={generateMutation.isPending}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.2)] rounded-lg hover:bg-[rgba(0,212,200,0.06)] active:scale-[0.97] transition-all duration-200 disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.2)] rounded-lg hover:bg-[rgba(201,162,39,0.06)] active:scale-[0.97] transition-all duration-200 disabled:opacity-50"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     {generateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
@@ -457,7 +457,7 @@ export default function AIRecommendations() {
                 )}
                 <Link
                   href="/connect-ghl"
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(0,212,200,0.3)]"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)]"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   <Zap className="w-4 h-4" />
@@ -480,8 +480,8 @@ export default function AIRecommendations() {
                   onClick={() => setSelectedTenantId(sub.ghlLocationId)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
                     tenantId === sub.ghlLocationId
-                      ? "bg-[rgba(0,212,200,0.12)] text-[#00D4C8] border border-[rgba(0,212,200,0.3)]"
-                      : "text-[#E8EDF5]/50 hover:text-[#E8EDF5]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
+                      ? "bg-[rgba(201,162,39,0.12)] text-[#C9A227] border border-[rgba(201,162,39,0.3)]"
+                      : "text-[#FFFFFF]/50 hover:text-[#FFFFFF]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
                   }`}
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
@@ -498,10 +498,10 @@ export default function AIRecommendations() {
       <section className="py-3">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection delay={80}>
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[rgba(0,212,200,0.05)] border border-[rgba(0,212,200,0.15)]">
-              <Brain className="w-4 h-4 text-[#00D4C8] shrink-0" />
-              <p className="text-xs text-[#E8EDF5]/60 leading-relaxed">
-                <span className="text-[#00D4C8] font-semibold">Eagle Eye Automation Engineering Principle #1:</span>{" "}
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[rgba(201,162,39,0.05)] border border-[rgba(201,162,39,0.15)]">
+              <Brain className="w-4 h-4 text-[#C9A227] shrink-0" />
+              <p className="text-xs text-[#FFFFFF]/60 leading-relaxed">
+                <span className="text-[#C9A227] font-semibold">Eagle Eye Automation Engineering Principle #1:</span>{" "}
                 "Don't Build More. Build Accurate." Every recommendation is grounded in real GoHighLevel data signals, not guesswork.
               </p>
             </div>
@@ -516,7 +516,7 @@ export default function AIRecommendations() {
             <AnimatedSection delay={120}>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { label: "Total Active", value: recommendations.length.toString(), color: "#00D4C8", icon: Brain },
+                  { label: "Total Active", value: recommendations.length.toString(), color: "#C9A227", icon: Brain },
                   { label: "Critical", value: criticalCount.toString(), color: "#EF4444", icon: XCircle },
                   { label: "High Risk", value: highCount.toString(), color: "#F59E0B", icon: AlertTriangle },
                   { label: "Feedback Given", value: feedbackCount.toString(), color: "#10B981", icon: CheckCircle2 },
@@ -527,7 +527,7 @@ export default function AIRecommendations() {
                     </div>
                     <div>
                       <div className="text-xl font-bold" style={{ color: stat.color, fontFamily: "'Space Grotesk', sans-serif" }}>{stat.value}</div>
-                      <div className="text-[10px] text-[#E8EDF5]/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{stat.label.toUpperCase()}</div>
+                      <div className="text-[10px] text-[#FFFFFF]/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{stat.label.toUpperCase()}</div>
                     </div>
                   </div>
                 ))}
@@ -553,13 +553,13 @@ export default function AIRecommendations() {
                     onClick={() => setActiveFilter(f)}
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 capitalize ${
                       activeFilter === f
-                        ? "bg-[rgba(0,212,200,0.12)] text-[#00D4C8] border border-[rgba(0,212,200,0.3)]"
-                        : "text-[#E8EDF5]/50 hover:text-[#E8EDF5]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
+                        ? "bg-[rgba(201,162,39,0.12)] text-[#C9A227] border border-[rgba(201,162,39,0.3)]"
+                        : "text-[#FFFFFF]/50 hover:text-[#FFFFFF]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
                     }`}
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     {f === "all" ? "All" : (config?.label ?? f)}
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeFilter === f ? "bg-[rgba(0,212,200,0.2)]" : "bg-[rgba(255,255,255,0.06)]"}`}>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeFilter === f ? "bg-[rgba(201,162,39,0.2)]" : "bg-[rgba(255,255,255,0.06)]"}`}>
                       {count}
                     </span>
                   </button>
@@ -578,16 +578,16 @@ export default function AIRecommendations() {
           {!isAuthenticated && (
             <AnimatedSection>
               <div className="text-center py-20 glass-card rounded-2xl">
-                <Brain className="w-12 h-12 text-[#E8EDF5]/20 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-[#E8EDF5]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <Brain className="w-12 h-12 text-[#FFFFFF]/20 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-[#FFFFFF]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   Sign in to view recommendations
                 </h3>
-                <p className="text-sm text-[#E8EDF5]/30 mb-6">
+                <p className="text-sm text-[#FFFFFF]/30 mb-6">
                   The Intelligence Engine generates recommendations scoped to your EEOS account.
                 </p>
                 <button
                   onClick={() => startLogin()}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   <Zap className="w-4 h-4" />
@@ -601,16 +601,16 @@ export default function AIRecommendations() {
           {noSubaccounts && (
             <AnimatedSection>
               <div className="text-center py-20 glass-card rounded-2xl">
-                <Database className="w-12 h-12 text-[#E8EDF5]/20 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-[#E8EDF5]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <Database className="w-12 h-12 text-[#FFFFFF]/20 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-[#FFFFFF]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   No GoHighLevel subaccounts connected
                 </h3>
-                <p className="text-sm text-[#E8EDF5]/30 mb-6">
+                <p className="text-sm text-[#FFFFFF]/30 mb-6">
                   Connect your GoHighLevel subaccounts to start generating executive recommendations.
                 </p>
                 <Link
                   href="/connect-ghl"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   <Zap className="w-4 h-4" />
@@ -623,7 +623,7 @@ export default function AIRecommendations() {
           {/* Loading */}
           {isAuthenticated && tenantId && isLoading && (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 text-[#00D4C8] animate-spin" />
+              <Loader2 className="w-8 h-8 text-[#C9A227] animate-spin" />
             </div>
           )}
 
@@ -631,17 +631,17 @@ export default function AIRecommendations() {
           {isAuthenticated && tenantId && !isLoading && recommendations.length === 0 && (
             <AnimatedSection>
               <div className="text-center py-20 glass-card rounded-2xl">
-                <Brain className="w-12 h-12 text-[#E8EDF5]/20 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-[#E8EDF5]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <Brain className="w-12 h-12 text-[#FFFFFF]/20 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-[#FFFFFF]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   No active recommendations
                 </h3>
-                <p className="text-sm text-[#E8EDF5]/30 mb-6">
+                <p className="text-sm text-[#FFFFFF]/30 mb-6">
                   Run the Intelligence Engine to generate recommendations from your live GoHighLevel signals.
                 </p>
                 <button
                   onClick={() => generateMutation.mutate({ tenantId })}
                   disabled={generateMutation.isPending}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200 disabled:opacity-50"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   {generateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
@@ -668,10 +668,10 @@ export default function AIRecommendations() {
           {isAuthenticated && tenantId && !isLoading && recommendations.length > 0 && filtered.length === 0 && (
             <AnimatedSection>
               <div className="text-center py-12 glass-card rounded-2xl">
-                <p className="text-sm text-[#E8EDF5]/40">No recommendations in the "{activeFilter}" category.</p>
+                <p className="text-sm text-[#FFFFFF]/40">No recommendations in the "{activeFilter}" category.</p>
                 <button
                   onClick={() => setActiveFilter("all")}
-                  className="mt-3 text-xs text-[#00D4C8] hover:text-[#00E8DB] transition-colors"
+                  className="mt-3 text-xs text-[#C9A227] hover:text-[#D8B84A] transition-colors"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 >
                   Show all →

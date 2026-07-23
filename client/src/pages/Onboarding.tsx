@@ -237,18 +237,18 @@ function LivePreviewPanel({ step, data }: { step: number; data: OnboardingData }
             {current.status}
           </span>
         </div>
-        <div className="text-xs text-[#E8EDF5]/50 mb-3"
+        <div className="text-xs text-[#FFFFFF]/50 mb-3"
           style={{ fontFamily: "'JetBrains Mono', monospace" }}>
           {current.title}
         </div>
         <div className="space-y-2">
           {current.items.map((item) => (
             <div key={item.label} className="flex items-center justify-between">
-              <span className="text-xs text-[#E8EDF5]/45">{item.label}</span>
+              <span className="text-xs text-[#FFFFFF]/45">{item.label}</span>
               <span
                 className="text-xs font-medium"
                 style={{
-                  color: item.active && item.value !== "—" ? "#00D4C8" : "rgba(232,237,245,0.3)",
+                  color: item.active && item.value !== "—" ? "#C9A227" : "rgba(232,237,245,0.3)",
                   fontFamily: "'JetBrains Mono', monospace",
                 }}
               >
@@ -263,12 +263,12 @@ function LivePreviewPanel({ step, data }: { step: number; data: OnboardingData }
       <div className="glass-card rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <span className="section-label text-[10px]">Profile Completion</span>
-          <span className="text-lg font-bold text-[#00D4C8]"
+          <span className="text-lg font-bold text-[#C9A227]"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {activationPct}%
           </span>
         </div>
-        <div className="h-1.5 bg-[rgba(0,212,200,0.1)] rounded-full overflow-hidden mb-3">
+        <div className="h-1.5 bg-[rgba(201,162,39,0.1)] rounded-full overflow-hidden mb-3">
           <div
             className="h-full rounded-full progress-teal transition-all duration-700"
             style={{ width: `${activationPct}%` }}
@@ -277,8 +277,8 @@ function LivePreviewPanel({ step, data }: { step: number; data: OnboardingData }
         <div className="grid grid-cols-2 gap-1">
           {completionMap.map((item) => (
             <div key={item.label} className="flex items-center gap-1.5">
-              <div className={`w-1.5 h-1.5 rounded-full ${item.done ? "bg-[#10B981]" : "bg-[rgba(0,212,200,0.15)]"}`} />
-              <span className={`text-[10px] ${item.done ? "text-[#E8EDF5]/70" : "text-[#E8EDF5]/30"}`}
+              <div className={`w-1.5 h-1.5 rounded-full ${item.done ? "bg-[#10B981]" : "bg-[rgba(201,162,39,0.15)]"}`} />
+              <span className={`text-[10px] ${item.done ? "text-[#FFFFFF]/70" : "text-[#FFFFFF]/30"}`}
                 style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 {item.label}
               </span>
@@ -298,8 +298,8 @@ function LivePreviewPanel({ step, data }: { step: number; data: OnboardingData }
             { icon: Activity, label: "Zero data replication" },
           ].map(({ icon: Icon, label }) => (
             <div key={label} className="flex items-center gap-2">
-              <Icon className="w-3 h-3 text-[#00D4C8] shrink-0" />
-              <span className="text-xs text-[#E8EDF5]/55">{label}</span>
+              <Icon className="w-3 h-3 text-[#C9A227] shrink-0" />
+              <span className="text-xs text-[#FFFFFF]/55">{label}</span>
             </div>
           ))}
         </div>
@@ -317,13 +317,13 @@ function LivePreviewPanel({ step, data }: { step: number; data: OnboardingData }
           ].map((item) => (
             <div key={item.week} className="flex items-center gap-2">
               <div
-                className={`w-8 text-[9px] font-semibold shrink-0 ${item.done ? "text-[#00D4C8]" : "text-[#E8EDF5]/25"}`}
+                className={`w-8 text-[9px] font-semibold shrink-0 ${item.done ? "text-[#C9A227]" : "text-[#FFFFFF]/25"}`}
                 style={{ fontFamily: "'JetBrains Mono', monospace" }}
               >
                 {item.week}
               </div>
-              <div className={`h-px flex-1 ${item.done ? "bg-[rgba(0,212,200,0.4)]" : "bg-[rgba(0,212,200,0.08)]"}`} />
-              <span className={`text-[10px] ${item.done ? "text-[#E8EDF5]/60" : "text-[#E8EDF5]/25"}`}>
+              <div className={`h-px flex-1 ${item.done ? "bg-[rgba(201,162,39,0.4)]" : "bg-[rgba(201,162,39,0.08)]"}`} />
+              <span className={`text-[10px] ${item.done ? "text-[#FFFFFF]/60" : "text-[#FFFFFF]/25"}`}>
                 {item.label}
               </span>
             </div>
@@ -393,27 +393,27 @@ export default function Onboarding() {
 
   if (completed) {
     return (
-      <div className="min-h-screen bg-[#050C1A] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0B0B0B] flex items-center justify-center">
         <Navigation />
         <div className="max-w-2xl mx-auto px-4 text-center pt-24">
-          <div className="w-20 h-20 rounded-full bg-[rgba(0,212,200,0.1)] border-2 border-[#00D4C8] flex items-center justify-center mx-auto mb-8 animate-pulse-teal">
-            <CheckCircle2 className="w-10 h-10 text-[#00D4C8]" />
+          <div className="w-20 h-20 rounded-full bg-[rgba(201,162,39,0.1)] border-2 border-[#C9A227] flex items-center justify-center mx-auto mb-8 animate-pulse-teal">
+            <CheckCircle2 className="w-10 h-10 text-[#C9A227]" />
           </div>
           <div className="section-label mb-3">Activation Confirmed</div>
           <h1
-            className="text-4xl font-bold text-[#E8EDF5] mb-4"
+            className="text-4xl font-bold text-[#FFFFFF] mb-4"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             Profile received.
             <br />
             <span className="gradient-text">EEOS activation begins.</span>
           </h1>
-          <p className="text-lg text-[#E8EDF5]/65 mb-8">
-            Your onboarding profile for <strong className="text-[#E8EDF5]">{data.companyName}</strong> has been submitted. Your dedicated EEOS activation specialist will contact you at <strong className="text-[#00D4C8]">{data.email}</strong> within 24 hours.
+          <p className="text-lg text-[#FFFFFF]/65 mb-8">
+            Your onboarding profile for <strong className="text-[#FFFFFF]">{data.companyName}</strong> has been submitted. Your dedicated EEOS activation specialist will contact you at <strong className="text-[#C9A227]">{data.email}</strong> within 24 hours.
           </p>
           <div className="glass-card rounded-xl p-6 mb-8 text-left">
             <h3
-              className="text-sm font-semibold text-[#E8EDF5] mb-4"
+              className="text-sm font-semibold text-[#FFFFFF] mb-4"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Your activation roadmap
@@ -426,12 +426,12 @@ export default function Onboarding() {
                 { step: "Week 6", label: "Go-live & executive onboarding training" },
               ].map((item) => (
                 <div key={item.step} className="flex items-center gap-3">
-                  <div className="w-16 text-xs font-semibold text-[#00D4C8] shrink-0"
+                  <div className="w-16 text-xs font-semibold text-[#C9A227] shrink-0"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     {item.step}
                   </div>
-                  <div className="h-px flex-1 bg-[rgba(0,212,200,0.15)]" />
-                  <div className="text-sm text-[#E8EDF5]/70 flex-1">{item.label}</div>
+                  <div className="h-px flex-1 bg-[rgba(201,162,39,0.15)]" />
+                  <div className="text-sm text-[#FFFFFF]/70 flex-1">{item.label}</div>
                 </div>
               ))}
             </div>
@@ -439,7 +439,7 @@ export default function Onboarding() {
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/demo"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Explore the Demo
@@ -447,7 +447,7 @@ export default function Onboarding() {
             </Link>
             <Link
               href="/"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] transition-all duration-200"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] transition-all duration-200"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Return to Command
@@ -459,7 +459,7 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* Split-screen layout */}
@@ -470,12 +470,12 @@ export default function Onboarding() {
           <div className="mb-8">
             <div className="section-label mb-2">Activation Wizard</div>
             <h1
-              className="text-2xl sm:text-3xl font-bold text-[#E8EDF5] tracking-tight leading-tight"
+              className="text-2xl sm:text-3xl font-bold text-[#FFFFFF] tracking-tight leading-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               {STEPS[step - 1].title}
             </h1>
-            <p className="text-[#E8EDF5]/50 mt-1 text-sm">
+            <p className="text-[#FFFFFF]/50 mt-1 text-sm">
               Step {step} of {STEPS.length} — Provisioning secure intelligence access for your organization
             </p>
           </div>
@@ -488,10 +488,10 @@ export default function Onboarding() {
                   onClick={() => s.id < step && setStep(s.id)}
                   className={`flex items-center justify-center w-7 h-7 rounded-full transition-all duration-300 text-[10px] font-bold ${
                     s.id === step
-                      ? "bg-[#00D4C8] text-[#050C1A] shadow-[0_0_12px_rgba(0,212,200,0.5)]"
+                      ? "bg-[#C9A227] text-[#0B0B0B] shadow-[0_0_12px_rgba(201,162,39,0.5)]"
                       : s.id < step
-                      ? "bg-[rgba(0,212,200,0.2)] text-[#00D4C8] border border-[rgba(0,212,200,0.4)] cursor-pointer"
-                      : "bg-[rgba(0,212,200,0.05)] text-[#E8EDF5]/25 border border-[rgba(0,212,200,0.08)]"
+                      ? "bg-[rgba(201,162,39,0.2)] text-[#C9A227] border border-[rgba(201,162,39,0.4)] cursor-pointer"
+                      : "bg-[rgba(201,162,39,0.05)] text-[#FFFFFF]/25 border border-[rgba(201,162,39,0.08)]"
                   }`}
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 >
@@ -502,8 +502,8 @@ export default function Onboarding() {
                     className="h-px w-4 transition-all duration-500"
                     style={{
                       background: step > s.id
-                        ? "rgba(0,212,200,0.4)"
-                        : "rgba(0,212,200,0.08)",
+                        ? "rgba(201,162,39,0.4)"
+                        : "rgba(201,162,39,0.08)",
                     }}
                   />
                 )}
@@ -512,7 +512,7 @@ export default function Onboarding() {
           </div>
 
           {/* Progress Bar */}
-          <div className="h-0.5 bg-[rgba(0,212,200,0.08)] rounded-full mb-8 overflow-hidden">
+          <div className="h-0.5 bg-[rgba(201,162,39,0.08)] rounded-full mb-8 overflow-hidden">
             <div
               className="h-full rounded-full progress-teal transition-all duration-500"
               style={{ width: `${progress}%` }}
@@ -526,7 +526,7 @@ export default function Onboarding() {
             {step === 1 && (
               <div className="space-y-5">
                 <div>
-                  <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                  <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     Company Name *
                   </label>
@@ -539,7 +539,7 @@ export default function Onboarding() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                  <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     Company Website
                   </label>
@@ -552,7 +552,7 @@ export default function Onboarding() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                  <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     Annual Revenue (approximate)
                   </label>
@@ -576,7 +576,7 @@ export default function Onboarding() {
             {step === 2 && (
               <div className="space-y-5">
                 <div>
-                  <label className="block text-xs text-[#E8EDF5]/50 mb-3 uppercase tracking-wider"
+                  <label className="block text-xs text-[#FFFFFF]/50 mb-3 uppercase tracking-wider"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     Select your primary industry *
                   </label>
@@ -588,8 +588,8 @@ export default function Onboarding() {
                         onClick={() => setData({ ...data, industry: ind })}
                         className={`px-3 py-2.5 rounded-lg text-sm font-medium text-left transition-all duration-200 ${
                           data.industry === ind
-                            ? "bg-[rgba(0,212,200,0.15)] border border-[rgba(0,212,200,0.5)] text-[#00D4C8]"
-                            : "border border-[rgba(0,212,200,0.1)] text-[#E8EDF5]/65 hover:border-[rgba(0,212,200,0.25)] hover:text-[#E8EDF5]/85"
+                            ? "bg-[rgba(201,162,39,0.15)] border border-[rgba(201,162,39,0.5)] text-[#C9A227]"
+                            : "border border-[rgba(201,162,39,0.1)] text-[#FFFFFF]/65 hover:border-[rgba(201,162,39,0.25)] hover:text-[#FFFFFF]/85"
                         }`}
                         style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                       >
@@ -600,7 +600,7 @@ export default function Onboarding() {
                 </div>
                 {data.industry && (
                   <div>
-                    <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                    <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       Sub-sector or specialization (optional)
                     </label>
@@ -620,7 +620,7 @@ export default function Onboarding() {
             {step === 3 && (
               <div className="space-y-5">
                 <div>
-                  <label className="block text-xs text-[#E8EDF5]/50 mb-3 uppercase tracking-wider"
+                  <label className="block text-xs text-[#FFFFFF]/50 mb-3 uppercase tracking-wider"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     Add your key operating locations *
                   </label>
@@ -636,7 +636,7 @@ export default function Onboarding() {
                     <button
                       type="button"
                       onClick={addLocation}
-                      className="px-4 py-3 rounded-lg bg-[rgba(0,212,200,0.1)] border border-[rgba(0,212,200,0.3)] text-[#00D4C8] hover:bg-[rgba(0,212,200,0.15)] transition-colors"
+                      className="px-4 py-3 rounded-lg bg-[rgba(201,162,39,0.1)] border border-[rgba(201,162,39,0.3)] text-[#C9A227] hover:bg-[rgba(201,162,39,0.15)] transition-colors"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
@@ -646,13 +646,13 @@ export default function Onboarding() {
                       {data.locations.map((loc) => (
                         <div
                           key={loc}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(0,212,200,0.1)] border border-[rgba(0,212,200,0.25)] text-sm text-[#00D4C8]"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(201,162,39,0.1)] border border-[rgba(201,162,39,0.25)] text-sm text-[#C9A227]"
                         >
                           {loc}
                           <button
                             type="button"
                             onClick={() => setData({ ...data, locations: data.locations.filter((l) => l !== loc) })}
-                            className="text-[#00D4C8]/60 hover:text-[#00D4C8]"
+                            className="text-[#C9A227]/60 hover:text-[#C9A227]"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -662,7 +662,7 @@ export default function Onboarding() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                  <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     Total number of locations / facilities
                   </label>
@@ -685,7 +685,7 @@ export default function Onboarding() {
             {/* STEP 4: Departments */}
             {step === 4 && (
               <div>
-                <label className="block text-xs text-[#E8EDF5]/50 mb-3 uppercase tracking-wider"
+                <label className="block text-xs text-[#FFFFFF]/50 mb-3 uppercase tracking-wider"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   Select departments EEOS should monitor *
                 </label>
@@ -697,8 +697,8 @@ export default function Onboarding() {
                       onClick={() => toggleItem("departments", dept)}
                       className={`px-3 py-2.5 rounded-lg text-sm font-medium text-left transition-all duration-200 ${
                         data.departments.includes(dept)
-                          ? "bg-[rgba(0,212,200,0.15)] border border-[rgba(0,212,200,0.5)] text-[#00D4C8]"
-                          : "border border-[rgba(0,212,200,0.1)] text-[#E8EDF5]/65 hover:border-[rgba(0,212,200,0.25)]"
+                          ? "bg-[rgba(201,162,39,0.15)] border border-[rgba(201,162,39,0.5)] text-[#C9A227]"
+                          : "border border-[rgba(201,162,39,0.1)] text-[#FFFFFF]/65 hover:border-[rgba(201,162,39,0.25)]"
                       }`}
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
@@ -707,7 +707,7 @@ export default function Onboarding() {
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-[#E8EDF5]/40 mt-3"
+                <p className="text-xs text-[#FFFFFF]/40 mt-3"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   {data.departments.length} selected · Select all that apply
                 </p>
@@ -717,7 +717,7 @@ export default function Onboarding() {
             {/* STEP 5: Goals */}
             {step === 5 && (
               <div>
-                <label className="block text-xs text-[#E8EDF5]/50 mb-3 uppercase tracking-wider"
+                <label className="block text-xs text-[#FFFFFF]/50 mb-3 uppercase tracking-wider"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   Intelligence objectives *
                 </label>
@@ -729,15 +729,15 @@ export default function Onboarding() {
                       onClick={() => toggleItem("goals", goal)}
                       className={`px-4 py-3 rounded-lg text-sm font-medium text-left transition-all duration-200 flex items-center gap-3 ${
                         data.goals.includes(goal)
-                          ? "bg-[rgba(0,212,200,0.12)] border border-[rgba(0,212,200,0.5)] text-[#00D4C8]"
-                          : "border border-[rgba(0,212,200,0.1)] text-[#E8EDF5]/65 hover:border-[rgba(0,212,200,0.25)]"
+                          ? "bg-[rgba(201,162,39,0.12)] border border-[rgba(201,162,39,0.5)] text-[#C9A227]"
+                          : "border border-[rgba(201,162,39,0.1)] text-[#FFFFFF]/65 hover:border-[rgba(201,162,39,0.25)]"
                       }`}
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
                       <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                        data.goals.includes(goal) ? "bg-[#00D4C8] border-[#00D4C8]" : "border-[rgba(0,212,200,0.3)]"
+                        data.goals.includes(goal) ? "bg-[#C9A227] border-[#C9A227]" : "border-[rgba(201,162,39,0.3)]"
                       }`}>
-                        {data.goals.includes(goal) && <CheckCircle2 className="w-3 h-3 text-[#050C1A]" />}
+                        {data.goals.includes(goal) && <CheckCircle2 className="w-3 h-3 text-[#0B0B0B]" />}
                       </div>
                       {goal}
                     </button>
@@ -749,7 +749,7 @@ export default function Onboarding() {
             {/* STEP 6: KPIs */}
             {step === 6 && (
               <div>
-                <label className="block text-xs text-[#E8EDF5]/50 mb-3 uppercase tracking-wider"
+                <label className="block text-xs text-[#FFFFFF]/50 mb-3 uppercase tracking-wider"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   Signal parameters — KPIs to track *
                 </label>
@@ -761,8 +761,8 @@ export default function Onboarding() {
                       onClick={() => toggleItem("kpis", kpi)}
                       className={`px-3 py-2.5 rounded-lg text-sm font-medium text-left transition-all duration-200 ${
                         data.kpis.includes(kpi)
-                          ? "bg-[rgba(0,212,200,0.15)] border border-[rgba(0,212,200,0.5)] text-[#00D4C8]"
-                          : "border border-[rgba(0,212,200,0.1)] text-[#E8EDF5]/65 hover:border-[rgba(0,212,200,0.25)]"
+                          ? "bg-[rgba(201,162,39,0.15)] border border-[rgba(201,162,39,0.5)] text-[#C9A227]"
+                          : "border border-[rgba(201,162,39,0.1)] text-[#FFFFFF]/65 hover:border-[rgba(201,162,39,0.25)]"
                       }`}
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
@@ -777,12 +777,12 @@ export default function Onboarding() {
             {/* STEP 7: Software */}
             {step === 7 && (
               <div className="space-y-5">
-                <p className="text-sm text-[#E8EDF5]/55">
+                <p className="text-sm text-[#FFFFFF]/55">
                   Select your existing systems. EEOS will configure read-only connectors for each — no data is copied or stored.
                 </p>
                 {SOFTWARE_CATEGORIES.map((cat) => (
                   <div key={cat.category}>
-                    <div className="text-xs font-semibold text-[#00D4C8] uppercase tracking-wider mb-2"
+                    <div className="text-xs font-semibold text-[#C9A227] uppercase tracking-wider mb-2"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       {cat.category}
                     </div>
@@ -794,8 +794,8 @@ export default function Onboarding() {
                           onClick={() => toggleSoftware(cat.category, opt)}
                           className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                             (data.software[cat.category] || []).includes(opt)
-                              ? "bg-[rgba(0,212,200,0.15)] border border-[rgba(0,212,200,0.5)] text-[#00D4C8]"
-                              : "border border-[rgba(0,212,200,0.1)] text-[#E8EDF5]/60 hover:border-[rgba(0,212,200,0.25)]"
+                              ? "bg-[rgba(201,162,39,0.15)] border border-[rgba(201,162,39,0.5)] text-[#C9A227]"
+                              : "border border-[rgba(201,162,39,0.1)] text-[#FFFFFF]/60 hover:border-[rgba(201,162,39,0.25)]"
                           }`}
                           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                         >
@@ -813,7 +813,7 @@ export default function Onboarding() {
               <div className="space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                    <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       First Name *
                     </label>
@@ -826,7 +826,7 @@ export default function Onboarding() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                    <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       Last Name
                     </label>
@@ -840,7 +840,7 @@ export default function Onboarding() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                  <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     Work Email *
                   </label>
@@ -854,7 +854,7 @@ export default function Onboarding() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                  <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     Your Title
                   </label>
@@ -867,7 +867,7 @@ export default function Onboarding() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#E8EDF5]/50 mb-2 uppercase tracking-wider"
+                  <label className="block text-xs text-[#FFFFFF]/50 mb-2 uppercase tracking-wider"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     Organization size *
                   </label>
@@ -879,8 +879,8 @@ export default function Onboarding() {
                         onClick={() => setData({ ...data, teamSize: size })}
                         className={`px-3 py-2.5 rounded-lg text-sm font-medium text-center transition-all duration-200 ${
                           data.teamSize === size
-                            ? "bg-[rgba(0,212,200,0.15)] border border-[rgba(0,212,200,0.5)] text-[#00D4C8]"
-                            : "border border-[rgba(0,212,200,0.1)] text-[#E8EDF5]/65 hover:border-[rgba(0,212,200,0.25)]"
+                            ? "bg-[rgba(201,162,39,0.15)] border border-[rgba(201,162,39,0.5)] text-[#C9A227]"
+                            : "border border-[rgba(201,162,39,0.1)] text-[#FFFFFF]/65 hover:border-[rgba(201,162,39,0.25)]"
                         }`}
                         style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                       >
@@ -890,7 +890,7 @@ export default function Onboarding() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#E8EDF5]/50 mb-2 uppercase tracking-wider"
+                  <label className="block text-xs text-[#FFFFFF]/50 mb-2 uppercase tracking-wider"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     Activation timeline
                   </label>
@@ -902,8 +902,8 @@ export default function Onboarding() {
                         onClick={() => setData({ ...data, timeline: t })}
                         className={`px-3 py-2.5 rounded-lg text-sm font-medium text-left transition-all duration-200 ${
                           data.timeline === t
-                            ? "bg-[rgba(0,212,200,0.15)] border border-[rgba(0,212,200,0.5)] text-[#00D4C8]"
-                            : "border border-[rgba(0,212,200,0.1)] text-[#E8EDF5]/65 hover:border-[rgba(0,212,200,0.25)]"
+                            ? "bg-[rgba(201,162,39,0.15)] border border-[rgba(201,162,39,0.5)] text-[#C9A227]"
+                            : "border border-[rgba(201,162,39,0.1)] text-[#FFFFFF]/65 hover:border-[rgba(201,162,39,0.25)]"
                         }`}
                         style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                       >
@@ -917,15 +917,15 @@ export default function Onboarding() {
           </div>
 
           {/* Navigation */}
-          <div className="flex items-center justify-between mt-10 pt-6 border-t border-[rgba(0,212,200,0.1)]">
+          <div className="flex items-center justify-between mt-10 pt-6 border-t border-[rgba(201,162,39,0.1)]">
             <button
               type="button"
               onClick={() => setStep(Math.max(1, step - 1))}
               disabled={step === 1}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                 step === 1
-                  ? "text-[#E8EDF5]/25 cursor-not-allowed"
-                  : "text-[#E8EDF5]/70 border border-[rgba(0,212,200,0.15)] hover:border-[rgba(0,212,200,0.3)] hover:text-[#E8EDF5]/90"
+                  ? "text-[#FFFFFF]/25 cursor-not-allowed"
+                  : "text-[#FFFFFF]/70 border border-[rgba(201,162,39,0.15)] hover:border-[rgba(201,162,39,0.3)] hover:text-[#FFFFFF]/90"
               }`}
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
@@ -933,7 +933,7 @@ export default function Onboarding() {
               Back
             </button>
 
-            <div className="text-xs text-[#E8EDF5]/30"
+            <div className="text-xs text-[#FFFFFF]/30"
               style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               {step} / {STEPS.length}
             </div>
@@ -945,8 +945,8 @@ export default function Onboarding() {
                 disabled={!canProceed()}
                 className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
                   canProceed()
-                    ? "bg-[#00D4C8] text-[#050C1A] hover:bg-[#00E8DB] shadow-[0_0_16px_rgba(0,212,200,0.35)]"
-                    : "bg-[rgba(0,212,200,0.15)] text-[#00D4C8]/40 cursor-not-allowed"
+                    ? "bg-[#C9A227] text-[#0B0B0B] hover:bg-[#D8B84A] shadow-[0_0_16px_rgba(201,162,39,0.35)]"
+                    : "bg-[rgba(201,162,39,0.15)] text-[#C9A227]/40 cursor-not-allowed"
                 }`}
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
@@ -960,8 +960,8 @@ export default function Onboarding() {
                 disabled={!canProceed()}
                 className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
                   canProceed()
-                    ? "bg-[#00D4C8] text-[#050C1A] hover:bg-[#00E8DB] shadow-[0_0_20px_rgba(0,212,200,0.4)]"
-                    : "bg-[rgba(0,212,200,0.15)] text-[#00D4C8]/40 cursor-not-allowed"
+                    ? "bg-[#C9A227] text-[#0B0B0B] hover:bg-[#D8B84A] shadow-[0_0_20px_rgba(201,162,39,0.4)]"
+                    : "bg-[rgba(201,162,39,0.15)] text-[#C9A227]/40 cursor-not-allowed"
                 }`}
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
@@ -973,11 +973,11 @@ export default function Onboarding() {
         </div>
 
         {/* RIGHT — Live Preview Panel */}
-        <div className="hidden lg:flex w-80 xl:w-96 flex-col bg-[#0A1628] border-l border-[rgba(0,212,200,0.1)] px-6 py-12 overflow-y-auto sticky top-16 self-start h-[calc(100vh-4rem)]">
+        <div className="hidden lg:flex w-80 xl:w-96 flex-col bg-[#141414] border-l border-[rgba(201,162,39,0.1)] px-6 py-12 overflow-y-auto sticky top-16 self-start h-[calc(100vh-4rem)]">
           {/* Panel header */}
           <div className="flex items-center gap-2 mb-6">
             <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-            <span className="text-xs text-[#E8EDF5]/50"
+            <span className="text-xs text-[#FFFFFF]/50"
               style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               EEOS ACTIVATION CONSOLE
             </span>

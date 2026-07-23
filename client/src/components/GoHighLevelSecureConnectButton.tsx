@@ -105,10 +105,10 @@ export function GoHighLevelSecureConnectButton({ locationId }: GoHighLevelSecure
   const disabled = status === "loading" || status === "starting" || status === "blocked" || !sessionContext;
 
   return (
-    <div className="space-y-4 rounded-2xl border border-[rgba(0,212,200,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
+    <div className="space-y-4 rounded-2xl border border-[rgba(201,162,39,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
       <div className="flex items-center gap-2">
-        <ShieldCheck className="h-5 w-5 text-[#00D4C8]" aria-hidden="true" />
-        <h2 className="text-lg font-semibold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+        <ShieldCheck className="h-5 w-5 text-[#C9A227]" aria-hidden="true" />
+        <h2 className="text-lg font-semibold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
           Secure EEOS session
         </h2>
       </div>
@@ -119,12 +119,12 @@ export function GoHighLevelSecureConnectButton({ locationId }: GoHighLevelSecure
         <SessionTile label="Organization Name" value={sessionContext?.organization.name ?? "Not verified"} />
       </div>
 
-      <div className="rounded-xl border border-[rgba(0,212,200,0.12)] bg-[rgba(0,212,200,0.05)] p-4">
-        <p className="text-xs font-bold uppercase tracking-wider text-[#00D4C8]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+      <div className="rounded-xl border border-[rgba(201,162,39,0.12)] bg-[rgba(201,162,39,0.05)] p-4">
+        <p className="text-xs font-bold uppercase tracking-wider text-[#C9A227]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
           Target GoHighLevel location
         </p>
-        <p className="mt-2 text-sm font-semibold text-[#E8EDF5]">{sessionContext?.location.name ?? "Awaiting session verification"}</p>
-        <p className="mt-1 text-xs text-[#E8EDF5]/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+        <p className="mt-2 text-sm font-semibold text-[#FFFFFF]">{sessionContext?.location.name ?? "Awaiting session verification"}</p>
+        <p className="mt-1 text-xs text-[#FFFFFF]/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
           {sessionContext?.location.id ?? locationId}
         </p>
       </div>
@@ -133,7 +133,7 @@ export function GoHighLevelSecureConnectButton({ locationId }: GoHighLevelSecure
         type="button"
         onClick={startOAuth}
         disabled={disabled}
-        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#00D4C8] px-5 text-sm font-semibold text-[#050C1A] shadow-[0_0_20px_rgba(0,212,200,0.25)] transition hover:bg-[#00E8DB] disabled:cursor-not-allowed disabled:bg-[#E8EDF5]/20 disabled:text-[#E8EDF5]/45 disabled:shadow-none"
+        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#C9A227] px-5 text-sm font-semibold text-[#0B0B0B] shadow-[0_0_20px_rgba(201,162,39,0.25)] transition hover:bg-[#D8B84A] disabled:cursor-not-allowed disabled:bg-[#FFFFFF]/20 disabled:text-[#FFFFFF]/45 disabled:shadow-none"
       >
         {status === "starting" || status === "loading" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <KeyRound className="h-4 w-4" aria-hidden="true" />}
         {status === "starting" ? "Opening GoHighLevel..." : "Connect GoHighLevel"}
@@ -150,10 +150,10 @@ export function GoHighLevelSecureConnectButton({ locationId }: GoHighLevelSecure
 function SessionTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl bg-[rgba(255,255,255,0.04)] p-4">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+      <p className="text-[10px] font-bold uppercase tracking-wider text-[#FFFFFF]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
         {label}
       </p>
-      <p className="mt-2 break-words text-sm font-semibold text-[#E8EDF5]">{value}</p>
+      <p className="mt-2 break-words text-sm font-semibold text-[#FFFFFF]">{value}</p>
     </div>
   );
 }

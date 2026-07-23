@@ -66,14 +66,14 @@ const HOW_IT_WORKS = [
     icon: Database,
     title: "Connects to your business systems",
     description: "EEOS uses read-only connectors to securely link your existing software — CRM, ERP, HR, finance, and operations platforms. No data is copied or stored.",
-    color: "#00D4C8",
+    color: "#C9A227",
   },
   {
     step: "02",
     icon: Eye,
     title: "Reads approved signals",
     description: "Our intelligence engine monitors the signals you authorize — KPIs, alerts, trends, and anomalies — across every connected system in real time.",
-    color: "#6366F1",
+    color: "#0F2747",
   },
   {
     step: "03",
@@ -117,7 +117,7 @@ export default function Home() {
   let { user, loading, error, isAuthenticated, logout } = useAuth();
 
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* ── HERO ── */}
@@ -137,7 +137,7 @@ export default function Home() {
         <div
           className="absolute right-[5%] top-[15%] w-[500px] h-[500px] rounded-full pointer-events-none"
           style={{
-            background: "radial-gradient(circle, rgba(0,212,200,0.10) 0%, transparent 70%)",
+            background: "radial-gradient(circle, rgba(201,162,39,0.10) 0%, transparent 70%)",
             filter: "blur(60px)",
           }}
         />
@@ -147,15 +147,15 @@ export default function Home() {
 
             {/* Company badge */}
             <div className="flex items-center gap-3 mb-8 animate-fade-up">
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-[rgba(0,212,200,0.25)] bg-[rgba(0,212,200,0.06)]">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#00D4C8] animate-pulse" />
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-[rgba(201,162,39,0.25)] bg-[rgba(201,162,39,0.06)]">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#C9A227] animate-pulse" />
                 <span className="section-label text-[10px]">Eagle Eye Automation — AI Software for Service Businesses</span>
               </div>
             </div>
 
             {/* Primary headline — the transcendence message */}
             <h1
-              className="text-5xl sm:text-6xl lg:text-7xl font-bold text-[#E8EDF5] leading-[1.05] tracking-tight mb-4 animate-fade-up"
+              className="text-5xl sm:text-6xl lg:text-7xl font-bold text-[#FFFFFF] leading-[1.05] tracking-tight mb-4 animate-fade-up"
               style={{ fontFamily: "'Space Grotesk', sans-serif", animationDelay: "100ms" }}
             >
               Transcend Your
@@ -163,7 +163,7 @@ export default function Home() {
               Business.
             </h1>
             <p
-              className="text-2xl sm:text-3xl font-semibold text-[#E8EDF5]/70 mb-6 animate-fade-up"
+              className="text-2xl sm:text-3xl font-semibold text-[#FFFFFF]/70 mb-6 animate-fade-up"
               style={{ fontFamily: "'Space Grotesk', sans-serif", animationDelay: "150ms" }}
             >
               Stop managing.{" "}
@@ -172,13 +172,13 @@ export default function Home() {
 
             {/* The core explanation */}
             <div className="mb-8 animate-fade-up" style={{ animationDelay: "200ms" }}>
-                <p className="text-base sm:text-lg text-[#E8EDF5]/65 leading-relaxed max-w-2xl mb-5">
-                  Eagle Eye Automation builds AI software that helps service businesses grow. Our flagship product, <span className="text-[#00D4C8] font-semibold">EEOS</span>, transforms your business data into accurate executive intelligence — helping leaders move beyond reacting to today's problems and begin making tomorrow's decisions with confidence.
+                <p className="text-base sm:text-lg text-[#FFFFFF]/65 leading-relaxed max-w-2xl mb-5">
+                  Eagle Eye Automation builds AI software that helps service businesses grow. Our flagship product, <span className="text-[#C9A227] font-semibold">EEOS</span>, transforms your business data into accurate executive intelligence — helping leaders move beyond reacting to today's problems and begin making tomorrow's decisions with confidence.
                 </p>
-              <div className="flex items-start gap-3 p-4 rounded-xl border border-[rgba(0,212,200,0.2)] bg-[rgba(0,212,200,0.04)]">
-                <Lock className="w-4 h-4 text-[#00D4C8] mt-0.5 shrink-0" />
-                <p className="text-sm text-[#E8EDF5]/75 leading-relaxed">
-                  <span className="text-[#00D4C8] font-semibold">How EEOS works:</span> Connects to your business systems, reads approved signals, and turns them into executive recommendations — all without storing your data.
+              <div className="flex items-start gap-3 p-4 rounded-xl border border-[rgba(201,162,39,0.2)] bg-[rgba(201,162,39,0.04)]">
+                <Lock className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
+                <p className="text-sm text-[#FFFFFF]/75 leading-relaxed">
+                  <span className="text-[#C9A227] font-semibold">How EEOS works:</span> Connects to your business systems, reads approved signals, and turns them into executive recommendations — all without storing your data.
                 </p>
               </div>
             </div>
@@ -190,7 +190,7 @@ export default function Home() {
             >
               <Link
                 href="/connect-ghl"
-                className="inline-flex items-center justify-center gap-2 px-7 py-4 text-base font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_28px_rgba(0,212,200,0.45)]"
+                className="inline-flex items-center justify-center gap-2 px-7 py-4 text-base font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_28px_rgba(201,162,39,0.45)]"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 <Zap className="w-4 h-4" />
@@ -198,7 +198,7 @@ export default function Home() {
               </Link>
               <Link
                 href="/demo"
-                className="inline-flex items-center justify-center gap-2 px-7 py-4 text-base font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] hover:border-[rgba(0,212,200,0.6)] active:scale-[0.97] transition-all duration-200"
+                className="inline-flex items-center justify-center gap-2 px-7 py-4 text-base font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] hover:border-[rgba(201,162,39,0.6)] active:scale-[0.97] transition-all duration-200"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 <Play className="w-4 h-4" />
@@ -206,7 +206,7 @@ export default function Home() {
               </Link>
               <Link
                 href="/onboarding"
-                className="inline-flex items-center justify-center gap-2 px-7 py-4 text-base font-semibold text-[#E8EDF5]/70 hover:text-[#E8EDF5] active:scale-[0.97] transition-all duration-200"
+                className="inline-flex items-center justify-center gap-2 px-7 py-4 text-base font-semibold text-[#FFFFFF]/70 hover:text-[#FFFFFF] active:scale-[0.97] transition-all duration-200"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 Connect Your Business
@@ -221,9 +221,9 @@ export default function Home() {
             >
               {["SOC 2 Type II", "ISO 27001", "FedRAMP Ready", "Service Business Specialists"].map((badge) => (
                 <div key={badge} className="flex items-center gap-1.5">
-                  <div className="w-1 h-1 rounded-full bg-[#00D4C8]" />
+                  <div className="w-1 h-1 rounded-full bg-[#C9A227]" />
                   <span
-                    className="text-xs text-[#E8EDF5]/45 tracking-wide"
+                    className="text-xs text-[#FFFFFF]/45 tracking-wide"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}
                   >
                     {badge}
@@ -236,9 +236,9 @@ export default function Home() {
 
         {/* Scroll indicator */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-float hidden sm:flex">
-          <div className="w-px h-12 bg-gradient-to-b from-[rgba(0,212,200,0.6)] to-transparent" />
+          <div className="w-px h-12 bg-gradient-to-b from-[rgba(201,162,39,0.6)] to-transparent" />
           <span
-            className="text-[10px] text-[#00D4C8] tracking-[0.2em] uppercase"
+            className="text-[10px] text-[#C9A227] tracking-[0.2em] uppercase"
             style={{ fontFamily: "'JetBrains Mono', monospace" }}
           >
             Scroll
@@ -247,19 +247,19 @@ export default function Home() {
       </section>
 
       {/* ── STATS BAR ── */}
-      <section className="bg-[#0A1628] border-y border-[rgba(0,212,200,0.1)]">
+      <section className="bg-[#141414] border-y border-[rgba(201,162,39,0.1)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {STATS.map((stat, i) => (
               <AnimatedSection key={stat.label} delay={i * 100} className="text-center">
                 <div
-                  className="text-3xl sm:text-4xl font-bold text-[#00D4C8] mb-1"
+                  className="text-3xl sm:text-4xl font-bold text-[#C9A227] mb-1"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   <CountUp end={stat.value} suffix={stat.suffix} />
                 </div>
                 <div
-                  className="text-xs text-[#E8EDF5]/50 tracking-wide"
+                  className="text-xs text-[#FFFFFF]/50 tracking-wide"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 >
                   {stat.label}
@@ -271,20 +271,20 @@ export default function Home() {
       </section>
 
       {/* ── THE TRANSFORMATION ── */}
-      <section className="bg-[#050C1A] py-20 sm:py-28">
+      <section className="bg-[#0B0B0B] py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="mb-14">
             <div className="section-label mb-3">The Shift</div>
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
               <h2
-                className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight leading-tight max-w-xl"
+                className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight leading-tight max-w-xl"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 From reactive operator
                 <br />
                 <span className="gradient-text">to confident leader.</span>
               </h2>
-              <p className="text-[#E8EDF5]/55 max-w-sm text-sm leading-relaxed lg:text-right">
+              <p className="text-[#FFFFFF]/55 max-w-sm text-sm leading-relaxed lg:text-right">
                 EEOS doesn't just report what happened — it tells you what to do next, and why it matters now.
               </p>
             </div>
@@ -293,10 +293,10 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {TRANSFORMATION.map((item, i) => (
               <AnimatedSection key={item.from} delay={i * 80}>
-                <div className="glass-card rounded-xl p-6 h-full group hover:border-[rgba(0,212,200,0.3)] transition-all duration-300">
+                <div className="glass-card rounded-xl p-6 h-full group hover:border-[rgba(201,162,39,0.3)] transition-all duration-300">
                   <div className="flex items-start gap-4">
-                    <div className="w-9 h-9 rounded-lg bg-[rgba(0,212,200,0.08)] border border-[rgba(0,212,200,0.18)] flex items-center justify-center shrink-0 mt-0.5">
-                      <item.icon className="w-4 h-4 text-[#00D4C8]" />
+                    <div className="w-9 h-9 rounded-lg bg-[rgba(201,162,39,0.08)] border border-[rgba(201,162,39,0.18)] flex items-center justify-center shrink-0 mt-0.5">
+                      <item.icon className="w-4 h-4 text-[#C9A227]" />
                     </div>
                     <div className="flex-1 min-w-0">
                       {/* Before */}
@@ -304,13 +304,13 @@ export default function Home() {
                         <span className="text-[9px] font-bold text-[#EF4444]/60 tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>BEFORE</span>
                         <div className="flex-1 h-px bg-[rgba(239,68,68,0.15)]" />
                       </div>
-                      <p className="text-sm text-[#E8EDF5]/40 line-through mb-3 leading-snug">{item.from}</p>
+                      <p className="text-sm text-[#FFFFFF]/40 line-through mb-3 leading-snug">{item.from}</p>
                       {/* After */}
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[9px] font-bold text-[#00D4C8]/70 tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>WITH EEOS</span>
-                        <div className="flex-1 h-px bg-[rgba(0,212,200,0.2)]" />
+                        <span className="text-[9px] font-bold text-[#C9A227]/70 tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>WITH EEOS</span>
+                        <div className="flex-1 h-px bg-[rgba(201,162,39,0.2)]" />
                       </div>
-                      <p className="text-sm font-semibold text-[#E8EDF5] leading-snug">{item.to}</p>
+                      <p className="text-sm font-semibold text-[#FFFFFF] leading-snug">{item.to}</p>
                     </div>
                   </div>
                 </div>
@@ -321,20 +321,20 @@ export default function Home() {
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section className="bg-[#0A1628] py-20 sm:py-28">
+      <section className="bg-[#141414] py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="mb-14">
             <div className="section-label mb-3">How EEOS Works</div>
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
               <h2
-                className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight leading-tight max-w-xl"
+                className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight leading-tight max-w-xl"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 Three steps from
                 <br />
                 <span className="gradient-text">data to decision.</span>
               </h2>
-              <p className="text-[#E8EDF5]/55 max-w-sm text-sm leading-relaxed lg:text-right">
+              <p className="text-[#FFFFFF]/55 max-w-sm text-sm leading-relaxed lg:text-right">
                 EEOS connects to your business systems, reads approved signals, and turns them into executive recommendations.
               </p>
             </div>
@@ -342,11 +342,11 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
             {/* Connector line — desktop only */}
-            <div className="hidden md:block absolute top-12 left-[calc(33%+1rem)] right-[calc(33%+1rem)] h-px bg-gradient-to-r from-[rgba(0,212,200,0.3)] via-[rgba(99,102,241,0.3)] to-[rgba(16,185,129,0.3)]" />
+            <div className="hidden md:block absolute top-12 left-[calc(33%+1rem)] right-[calc(33%+1rem)] h-px bg-gradient-to-r from-[rgba(201,162,39,0.3)] via-[rgba(99,102,241,0.3)] to-[rgba(16,185,129,0.3)]" />
 
             {HOW_IT_WORKS.map((step, i) => (
               <AnimatedSection key={step.step} delay={i * 120}>
-                <div className="relative glass-card rounded-2xl p-6 sm:p-8 h-full group hover:border-[rgba(0,212,200,0.3)] transition-all duration-300">
+                <div className="relative glass-card rounded-2xl p-6 sm:p-8 h-full group hover:border-[rgba(201,162,39,0.3)] transition-all duration-300">
                   <div
                     className="text-[10px] font-bold tracking-[0.2em] mb-4"
                     style={{ fontFamily: "'JetBrains Mono', monospace", color: step.color }}
@@ -360,15 +360,15 @@ export default function Home() {
                     <step.icon className="w-6 h-6" style={{ color: step.color }} />
                   </div>
                   <h3
-                    className="text-lg font-semibold text-[#E8EDF5] mb-3 leading-snug"
+                    className="text-lg font-semibold text-[#FFFFFF] mb-3 leading-snug"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     {step.title}
                   </h3>
-                  <p className="text-sm text-[#E8EDF5]/60 leading-relaxed">{step.description}</p>
+                  <p className="text-sm text-[#FFFFFF]/60 leading-relaxed">{step.description}</p>
                   {i < HOW_IT_WORKS.length - 1 && (
                     <div className="md:hidden flex justify-center mt-6">
-                      <ArrowRight className="w-5 h-5 text-[#00D4C8]/40 rotate-90" />
+                      <ArrowRight className="w-5 h-5 text-[#C9A227]/40 rotate-90" />
                     </div>
                   )}
                 </div>
@@ -379,7 +379,7 @@ export default function Home() {
           <AnimatedSection delay={400} className="mt-10 text-center">
             <Link
               href="/integrations"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-[#00D4C8] hover:gap-3 transition-all duration-200"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#C9A227] hover:gap-3 transition-all duration-200"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               See all integrations and security details
@@ -390,9 +390,9 @@ export default function Home() {
       </section>
 
       {/* ── LOGO MARQUEE ── */}
-      <section className="bg-[#050C1A] border-t border-[rgba(0,212,200,0.06)] py-10 overflow-hidden">
+      <section className="bg-[#0B0B0B] border-t border-[rgba(201,162,39,0.06)] py-10 overflow-hidden">
         <p
-          className="text-center text-[10px] text-[#E8EDF5]/25 tracking-[0.2em] uppercase mb-6"
+          className="text-center text-[10px] text-[#FFFFFF]/25 tracking-[0.2em] uppercase mb-6"
           style={{ fontFamily: "'JetBrains Mono', monospace" }}
         >
           Trusted by service businesses across industries
@@ -404,7 +404,7 @@ export default function Home() {
           {[...LOGOS, ...LOGOS].map((logo, i) => (
             <div
               key={i}
-              className="whitespace-nowrap text-sm font-semibold text-[#E8EDF5]/18 tracking-[0.15em] uppercase shrink-0"
+              className="whitespace-nowrap text-sm font-semibold text-[#FFFFFF]/18 tracking-[0.15em] uppercase shrink-0"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               {logo}
@@ -420,19 +420,19 @@ export default function Home() {
       </section>
 
       {/* ── VALUE PROPS ── */}
-      <section className="bg-[#050C1A] scan-grid py-20 sm:py-28">
+      <section className="bg-[#0B0B0B] scan-grid py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="mb-14">
             <div className="section-label mb-3">Why EEOS</div>
             <h2
-              className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight mb-3"
+              className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight mb-3"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Intelligence that operates
               <br />
               <span className="gradient-text">at the speed of leadership</span>
             </h2>
-            <p className="text-[#E8EDF5]/55 max-w-lg text-sm leading-relaxed">
+            <p className="text-[#FFFFFF]/55 max-w-lg text-sm leading-relaxed">
               EEOS doesn't just report what happened — it tells you what to do next, and why it matters now.
             </p>
           </AnimatedSection>
@@ -440,17 +440,17 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {VALUE_PROPS.map((prop, i) => (
               <AnimatedSection key={prop.title} delay={i * 70}>
-                <div className="glass-card rounded-xl p-6 h-full hover:border-[rgba(0,212,200,0.3)] transition-all duration-300 group">
-                  <div className="w-10 h-10 rounded-lg bg-[rgba(0,212,200,0.08)] border border-[rgba(0,212,200,0.18)] flex items-center justify-center mb-4 group-hover:bg-[rgba(0,212,200,0.14)] transition-colors">
-                    <prop.icon className="w-5 h-5 text-[#00D4C8]" />
+                <div className="glass-card rounded-xl p-6 h-full hover:border-[rgba(201,162,39,0.3)] transition-all duration-300 group">
+                  <div className="w-10 h-10 rounded-lg bg-[rgba(201,162,39,0.08)] border border-[rgba(201,162,39,0.18)] flex items-center justify-center mb-4 group-hover:bg-[rgba(201,162,39,0.14)] transition-colors">
+                    <prop.icon className="w-5 h-5 text-[#C9A227]" />
                   </div>
                   <h3
-                    className="text-base font-semibold text-[#E8EDF5] mb-2"
+                    className="text-base font-semibold text-[#FFFFFF] mb-2"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     {prop.title}
                   </h3>
-                  <p className="text-sm text-[#E8EDF5]/58 leading-relaxed">{prop.description}</p>
+                  <p className="text-sm text-[#FFFFFF]/58 leading-relaxed">{prop.description}</p>
                 </div>
               </AnimatedSection>
             ))}
@@ -459,20 +459,20 @@ export default function Home() {
       </section>
 
       {/* ── DEMO PREVIEW ── */}
-      <section className="bg-[#0A1628] py-20 sm:py-28 overflow-hidden">
+      <section className="bg-[#141414] py-20 sm:py-28 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <AnimatedSection>
               <div className="section-label mb-4">EEOS — Executive Dashboard</div>
               <h2
-                className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight mb-5"
+                className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight mb-5"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 See everything.
                 <br />
                 <span className="gradient-text">Decide faster.</span>
               </h2>
-              <p className="text-[#E8EDF5]/62 leading-relaxed mb-6 text-sm sm:text-base">
+              <p className="text-[#FFFFFF]/62 leading-relaxed mb-6 text-sm sm:text-base">
                 The EEOS Executive Dashboard delivers a real-time command view of your entire business — from financial performance to team utilization, pipeline health to strategic momentum — in a single, actionable interface.
               </p>
               <ul className="space-y-2.5 mb-8">
@@ -483,15 +483,15 @@ export default function Home() {
                   "Strategic alignment scoring across business units",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3">
-                    <ChevronRight className="w-4 h-4 text-[#00D4C8] mt-0.5 shrink-0" />
-                    <span className="text-sm text-[#E8EDF5]/68">{item}</span>
+                    <ChevronRight className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
+                    <span className="text-sm text-[#FFFFFF]/68">{item}</span>
                   </li>
                 ))}
               </ul>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link
                   href="/demo"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(0,212,200,0.35)]"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(201,162,39,0.35)]"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Request Demo
@@ -499,7 +499,7 @@ export default function Home() {
                 </Link>
                 <Link
                   href="/connect-ghl"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.3)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   <Zap className="w-4 h-4" />
@@ -510,21 +510,21 @@ export default function Home() {
 
             <AnimatedSection delay={200}>
               <div className="relative">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[rgba(0,212,200,0.08)] to-transparent" />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[rgba(201,162,39,0.08)] to-transparent" />
                 <img
                   src="/manus-storage/eeos-demo-dashboard_bc692339.png"
                   alt="EEOS Executive Dashboard"
-                  className="w-full rounded-2xl border border-[rgba(0,212,200,0.15)] shadow-[0_0_60px_rgba(0,212,200,0.1)]"
+                  className="w-full rounded-2xl border border-[rgba(201,162,39,0.15)] shadow-[0_0_60px_rgba(201,162,39,0.1)]"
                 />
                 <div className="absolute -top-3 -right-3 sm:-top-4 sm:-right-4 glass-card rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 animate-float">
-                  <div className="text-[10px] text-[#E8EDF5]/50 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Revenue YTD</div>
-                  <div className="text-base sm:text-lg font-bold text-[#00D4C8]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>$4.2M</div>
+                  <div className="text-[10px] text-[#FFFFFF]/50 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Revenue YTD</div>
+                  <div className="text-base sm:text-lg font-bold text-[#C9A227]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>$4.2M</div>
                   <div className="text-xs text-[#10B981]">↑ +18.4%</div>
                 </div>
                 <div className="absolute -bottom-3 -left-3 sm:-bottom-4 sm:-left-4 glass-card rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 animate-float" style={{ animationDelay: "1s" }}>
-                  <div className="text-[10px] text-[#E8EDF5]/50 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Priorities Active</div>
+                  <div className="text-[10px] text-[#FFFFFF]/50 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Priorities Active</div>
                   <div className="text-base sm:text-lg font-bold text-[#F59E0B]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>5</div>
-                  <div className="text-xs text-[#E8EDF5]/50">1 Critical</div>
+                  <div className="text-xs text-[#FFFFFF]/50">1 Critical</div>
                 </div>
               </div>
             </AnimatedSection>
@@ -533,7 +533,7 @@ export default function Home() {
       </section>
 
       {/* ── KNOWLEDGE GRAPH PREVIEW ── */}
-      <section className="bg-[#050C1A] py-20 sm:py-28 overflow-hidden">
+      <section className="bg-[#0B0B0B] py-20 sm:py-28 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <AnimatedSection delay={200} className="order-2 lg:order-1">
@@ -541,28 +541,28 @@ export default function Home() {
                 <img
                   src="/manus-storage/eeos-knowledge-graph_63f83141.png"
                   alt="EEOS Knowledge Graph"
-                  className="w-full rounded-2xl border border-[rgba(0,212,200,0.15)] shadow-[0_0_60px_rgba(0,212,200,0.08)]"
+                  className="w-full rounded-2xl border border-[rgba(201,162,39,0.15)] shadow-[0_0_60px_rgba(201,162,39,0.08)]"
                 />
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-[#050C1A]/40 to-transparent pointer-events-none" />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-[#0B0B0B]/40 to-transparent pointer-events-none" />
               </div>
             </AnimatedSection>
 
             <AnimatedSection className="order-1 lg:order-2">
               <div className="section-label mb-4">Business DNA</div>
               <h2
-                className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight mb-5"
+                className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight mb-5"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 Your business,
                 <br />
                 <span className="gradient-text">mapped in real time.</span>
               </h2>
-              <p className="text-[#E8EDF5]/62 leading-relaxed mb-6 text-sm sm:text-base">
+              <p className="text-[#FFFFFF]/62 leading-relaxed mb-6 text-sm sm:text-base">
                 EEOS builds a living knowledge graph of your entire business — mapping relationships between people, departments, systems, risks, and opportunities. See how everything connects, and where the critical paths run.
               </p>
               <Link
                 href="/features"
-                className="inline-flex items-center gap-2 text-sm font-semibold text-[#00D4C8] hover:gap-3 transition-all duration-200"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-[#C9A227] hover:gap-3 transition-all duration-200"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 Explore all EEOS features
@@ -574,31 +574,31 @@ export default function Home() {
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section className="bg-[#0A1628] border-t border-[rgba(0,212,200,0.1)] py-20 sm:py-28">
+      <section className="bg-[#141414] border-t border-[rgba(201,162,39,0.1)] py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
             <div className="flex flex-col lg:flex-row items-start lg:items-center gap-10 lg:gap-20">
               <div className="flex-1">
                 {/* Company attribution */}
-                <div className="text-[10px] text-[#E8EDF5]/30 tracking-[0.2em] uppercase mb-3" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                <div className="text-[10px] text-[#FFFFFF]/30 tracking-[0.2em] uppercase mb-3" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   Eagle Eye Automation · Flagship Product
                 </div>
                 <h2
-                  className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#E8EDF5] tracking-tight mb-4 leading-tight"
+                  className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#FFFFFF] tracking-tight mb-4 leading-tight"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Ready to transcend
                   <br />
                   <span className="gradient-text">your business?</span>
                 </h2>
-                <p className="text-[#E8EDF5]/55 max-w-lg text-sm sm:text-base leading-relaxed">
+                <p className="text-[#FFFFFF]/55 max-w-lg text-sm sm:text-base leading-relaxed">
                   Join the service business owners who have moved beyond managing and started leading. EEOS is live in 6 weeks — from onboarding to full organizational intelligence.
                 </p>
               </div>
               <div className="flex flex-col gap-3 w-full sm:w-auto shrink-0">
                 <Link
                   href="/connect-ghl"
-                  className="flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#050C1A] bg-[#00D4C8] rounded-xl hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_28px_rgba(0,212,200,0.45)]"
+                  className="flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-xl hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_28px_rgba(201,162,39,0.45)]"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   <Zap className="w-4 h-4" />
@@ -606,14 +606,14 @@ export default function Home() {
                 </Link>
                 <Link
                   href="/demo"
-                  className="flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-xl hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200"
+                  className="flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-xl hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Request Demo
                 </Link>
                 <Link
                   href="/onboarding"
-                  className="flex items-center justify-center gap-2 px-8 py-3 text-sm font-semibold text-[#E8EDF5]/60 hover:text-[#E8EDF5] transition-all duration-200"
+                  className="flex items-center justify-center gap-2 px-8 py-3 text-sm font-semibold text-[#FFFFFF]/60 hover:text-[#FFFFFF] transition-all duration-200"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Connect Your Business

@@ -31,7 +31,7 @@ const CONNECTORS = [
     latency: 42,
     dataPoints: ["Contacts", "Opportunities", "Pipelines", "Conversations", "Appointments"],
     icon: "GHL",
-    color: "#00D4C8",
+    color: "#C9A227",
   },
   {
     id: "quickbooks",
@@ -59,7 +59,7 @@ const CONNECTORS = [
     latency: 67,
     dataPoints: ["Placements", "Schedules", "Utilization", "Compliance", "Timesheets"],
     icon: "WF",
-    color: "#00D4C8",
+    color: "#C9A227",
   },
   {
     id: "analytics",
@@ -146,7 +146,7 @@ const SEVERITY_STYLES = {
   success: { color: "#10B981", bg: "rgba(16,185,129,0.08)" },
   warning: { color: "#F59E0B", bg: "rgba(245,158,11,0.08)" },
   error: { color: "#EF4444", bg: "rgba(239,68,68,0.08)" },
-  info: { color: "#00D4C8", bg: "rgba(0,212,200,0.08)" },
+  info: { color: "#C9A227", bg: "rgba(201,162,39,0.08)" },
 };
 
 export default function LiveStatus() {
@@ -169,19 +169,19 @@ export default function LiveStatus() {
   const totalSignals = CONNECTORS.reduce((sum, c) => sum + c.signalsToday, 0);
 
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* Hero */}
-      <section className="pt-28 pb-8 bg-[#050C1A] scan-grid">
+      <section className="pt-28 pb-8 bg-[#0B0B0B] scan-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
               <div className="section-label mb-3">Live Integration Status</div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <h1 className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 Signal Command Center
               </h1>
-              <p className="text-sm text-[#E8EDF5]/50 mt-2">
+              <p className="text-sm text-[#FFFFFF]/50 mt-2">
                 Real-time health of all connected business systems and data pipelines.
               </p>
             </div>
@@ -191,14 +191,14 @@ export default function LiveStatus() {
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border transition-all duration-200 ${
                   autoRefresh
                     ? "bg-[rgba(16,185,129,0.1)] border-[rgba(16,185,129,0.3)] text-[#10B981]"
-                    : "border-[rgba(0,212,200,0.2)] text-[#E8EDF5]/50 hover:text-[#00D4C8]"
+                    : "border-[rgba(201,162,39,0.2)] text-[#FFFFFF]/50 hover:text-[#C9A227]"
                 }`}
                 style={{ fontFamily: "'JetBrains Mono', monospace" }}
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${autoRefresh ? "animate-spin" : ""}`} style={{ animationDuration: "3s" }} />
                 {autoRefresh ? "AUTO REFRESH" : "PAUSED"}
               </button>
-              <div className="text-[10px] text-[#E8EDF5]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <div className="text-[10px] text-[#FFFFFF]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 Last: {lastRefresh.toLocaleTimeString()}
               </div>
             </div>
@@ -214,21 +214,21 @@ export default function LiveStatus() {
             { label: "Operational", value: operational, total: CONNECTORS.length, color: "#10B981", icon: CheckCircle2 },
             { label: "Degraded", value: degraded, total: CONNECTORS.length, color: "#F59E0B", icon: AlertTriangle },
             { label: "Offline", value: offline, total: CONNECTORS.length, color: "#EF4444", icon: XCircle },
-            { label: "Signals Today", value: totalSignals.toLocaleString(), total: null, color: "#00D4C8", icon: Signal },
+            { label: "Signals Today", value: totalSignals.toLocaleString(), total: null, color: "#C9A227", icon: Signal },
           ].map((m) => (
             <div key={m.label} className="metric-card rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <m.icon className="w-4 h-4" style={{ color: m.color }} />
                 {m.total && (
-                  <span className="text-[10px] text-[#E8EDF5]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <span className="text-[10px] text-[#FFFFFF]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     of {m.total}
                   </span>
                 )}
               </div>
-              <div className="text-2xl font-bold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <div className="text-2xl font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 {m.value}
               </div>
-              <div className="text-[10px] text-[#E8EDF5]/40 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <div className="text-[10px] text-[#FFFFFF]/40 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 {m.label}
               </div>
             </div>
@@ -239,7 +239,7 @@ export default function LiveStatus() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <div className="section-label">Connected Systems</div>
-            <Link href="/connected-apps" className="flex items-center gap-1 text-xs text-[#00D4C8] hover:text-[#00E8DB] transition-colors" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <Link href="/connected-apps" className="flex items-center gap-1 text-xs text-[#C9A227] hover:text-[#D8B84A] transition-colors" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Manage connections <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -247,7 +247,7 @@ export default function LiveStatus() {
             {CONNECTORS.map((conn) => {
               const s = STATUS_COLORS[conn.status];
               return (
-                <div key={conn.id} className="glass-card rounded-xl p-5 hover:border-[rgba(0,212,200,0.25)] transition-all duration-250">
+                <div key={conn.id} className="glass-card rounded-xl p-5 hover:border-[rgba(201,162,39,0.25)] transition-all duration-250">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div
@@ -257,10 +257,10 @@ export default function LiveStatus() {
                         {conn.icon}
                       </div>
                       <div>
-                        <div className="text-sm font-semibold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                        <div className="text-sm font-semibold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                           {conn.name}
                         </div>
-                        <div className="text-[10px] text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        <div className="text-[10px] text-[#FFFFFF]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           {conn.type}
                         </div>
                       </div>
@@ -276,19 +276,19 @@ export default function LiveStatus() {
 
                   <div className="grid grid-cols-3 gap-3 mb-4">
                     <div>
-                      <div className="text-[10px] text-[#E8EDF5]/30 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>SIGNALS</div>
-                      <div className="text-sm font-semibold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                      <div className="text-[10px] text-[#FFFFFF]/30 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>SIGNALS</div>
+                      <div className="text-sm font-semibold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                         {conn.signalsToday.toLocaleString()}
                       </div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-[#E8EDF5]/30 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>UPTIME</div>
+                      <div className="text-[10px] text-[#FFFFFF]/30 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>UPTIME</div>
                       <div className={`text-sm font-semibold ${conn.uptime >= 99 ? "text-[#10B981]" : conn.uptime >= 95 ? "text-[#F59E0B]" : "text-[#EF4444]"}`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                         {conn.uptime}%
                       </div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-[#E8EDF5]/30 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>LATENCY</div>
+                      <div className="text-[10px] text-[#FFFFFF]/30 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>LATENCY</div>
                       <div className={`text-sm font-semibold ${conn.latency < 100 ? "text-[#10B981]" : conn.latency < 500 ? "text-[#F59E0B]" : "text-[#EF4444]"}`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                         {conn.latency > 0 ? `${conn.latency}ms` : "—"}
                       </div>
@@ -304,7 +304,7 @@ export default function LiveStatus() {
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between text-[10px] text-[#E8EDF5]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <div className="flex items-center justify-between text-[10px] text-[#FFFFFF]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     <span>Last sync: {conn.lastSync}</span>
                     <span>{conn.syncRate}</span>
                   </div>
@@ -319,21 +319,21 @@ export default function LiveStatus() {
           {/* Signal Throughput */}
           <div className="glass-card rounded-2xl p-6">
             <div className="section-label mb-1">Signal Throughput</div>
-            <div className="text-xs text-[#E8EDF5]/40 mb-4" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <div className="text-xs text-[#FFFFFF]/40 mb-4" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               Signals processed per 30-min window today
             </div>
             <ResponsiveContainer width="100%" height={160}>
               <AreaChart data={THROUGHPUT_DATA}>
                 <defs>
                   <linearGradient id="throughputGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00D4C8" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#00D4C8" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#C9A227" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#C9A227" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="time" tick={{ fill: "rgba(232,237,245,0.35)", fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} />
                 <YAxis hide />
-                <Tooltip contentStyle={{ background: "#0F1E35", border: "1px solid rgba(0,212,200,0.2)", borderRadius: "8px", fontSize: "11px" }} formatter={(v: number) => [`${v} signals`, ""]} />
-                <Area type="monotone" dataKey="signals" stroke="#00D4C8" strokeWidth={2} fill="url(#throughputGrad)" dot={false} />
+                <Tooltip contentStyle={{ background: "#1A1A1A", border: "1px solid rgba(201,162,39,0.2)", borderRadius: "8px", fontSize: "11px" }} formatter={(v: number) => [`${v} signals`, ""]} />
+                <Area type="monotone" dataKey="signals" stroke="#C9A227" strokeWidth={2} fill="url(#throughputGrad)" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -341,21 +341,21 @@ export default function LiveStatus() {
           {/* Latency */}
           <div className="glass-card rounded-2xl p-6">
             <div className="section-label mb-1">API Latency</div>
-            <div className="text-xs text-[#E8EDF5]/40 mb-4" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <div className="text-xs text-[#FFFFFF]/40 mb-4" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               p50 and p95 response times (ms)
             </div>
             <ResponsiveContainer width="100%" height={160}>
               <LineChart data={LATENCY_DATA}>
                 <XAxis dataKey="time" tick={{ fill: "rgba(232,237,245,0.35)", fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} />
                 <YAxis hide />
-                <Tooltip contentStyle={{ background: "#0F1E35", border: "1px solid rgba(0,212,200,0.2)", borderRadius: "8px", fontSize: "11px" }} formatter={(v: number) => [`${v}ms`, ""]} />
+                <Tooltip contentStyle={{ background: "#1A1A1A", border: "1px solid rgba(201,162,39,0.2)", borderRadius: "8px", fontSize: "11px" }} formatter={(v: number) => [`${v}ms`, ""]} />
                 <Line type="monotone" dataKey="p50" stroke="#10B981" strokeWidth={2} dot={false} name="p50" />
                 <Line type="monotone" dataKey="p95" stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="p95" />
               </LineChart>
             </ResponsiveContainer>
             <div className="flex items-center gap-4 mt-2">
-              <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-[#10B981] rounded" /><span className="text-[10px] text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>p50</span></div>
-              <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-[#F59E0B] rounded" /><span className="text-[10px] text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>p95</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-[#10B981] rounded" /><span className="text-[10px] text-[#FFFFFF]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>p50</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-[#F59E0B] rounded" /><span className="text-[10px] text-[#FFFFFF]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>p95</span></div>
             </div>
           </div>
         </div>
@@ -365,7 +365,7 @@ export default function LiveStatus() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <div className="section-label mb-1">Live Signal Feed</div>
-              <div className="text-xs text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <div className="text-xs text-[#FFFFFF]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 Most recent signals ingested by EEOS
               </div>
             </div>
@@ -383,7 +383,7 @@ export default function LiveStatus() {
                   className="flex items-start gap-4 px-4 py-3 rounded-lg transition-all duration-150 hover:bg-[rgba(255,255,255,0.02)]"
                   style={{ borderLeft: `2px solid ${style.color}40` }}
                 >
-                  <span className="text-[10px] text-[#E8EDF5]/30 shrink-0 mt-0.5 w-16" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <span className="text-[10px] text-[#FFFFFF]/30 shrink-0 mt-0.5 w-16" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     {sig.time}
                   </span>
                   <span
@@ -392,7 +392,7 @@ export default function LiveStatus() {
                   >
                     {sig.connector}
                   </span>
-                  <span className="text-xs text-[#E8EDF5]/70 flex-1">{sig.message}</span>
+                  <span className="text-xs text-[#FFFFFF]/70 flex-1">{sig.message}</span>
                 </div>
               );
             })}
@@ -400,10 +400,10 @@ export default function LiveStatus() {
         </div>
 
         {/* ── CTA ── */}
-        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-[rgba(0,212,200,0.08)]">
+        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-[rgba(201,162,39,0.08)]">
           <Link
             href="/connect-ghl"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(0,212,200,0.35)]"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(201,162,39,0.35)]"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             <Plug className="w-4 h-4" />
@@ -411,7 +411,7 @@ export default function LiveStatus() {
           </Link>
           <Link
             href="/connected-apps"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             <Database className="w-4 h-4" />
@@ -419,7 +419,7 @@ export default function LiveStatus() {
           </Link>
           <Link
             href="/executive-home"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#E8EDF5]/60 border border-[rgba(232,237,245,0.1)] rounded-lg hover:border-[rgba(0,212,200,0.2)] hover:text-[#E8EDF5]/80 active:scale-[0.97] transition-all duration-200"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#FFFFFF]/60 border border-[rgba(232,237,245,0.1)] rounded-lg hover:border-[rgba(201,162,39,0.2)] hover:text-[#FFFFFF]/80 active:scale-[0.97] transition-all duration-200"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             <Eye className="w-4 h-4" />

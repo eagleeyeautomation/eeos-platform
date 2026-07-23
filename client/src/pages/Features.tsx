@@ -146,23 +146,23 @@ const FEATURES = [
 
 export default function Features() {
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* Hero */}
-      <section className="pt-32 pb-20 bg-[#050C1A] scan-grid">
+      <section className="pt-32 pb-20 bg-[#0B0B0B] scan-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center max-w-3xl mx-auto">
             <div className="section-label mb-4">EEOS Platform Features</div>
             <h1
-              className="text-5xl sm:text-6xl font-bold text-[#E8EDF5] tracking-tight mb-6"
+              className="text-5xl sm:text-6xl font-bold text-[#FFFFFF] tracking-tight mb-6"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Every capability
               <br />
               <span className="gradient-text">a business leader needs</span>
             </h1>
-            <p className="text-xl text-[#E8EDF5]/65 leading-relaxed">
+            <p className="text-xl text-[#FFFFFF]/65 leading-relaxed">
               EEOS is Eagle Eye Automation's flagship product — a complete business intelligence platform, not a collection of dashboards. Every feature is designed around how service business owners actually lead.
             </p>
           </AnimatedSection>
@@ -170,34 +170,34 @@ export default function Features() {
       </section>
 
       {/* Feature Grid */}
-      <section className="bg-[#050C1A] pb-24">
+      <section className="bg-[#0B0B0B] pb-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="space-y-8">
             {FEATURES.map((feature, i) => (
               <AnimatedSection key={feature.id} delay={i * 60}>
-                <div className="glass-card rounded-2xl p-8 hover:border-[rgba(0,212,200,0.25)] transition-all duration-300">
+                <div className="glass-card rounded-2xl p-8 hover:border-[rgba(201,162,39,0.25)] transition-all duration-300">
                   <div className="grid lg:grid-cols-3 gap-8 items-start">
                     <div className="lg:col-span-1">
                       <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-lg bg-[rgba(0,212,200,0.1)] border border-[rgba(0,212,200,0.2)] flex items-center justify-center">
-                          <feature.icon className="w-5 h-5 text-[#00D4C8]" />
+                        <div className="w-10 h-10 rounded-lg bg-[rgba(201,162,39,0.1)] border border-[rgba(201,162,39,0.2)] flex items-center justify-center">
+                          <feature.icon className="w-5 h-5 text-[#C9A227]" />
                         </div>
                         {feature.demo && (
                           <span className="tag-teal">Live Demo</span>
                         )}
                       </div>
                       <h3
-                        className="text-2xl font-bold text-[#E8EDF5] mb-2"
+                        className="text-2xl font-bold text-[#FFFFFF] mb-2"
                         style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                       >
                         {feature.name}
                       </h3>
-                      <p className="text-sm text-[#00D4C8] font-medium mb-4">{feature.tagline}</p>
-                      <p className="text-sm text-[#E8EDF5]/60 leading-relaxed">{feature.description}</p>
+                      <p className="text-sm text-[#C9A227] font-medium mb-4">{feature.tagline}</p>
+                      <p className="text-sm text-[#FFFFFF]/60 leading-relaxed">{feature.description}</p>
                       {feature.demo && (
                         <Link
                           href="/demo"
-                          className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-[#00D4C8] hover:gap-2.5 transition-all duration-200"
+                          className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-[#C9A227] hover:gap-2.5 transition-all duration-200"
                           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                         >
                           Try in demo
@@ -210,10 +210,10 @@ export default function Features() {
                         {feature.capabilities.map((cap) => (
                           <div
                             key={cap}
-                            className="flex items-start gap-2.5 p-3 rounded-lg bg-[rgba(0,212,200,0.04)] border border-[rgba(0,212,200,0.08)]"
+                            className="flex items-start gap-2.5 p-3 rounded-lg bg-[rgba(201,162,39,0.04)] border border-[rgba(201,162,39,0.08)]"
                           >
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#00D4C8] mt-1.5 shrink-0" />
-                            <span className="text-sm text-[#E8EDF5]/70">{cap}</span>
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#C9A227] mt-1.5 shrink-0" />
+                            <span className="text-sm text-[#FFFFFF]/70">{cap}</span>
                           </div>
                         ))}
                       </div>
@@ -227,21 +227,21 @@ export default function Features() {
       </section>
 
       {/* CTA */}
-      <section className="bg-[#0A1628] py-20">
+      <section className="bg-[#141414] py-20">
         <div className="max-w-3xl mx-auto px-4 text-center">
           <AnimatedSection>
             <h2
-              className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight mb-6"
+              className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight mb-6"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Experience every feature live
             </h2>
-            <p className="text-[#E8EDF5]/60 mb-8">
+            <p className="text-[#FFFFFF]/60 mb-8">
               Our interactive demo uses real demonstration data to show you exactly how EEOS operates in a Fortune 500 environment.
             </p>
             <Link
               href="/demo"
-              className="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200 shadow-[0_0_24px_rgba(0,212,200,0.4)]"
+              className="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200 shadow-[0_0_24px_rgba(201,162,39,0.4)]"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Launch Interactive Demo

@@ -53,7 +53,7 @@ const NOTIFICATIONS = [
     actionLabel: "View Insight",
     actionHref: "/demo",
     icon: Brain,
-    color: "#00D4C8",
+    color: "#C9A227",
     source: "EEOS Intelligence",
   },
   {
@@ -109,7 +109,7 @@ const NOTIFICATIONS = [
     actionLabel: "View Forecast",
     actionHref: "/demo",
     icon: TrendingUp,
-    color: "#00D4C8",
+    color: "#C9A227",
     source: "EEOS Intelligence",
   },
   {
@@ -133,9 +133,9 @@ const CATEGORIES = ["All", "Revenue", "Operations", "Finance", "AI Recommendatio
 const TYPE_CONFIG = {
   critical: { color: "#EF4444", bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)" },
   warning: { color: "#F59E0B", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)" },
-  insight: { color: "#00D4C8", bg: "rgba(0,212,200,0.08)", border: "rgba(0,212,200,0.2)" },
+  insight: { color: "#C9A227", bg: "rgba(201,162,39,0.08)", border: "rgba(201,162,39,0.2)" },
   success: { color: "#10B981", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.2)" },
-  system: { color: "#E8EDF5", bg: "rgba(232,237,245,0.04)", border: "rgba(232,237,245,0.1)" },
+  system: { color: "#FFFFFF", bg: "rgba(232,237,245,0.04)", border: "rgba(232,237,245,0.1)" },
 };
 
 export default function Notifications() {
@@ -160,19 +160,19 @@ export default function Notifications() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* Hero */}
-      <section className="pt-28 pb-8 bg-[#050C1A] scan-grid">
+      <section className="pt-28 pb-8 bg-[#0B0B0B] scan-grid">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
               <div className="section-label mb-3">Notification Center</div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <h1 className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 Executive Alerts
               </h1>
-              <p className="text-sm text-[#E8EDF5]/50 mt-2">
+              <p className="text-sm text-[#FFFFFF]/50 mt-2">
                 {unreadCount} unread · {notifications.length} total · All signals requiring your attention.
               </p>
             </div>
@@ -181,8 +181,8 @@ export default function Notifications() {
                 onClick={() => setShowUnreadOnly(!showUnreadOnly)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border transition-all duration-200 ${
                   showUnreadOnly
-                    ? "bg-[rgba(0,212,200,0.1)] border-[rgba(0,212,200,0.3)] text-[#00D4C8]"
-                    : "border-[rgba(0,212,200,0.15)] text-[#E8EDF5]/50 hover:text-[#00D4C8]"
+                    ? "bg-[rgba(201,162,39,0.1)] border-[rgba(201,162,39,0.3)] text-[#C9A227]"
+                    : "border-[rgba(201,162,39,0.15)] text-[#FFFFFF]/50 hover:text-[#C9A227]"
                 }`}
                 style={{ fontFamily: "'JetBrains Mono', monospace" }}
               >
@@ -192,7 +192,7 @@ export default function Notifications() {
               {unreadCount > 0 && (
                 <button
                   onClick={markAllRead}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border border-[rgba(0,212,200,0.15)] text-[#E8EDF5]/50 hover:text-[#00D4C8] transition-all duration-200"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border border-[rgba(201,162,39,0.15)] text-[#FFFFFF]/50 hover:text-[#C9A227] transition-all duration-200"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 >
                   <Check className="w-3.5 h-3.5" />
@@ -211,14 +211,14 @@ export default function Notifications() {
           {[
             { label: "Critical", value: notifications.filter((n) => n.type === "critical").length, color: "#EF4444" },
             { label: "Warnings", value: notifications.filter((n) => n.type === "warning").length, color: "#F59E0B" },
-            { label: "AI Insights", value: notifications.filter((n) => n.type === "insight").length, color: "#00D4C8" },
-            { label: "Unread", value: unreadCount, color: "#E8EDF5" },
+            { label: "AI Insights", value: notifications.filter((n) => n.type === "insight").length, color: "#C9A227" },
+            { label: "Unread", value: unreadCount, color: "#FFFFFF" },
           ].map((s) => (
             <div key={s.label} className="metric-card rounded-xl p-4">
               <div className="text-2xl font-bold" style={{ color: s.color, fontFamily: "'Space Grotesk', sans-serif" }}>
                 {s.value}
               </div>
-              <div className="text-[10px] text-[#E8EDF5]/40 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <div className="text-[10px] text-[#FFFFFF]/40 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 {s.label}
               </div>
             </div>
@@ -233,8 +233,8 @@ export default function Notifications() {
               onClick={() => setActiveCategory(cat)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200 shrink-0 ${
                 activeCategory === cat
-                  ? "bg-[rgba(0,212,200,0.12)] border border-[rgba(0,212,200,0.35)] text-[#00D4C8]"
-                  : "border border-[rgba(0,212,200,0.1)] text-[#E8EDF5]/50 hover:text-[#E8EDF5]/80"
+                  ? "bg-[rgba(201,162,39,0.12)] border border-[rgba(201,162,39,0.35)] text-[#C9A227]"
+                  : "border border-[rgba(201,162,39,0.1)] text-[#FFFFFF]/50 hover:text-[#FFFFFF]/80"
               }`}
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
@@ -246,7 +246,7 @@ export default function Notifications() {
         {/* Notification List */}
         <div className="space-y-3">
           {filtered.length === 0 ? (
-            <div className="text-center py-16 text-[#E8EDF5]/30">
+            <div className="text-center py-16 text-[#FFFFFF]/30">
               <Bell className="w-10 h-10 mx-auto mb-3 opacity-30" />
               <p className="text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>No notifications in this category.</p>
             </div>
@@ -256,7 +256,7 @@ export default function Notifications() {
               return (
                 <div
                   key={notif.id}
-                  className={`glass-card rounded-xl p-5 transition-all duration-250 hover:border-[rgba(0,212,200,0.25)] ${!notif.read ? "border-l-2" : ""}`}
+                  className={`glass-card rounded-xl p-5 transition-all duration-250 hover:border-[rgba(201,162,39,0.25)] ${!notif.read ? "border-l-2" : ""}`}
                   style={!notif.read ? { borderLeftColor: tc.color } : {}}
                 >
                   <div className="flex items-start gap-4">
@@ -279,17 +279,17 @@ export default function Notifications() {
                             {notif.category.toUpperCase()}
                           </span>
                           {!notif.read && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#00D4C8] inline-block" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#C9A227] inline-block" />
                           )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[10px] text-[#E8EDF5]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          <span className="text-[10px] text-[#FFFFFF]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                             {notif.time}
                           </span>
                           {!notif.read && (
                             <button
                               onClick={() => markRead(notif.id)}
-                              className="p-1 rounded text-[#E8EDF5]/30 hover:text-[#00D4C8] transition-colors"
+                              className="p-1 rounded text-[#FFFFFF]/30 hover:text-[#C9A227] transition-colors"
                               title="Mark as read"
                             >
                               <Check className="w-3.5 h-3.5" />
@@ -298,18 +298,18 @@ export default function Notifications() {
                         </div>
                       </div>
 
-                      <h4 className="text-sm font-semibold text-[#E8EDF5] mb-1 leading-snug" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                      <h4 className="text-sm font-semibold text-[#FFFFFF] mb-1 leading-snug" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                         {notif.title}
                       </h4>
-                      <p className="text-xs text-[#E8EDF5]/55 leading-relaxed mb-3">{notif.body}</p>
+                      <p className="text-xs text-[#FFFFFF]/55 leading-relaxed mb-3">{notif.body}</p>
 
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-[#E8EDF5]/25" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        <span className="text-[10px] text-[#FFFFFF]/25" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           via {notif.source}
                         </span>
                         <Link
                           href={notif.actionHref}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-[#00D4C8] hover:text-[#00E8DB] transition-colors"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-[#C9A227] hover:text-[#D8B84A] transition-colors"
                           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                           onClick={() => markRead(notif.id)}
                         >
@@ -326,10 +326,10 @@ export default function Notifications() {
         </div>
 
         {/* CTA */}
-        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-[rgba(0,212,200,0.08)]">
+        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-[rgba(201,162,39,0.08)]">
           <Link
             href="/executive-home"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(0,212,200,0.35)]"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(201,162,39,0.35)]"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             <Eye className="w-4 h-4" />
@@ -337,7 +337,7 @@ export default function Notifications() {
           </Link>
           <Link
             href="/connect-ghl"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             <Plug className="w-4 h-4" />

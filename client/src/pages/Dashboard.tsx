@@ -111,16 +111,16 @@ export default function Dashboard() {
   const summary = useMemo(() => getIntegrationHealthSummary(connections), [connections]);
 
   return (
-    <div className="min-h-screen bg-[#050C1A] text-[#E8EDF5]">
+    <div className="min-h-screen bg-[#0B0B0B] text-[#FFFFFF]">
       <Navigation />
 
       <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-24 sm:px-6 lg:px-8">
-        <section className="relative overflow-hidden rounded-3xl border border-[rgba(0,212,200,0.14)] bg-[linear-gradient(135deg,rgba(7,22,43,0.96),rgba(5,12,26,0.98))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-8 lg:p-10">
-          <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-[#00D4C8]/10 blur-3xl" />
+        <section className="relative overflow-hidden rounded-3xl border border-[rgba(201,162,39,0.14)] bg-[linear-gradient(135deg,rgba(7,22,43,0.96),rgba(5,12,26,0.98))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-8 lg:p-10">
+          <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-[#C9A227]/10 blur-3xl" />
           <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div
-                className="mb-4 inline-flex items-center gap-2 rounded-full border border-[rgba(0,212,200,0.3)] bg-[rgba(0,212,200,0.08)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#00D4C8]"
+                className="mb-4 inline-flex items-center gap-2 rounded-full border border-[rgba(201,162,39,0.3)] bg-[rgba(201,162,39,0.08)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#C9A227]"
                 style={{ fontFamily: "'JetBrains Mono', monospace" }}
               >
                 <ShieldCheck className="h-3.5 w-3.5" />
@@ -132,7 +132,7 @@ export default function Dashboard() {
               >
                 Live Integration Health
               </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-[#B7C5D8] sm:text-base">
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-[#D8D8D8] sm:text-base">
                 Verified GoHighLevel connection status for the locations currently persisted in EEOS.
                 Business metrics will be added only after the underlying live signals are verified.
               </p>
@@ -143,14 +143,14 @@ export default function Dashboard() {
                 type="button"
                 onClick={() => void loadConnections()}
                 disabled={status === "loading"}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[rgba(0,212,200,0.25)] bg-[rgba(0,212,200,0.08)] px-4 text-sm font-semibold text-[#BFFDF8] transition hover:border-[#00D4C8] hover:bg-[rgba(0,212,200,0.12)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[rgba(201,162,39,0.25)] bg-[rgba(201,162,39,0.08)] px-4 text-sm font-semibold text-[#FFFFFF] transition hover:border-[#C9A227] hover:bg-[rgba(201,162,39,0.12)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <RefreshCw className={`h-4 w-4 ${status === "loading" ? "animate-spin" : ""}`} />
                 Refresh
               </button>
               <Link
                 href="/connect-ghl"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#00D4C8] px-4 text-sm font-bold text-[#050C1A] shadow-[0_0_24px_rgba(0,212,200,0.3)] transition hover:bg-[#00E8DB]"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#C9A227] px-4 text-sm font-bold text-[#0B0B0B] shadow-[0_0_24px_rgba(201,162,39,0.3)] transition hover:bg-[#D8B84A]"
               >
                 Manage GoHighLevel Connections
                 <ArrowRight className="h-4 w-4" />
@@ -165,11 +165,11 @@ export default function Dashboard() {
           <SummaryCard icon={Database} label="Source of Truth" value="Backend" detail="No location IDs are owned by the frontend" />
         </section>
 
-        <section className="mt-6 rounded-3xl border border-[rgba(0,212,200,0.12)] bg-[rgba(7,20,38,0.82)] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.22)] sm:p-6">
-          <div className="flex flex-col gap-3 border-b border-[rgba(0,212,200,0.08)] pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <section className="mt-6 rounded-3xl border border-[rgba(201,162,39,0.12)] bg-[rgba(7,20,38,0.82)] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.22)] sm:p-6">
+          <div className="flex flex-col gap-3 border-b border-[rgba(201,162,39,0.08)] pb-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p
-                className="text-xs font-semibold uppercase tracking-[0.18em] text-[#00D4C8]"
+                className="text-xs font-semibold uppercase tracking-[0.18em] text-[#C9A227]"
                 style={{ fontFamily: "'JetBrains Mono', monospace" }}
               >
                 Integration Health
@@ -222,11 +222,11 @@ function SummaryCard({
   detail: string;
 }) {
   return (
-    <div className="rounded-2xl border border-[rgba(0,212,200,0.12)] bg-[rgba(7,20,38,0.78)] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.2)]">
+    <div className="rounded-2xl border border-[rgba(201,162,39,0.12)] bg-[rgba(7,20,38,0.78)] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.2)]">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p
-            className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8EA9C7]"
+            className="text-xs font-semibold uppercase tracking-[0.16em] text-[#B8B8B8]"
             style={{ fontFamily: "'JetBrains Mono', monospace" }}
           >
             {label}
@@ -234,9 +234,9 @@ function SummaryCard({
           <p className="mt-3 text-3xl font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {value}
           </p>
-          <p className="mt-2 text-sm text-[#B7C5D8]">{detail}</p>
+          <p className="mt-2 text-sm text-[#D8D8D8]">{detail}</p>
         </div>
-        <div className="rounded-xl border border-[rgba(0,212,200,0.18)] bg-[rgba(0,212,200,0.08)] p-3 text-[#00D4C8]">
+        <div className="rounded-xl border border-[rgba(201,162,39,0.18)] bg-[rgba(201,162,39,0.08)] p-3 text-[#C9A227]">
           <Icon className="h-5 w-5" />
         </div>
       </div>
@@ -246,7 +246,7 @@ function SummaryCard({
 
 function ConnectionCard({ connection }: { connection: GhlConnection }) {
   return (
-    <article className="rounded-2xl border border-[rgba(0,212,200,0.12)] bg-[#050F1D] p-5 transition hover:border-[rgba(0,212,200,0.28)]">
+    <article className="rounded-2xl border border-[rgba(201,162,39,0.12)] bg-[#FFFFFF] p-5 transition hover:border-[rgba(201,162,39,0.28)]">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -262,7 +262,7 @@ function ConnectionCard({ connection }: { connection: GhlConnection }) {
             </span>
           </div>
         </div>
-        <div className="rounded-xl border border-[rgba(0,212,200,0.18)] bg-[rgba(0,212,200,0.08)] p-2 text-[#00D4C8]">
+        <div className="rounded-xl border border-[rgba(201,162,39,0.18)] bg-[rgba(201,162,39,0.08)] p-2 text-[#C9A227]">
           <MapPin className="h-4 w-4" />
         </div>
       </div>
@@ -280,9 +280,9 @@ function ConnectionCard({ connection }: { connection: GhlConnection }) {
 
 function MetadataRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-3 border-t border-[rgba(0,212,200,0.06)] pt-3">
-      <dt className="text-[#8EA9C7]">{label}</dt>
-      <dd className="max-w-[60%] text-right text-[#E8EDF5]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+    <div className="flex items-start justify-between gap-3 border-t border-[rgba(201,162,39,0.06)] pt-3">
+      <dt className="text-[#B8B8B8]">{label}</dt>
+      <dd className="max-w-[60%] text-right text-[#FFFFFF]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
         {value}
       </dd>
     </div>
@@ -302,7 +302,7 @@ function StatePanel({
   tone?: "neutral" | "error";
   animate?: boolean;
 }) {
-  const color = tone === "error" ? "text-[#FCA5A5] border-[#EF4444]/25 bg-[#2A0808]" : "text-[#B7C5D8] border-[rgba(0,212,200,0.1)] bg-[#050F1D]";
+  const color = tone === "error" ? "text-[#FCA5A5] border-[#EF4444]/25 bg-[#2A0808]" : "text-[#D8D8D8] border-[rgba(201,162,39,0.1)] bg-[#FFFFFF]";
   return (
     <div className={`mt-5 flex min-h-56 flex-col items-center justify-center rounded-2xl border p-8 text-center ${color}`}>
       <Icon className={`h-8 w-8 ${animate ? "animate-spin" : ""}`} />
@@ -311,7 +311,7 @@ function StatePanel({
       </h3>
       <p className="mt-2 max-w-lg text-sm leading-6">{message}</p>
       {tone === "error" ? (
-        <Link href="/connect-ghl" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#00D4C8]">
+        <Link href="/connect-ghl" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#C9A227]">
           Review GoHighLevel connections
           <ExternalLink className="h-4 w-4" />
         </Link>

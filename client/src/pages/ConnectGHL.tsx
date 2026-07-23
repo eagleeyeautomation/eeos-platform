@@ -139,7 +139,7 @@ function SubaccountCard({
   const isLoading = entry.status === "loading" || entry.status === "connecting" || entry.status === "verifying";
   const hasError = entry.status === "error";
 
-  const statusColor = isConnected ? "#10B981" : hasError ? "#EF4444" : "#E8EDF5";
+  const statusColor = isConnected ? "#10B981" : hasError ? "#EF4444" : "#FFFFFF";
   const statusLabel = isConnected
     ? "Connected"
     : hasError
@@ -167,13 +167,13 @@ function SubaccountCard({
               ? "bg-[rgba(16,185,129,0.1)] border-[rgba(16,185,129,0.3)]"
               : hasError
               ? "bg-[rgba(239,68,68,0.08)] border-[rgba(239,68,68,0.2)]"
-              : "bg-[rgba(0,212,200,0.06)] border-[rgba(0,212,200,0.15)]"
+              : "bg-[rgba(201,162,39,0.06)] border-[rgba(201,162,39,0.15)]"
           }`}>
             <Building2 className="w-5 h-5" style={{ color: statusColor }} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <span className="text-sm font-semibold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 {entry.name || "New Subaccount"}
               </span>
               {isConnected && entry.ghlLocationName && entry.ghlLocationName !== entry.name && (
@@ -188,7 +188,7 @@ function SubaccountCard({
                 {statusLabel}
               </span>
               {entry.locationId && (
-                <span className="text-[10px] text-[#E8EDF5]/25" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                <span className="text-[10px] text-[#FFFFFF]/25" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   · {entry.locationId.slice(0, 8)}…
                 </span>
               )}
@@ -199,28 +199,28 @@ function SubaccountCard({
           {isConnected && (
             <button
               onClick={(e) => { e.stopPropagation(); onVerify(entry.key); }}
-              className="p-1.5 rounded-lg text-[#E8EDF5]/30 hover:text-[#00D4C8] transition-colors"
+              className="p-1.5 rounded-lg text-[#FFFFFF]/30 hover:text-[#C9A227] transition-colors"
               title="Re-verify connection"
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
           )}
           {entry.expanded ? (
-            <ChevronUp className="w-4 h-4 text-[#E8EDF5]/30" />
+            <ChevronUp className="w-4 h-4 text-[#FFFFFF]/30" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-[#E8EDF5]/30" />
+            <ChevronDown className="w-4 h-4 text-[#FFFFFF]/30" />
           )}
         </div>
       </div>
 
       {/* Expanded Form */}
       {entry.expanded && (
-        <div className="px-5 pb-5 border-t border-[rgba(0,212,200,0.06)]">
+        <div className="px-5 pb-5 border-t border-[rgba(201,162,39,0.06)]">
           <div className="pt-4 space-y-4">
 
             {/* Subaccount Name */}
             <div>
-              <label className="block text-[10px] font-bold text-[#E8EDF5]/50 uppercase tracking-wider mb-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <label className="block text-[10px] font-bold text-[#FFFFFF]/50 uppercase tracking-wider mb-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 Subaccount Name
               </label>
               <input
@@ -229,14 +229,14 @@ function SubaccountCard({
                 onChange={(e) => onChange(entry.key, "name", e.target.value)}
                 placeholder="Location name"
                 disabled={isConnected}
-                className="w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(0,212,200,0.15)] text-[#E8EDF5] text-sm placeholder-[#E8EDF5]/25 focus:outline-none focus:border-[rgba(0,212,200,0.4)] transition-colors disabled:opacity-50"
+                className="w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(201,162,39,0.15)] text-[#FFFFFF] text-sm placeholder-[#FFFFFF]/25 focus:outline-none focus:border-[rgba(201,162,39,0.4)] transition-colors disabled:opacity-50"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               />
             </div>
 
             {/* GHL Location ID */}
             <div>
-              <label className="block text-[10px] font-bold text-[#E8EDF5]/50 uppercase tracking-wider mb-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <label className="block text-[10px] font-bold text-[#FFFFFF]/50 uppercase tracking-wider mb-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 GHL Location ID
               </label>
               <input
@@ -245,30 +245,30 @@ function SubaccountCard({
                 onChange={(e) => onChange(entry.key, "locationId", e.target.value)}
                 placeholder="e.g. abc123xyz..."
                 disabled={isConnected}
-                className="w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(0,212,200,0.15)] text-[#E8EDF5] text-sm placeholder-[#E8EDF5]/25 focus:outline-none focus:border-[rgba(0,212,200,0.4)] transition-colors disabled:opacity-50 font-mono"
+                className="w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(201,162,39,0.15)] text-[#FFFFFF] text-sm placeholder-[#FFFFFF]/25 focus:outline-none focus:border-[rgba(201,162,39,0.4)] transition-colors disabled:opacity-50 font-mono"
               />
-              <p className="text-[10px] text-[#E8EDF5]/30 mt-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <p className="text-[10px] text-[#FFFFFF]/30 mt-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 Found in GHL → Settings → Business Profile → Location ID
               </p>
             </div>
 
             {/* Private Integration Token */}
             <div>
-              <label className="block text-[10px] font-bold text-[#E8EDF5]/50 uppercase tracking-wider mb-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <label className="block text-[10px] font-bold text-[#FFFFFF]/50 uppercase tracking-wider mb-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 Private Integration Token
               </label>
               <div className="relative">
-                <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#E8EDF5]/30" />
+                <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#FFFFFF]/30" />
                 <input
                   type="password"
                   value={entry.token}
                   onChange={(e) => onChange(entry.key, "token", e.target.value)}
                   placeholder="Paste your Private Integration Token here"
                   disabled={isConnected}
-                  className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(0,212,200,0.15)] text-[#E8EDF5] text-sm placeholder-[#E8EDF5]/25 focus:outline-none focus:border-[rgba(0,212,200,0.4)] transition-colors disabled:opacity-50 font-mono"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(201,162,39,0.15)] text-[#FFFFFF] text-sm placeholder-[#FFFFFF]/25 focus:outline-none focus:border-[rgba(201,162,39,0.4)] transition-colors disabled:opacity-50 font-mono"
                 />
               </div>
-              <p className="text-[10px] text-[#E8EDF5]/30 mt-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <p className="text-[10px] text-[#FFFFFF]/30 mt-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 Found in GHL → Settings → Integrations → Private Integrations
               </p>
             </div>
@@ -315,7 +315,7 @@ function SubaccountCard({
                 <button
                   onClick={() => onConnect(entry.key)}
                   disabled={isLoading || !entry.locationId.trim() || !entry.token.trim() || !entry.name.trim()}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_16px_rgba(0,212,200,0.3)]"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_16px_rgba(201,162,39,0.3)]"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   {isLoading ? (
@@ -567,14 +567,14 @@ export default function ConnectGHL() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* Hero */}
       <section className="pt-28 pb-12 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-20 right-0 w-[500px] h-[500px] rounded-full opacity-[0.04]"
-            style={{ background: "radial-gradient(circle, #00D4C8 0%, transparent 70%)" }} />
+            style={{ background: "radial-gradient(circle, #C9A227 0%, transparent 70%)" }} />
         </div>
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative">
@@ -588,12 +588,12 @@ export default function ConnectGHL() {
                 </span>
               </div>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight mb-3" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <h1 className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight mb-3" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Connect GoHighLevel
               <br />
               <span className="gradient-text">to the Intelligence Engine</span>
             </h1>
-            <p className="text-[#E8EDF5]/60 text-sm leading-relaxed max-w-2xl">
+            <p className="text-[#FFFFFF]/60 text-sm leading-relaxed max-w-2xl">
               Connect each GoHighLevel subaccount using its Private Integration Token. The EEOS Intelligence Engine reads approved signals from each location and generates executive recommendations scoped to that operational division.
             </p>
           </div>
@@ -621,16 +621,16 @@ export default function ConnectGHL() {
         {/* Auth Gate */}
         {!isAuthenticated && (
           <div className="glass-card rounded-2xl p-8 text-center">
-            <Lock className="w-10 h-10 text-[#E8EDF5]/20 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold text-[#E8EDF5] mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <Lock className="w-10 h-10 text-[#FFFFFF]/20 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-[#FFFFFF] mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Sign in to connect GoHighLevel
             </h3>
-            <p className="text-sm text-[#E8EDF5]/50 mb-5">
+            <p className="text-sm text-[#FFFFFF]/50 mb-5">
               Your Private Integration Tokens are stored securely and scoped to your EEOS account.
             </p>
             <button
               onClick={() => startLogin()}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               <Zap className="w-4 h-4" />
@@ -646,47 +646,47 @@ export default function ConnectGHL() {
             className="w-full flex items-center justify-between p-5 hover:bg-[rgba(255,255,255,0.02)] transition-colors"
           >
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[rgba(0,212,200,0.08)] border border-[rgba(0,212,200,0.15)] flex items-center justify-center">
-                <Info className="w-4 h-4 text-[#00D4C8]" />
+              <div className="w-8 h-8 rounded-lg bg-[rgba(201,162,39,0.08)] border border-[rgba(201,162,39,0.15)] flex items-center justify-center">
+                <Info className="w-4 h-4 text-[#C9A227]" />
               </div>
               <div className="text-left">
-                <div className="text-sm font-semibold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <div className="text-sm font-semibold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   How to get a Private Integration Token
                 </div>
-                <div className="text-[10px] text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                <div className="text-[10px] text-[#FFFFFF]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   Step-by-step instructions for each GHL location
                 </div>
               </div>
             </div>
             {showInstructions ? (
-              <ChevronUp className="w-4 h-4 text-[#E8EDF5]/30" />
+              <ChevronUp className="w-4 h-4 text-[#FFFFFF]/30" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-[#E8EDF5]/30" />
+              <ChevronDown className="w-4 h-4 text-[#FFFFFF]/30" />
             )}
           </button>
 
           {showInstructions && (
-            <div className="px-5 pb-5 border-t border-[rgba(0,212,200,0.06)]">
+            <div className="px-5 pb-5 border-t border-[rgba(201,162,39,0.06)]">
               <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {PIT_INSTRUCTIONS.map((item) => (
                   <div key={item.step} className="flex items-start gap-3">
-                    <div className="w-7 h-7 rounded-lg bg-[rgba(0,212,200,0.08)] border border-[rgba(0,212,200,0.15)] flex items-center justify-center shrink-0 mt-0.5">
-                      <span className="text-[10px] font-bold text-[#00D4C8]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{item.step}</span>
+                    <div className="w-7 h-7 rounded-lg bg-[rgba(201,162,39,0.08)] border border-[rgba(201,162,39,0.15)] flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[10px] font-bold text-[#C9A227]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{item.step}</span>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold text-[#E8EDF5] mb-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.title}</div>
-                      <p className="text-[11px] text-[#E8EDF5]/50 leading-relaxed">{item.description}</p>
+                      <div className="text-xs font-semibold text-[#FFFFFF] mb-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.title}</div>
+                      <p className="text-[11px] text-[#FFFFFF]/50 leading-relaxed">{item.description}</p>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="mt-4 pt-4 border-t border-[rgba(0,212,200,0.06)] flex items-center gap-2">
-                <ExternalLink className="w-3.5 h-3.5 text-[#00D4C8]" />
+              <div className="mt-4 pt-4 border-t border-[rgba(201,162,39,0.06)] flex items-center gap-2">
+                <ExternalLink className="w-3.5 h-3.5 text-[#C9A227]" />
                 <a
                   href="https://help.gohighlevel.com/support/solutions/articles/155000002166-private-integrations"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-[#00D4C8] hover:text-[#00E8DB] transition-colors"
+                  className="text-xs text-[#C9A227] hover:text-[#D8B84A] transition-colors"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 >
                   GHL Private Integrations Documentation →
@@ -700,16 +700,16 @@ export default function ConnectGHL() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-base font-semibold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <h2 className="text-base font-semibold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 GoHighLevel Subaccounts
               </h2>
-              <p className="text-[11px] text-[#E8EDF5]/40 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <p className="text-[11px] text-[#FFFFFF]/40 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 Each subaccount is an operational division with its own IE pipeline
               </p>
             </div>
             <button
               onClick={addSubaccount}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.2)] rounded-lg hover:bg-[rgba(0,212,200,0.06)] transition-all duration-200"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.2)] rounded-lg hover:bg-[rgba(201,162,39,0.06)] transition-all duration-200"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               + Add Subaccount
@@ -719,8 +719,8 @@ export default function ConnectGHL() {
           <div className="space-y-4">
             {connectionLoadStatus === "loading" && (
               <div className="glass-card rounded-2xl p-5 flex items-center gap-3">
-                <Loader2 className="w-4 h-4 animate-spin text-[#00D4C8]" />
-                <span className="text-sm text-[#E8EDF5]/60" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <Loader2 className="w-4 h-4 animate-spin text-[#C9A227]" />
+                <span className="text-sm text-[#FFFFFF]/60" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   Loading persisted GoHighLevel connections...
                 </span>
               </div>
@@ -740,11 +740,11 @@ export default function ConnectGHL() {
 
             {connectionLoadStatus !== "loading" && subaccounts.length === 0 && (
               <div className="glass-card rounded-2xl p-5 text-center">
-                <Plug className="w-8 h-8 text-[#E8EDF5]/20 mx-auto mb-3" />
-                <p className="text-sm font-semibold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <Plug className="w-8 h-8 text-[#FFFFFF]/20 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   No persisted GoHighLevel connections yet
                 </p>
-                <p className="text-xs text-[#E8EDF5]/45 mt-1">
+                <p className="text-xs text-[#FFFFFF]/45 mt-1">
                   Add a subaccount to connect a GoHighLevel location.
                 </p>
               </div>
@@ -774,10 +774,10 @@ export default function ConnectGHL() {
               { icon: Database, text: "Signals are processed in real time, not bulk-copied" },
             ].map((point, i) => (
               <div key={i} className="flex items-start gap-2.5">
-                <div className="w-6 h-6 rounded-md bg-[rgba(0,212,200,0.06)] border border-[rgba(0,212,200,0.12)] flex items-center justify-center shrink-0 mt-0.5">
-                  <point.icon className="w-3 h-3 text-[#00D4C8]" />
+                <div className="w-6 h-6 rounded-md bg-[rgba(201,162,39,0.06)] border border-[rgba(201,162,39,0.12)] flex items-center justify-center shrink-0 mt-0.5">
+                  <point.icon className="w-3 h-3 text-[#C9A227]" />
                 </div>
-                <p className="text-xs text-[#E8EDF5]/55 leading-relaxed">{point.text}</p>
+                <p className="text-xs text-[#FFFFFF]/55 leading-relaxed">{point.text}</p>
               </div>
             ))}
           </div>
@@ -790,7 +790,7 @@ export default function ConnectGHL() {
             <div className="space-y-3">
               <Link
                 href="/executive-home"
-                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-[rgba(0,212,200,0.08)] border border-[rgba(0,212,200,0.2)] text-[#00D4C8] hover:bg-[rgba(0,212,200,0.12)] transition-all duration-200"
+                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-[rgba(201,162,39,0.08)] border border-[rgba(201,162,39,0.2)] text-[#C9A227] hover:bg-[rgba(201,162,39,0.12)] transition-all duration-200"
               >
                 <Zap className="w-4 h-4 shrink-0" />
                 <span className="text-sm font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -800,7 +800,7 @@ export default function ConnectGHL() {
               </Link>
               <Link
                 href="/ai-recommendations"
-                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl border border-[rgba(0,212,200,0.1)] text-[#E8EDF5]/65 hover:text-[#E8EDF5]/90 hover:border-[rgba(0,212,200,0.2)] transition-all duration-200"
+                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl border border-[rgba(201,162,39,0.1)] text-[#FFFFFF]/65 hover:text-[#FFFFFF]/90 hover:border-[rgba(201,162,39,0.2)] transition-all duration-200"
               >
                 <Database className="w-4 h-4 shrink-0" />
                 <span className="text-sm font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>

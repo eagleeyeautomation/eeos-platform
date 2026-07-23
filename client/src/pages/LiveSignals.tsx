@@ -42,7 +42,7 @@ const SIGNAL_ICONS: Record<string, React.ComponentType<{ className?: string; sty
 
 const SEVERITY_CONFIG: Record<string, { color: string; bg: string; border: string }> = {
   positive: { color: "#10B981", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.2)" },
-  neutral: { color: "#00D4C8", bg: "rgba(0,212,200,0.06)", border: "rgba(0,212,200,0.15)" },
+  neutral: { color: "#C9A227", bg: "rgba(201,162,39,0.06)", border: "rgba(201,162,39,0.15)" },
   warning: { color: "#F59E0B", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)" },
   critical: { color: "#EF4444", bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)" },
 };
@@ -112,11 +112,11 @@ export default function LiveSignals() {
   const criticalCount = signals.filter(s => severityFromSignalType(s.signalType) === "critical").length;
 
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* Header */}
-      <section className="pt-24 pb-6 bg-[#050C1A] scan-grid">
+      <section className="pt-24 pb-6 bg-[#0B0B0B] scan-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -135,10 +135,10 @@ export default function LiveSignals() {
                     </div>
                   )}
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <h1 className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   Live Signal Feed
                 </h1>
-                <p className="text-sm text-[#E8EDF5]/50 mt-1 max-w-xl">
+                <p className="text-sm text-[#FFFFFF]/50 mt-1 max-w-xl">
                   Every signal is a raw GoHighLevel event processed by the EEOS Signal Pipeline — the input layer for the Intelligence Engine.
                 </p>
               </div>
@@ -146,7 +146,7 @@ export default function LiveSignals() {
                 <button
                   onClick={() => refetch()}
                   disabled={isFetching}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.3)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200 disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200 disabled:opacity-50"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   {isFetching ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
@@ -154,7 +154,7 @@ export default function LiveSignals() {
                 </button>
                 <Link
                   href="/connect-ghl"
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(0,212,200,0.3)]"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)]"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   <Zap className="w-4 h-4" />
@@ -177,8 +177,8 @@ export default function LiveSignals() {
                   onClick={() => setSelectedTenantId(sub.ghlLocationId)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
                     tenantId === sub.ghlLocationId
-                      ? "bg-[rgba(0,212,200,0.12)] text-[#00D4C8] border border-[rgba(0,212,200,0.3)]"
-                      : "text-[#E8EDF5]/50 hover:text-[#E8EDF5]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
+                      ? "bg-[rgba(201,162,39,0.12)] text-[#C9A227] border border-[rgba(201,162,39,0.3)]"
+                      : "text-[#FFFFFF]/50 hover:text-[#FFFFFF]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
                   }`}
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
@@ -197,7 +197,7 @@ export default function LiveSignals() {
           <AnimatedSection delay={100}>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: `Signals (${hours}h)`, value: signals.length.toString(), color: "#00D4C8", icon: Activity },
+                { label: `Signals (${hours}h)`, value: signals.length.toString(), color: "#C9A227", icon: Activity },
                 { label: "Positive Events", value: positiveCount.toString(), color: "#10B981", icon: CheckCircle2 },
                 { label: "Warnings", value: warningCount.toString(), color: "#F59E0B", icon: AlertTriangle },
                 { label: "Critical", value: criticalCount.toString(), color: "#EF4444", icon: AlertTriangle },
@@ -205,7 +205,7 @@ export default function LiveSignals() {
                 <div key={stat.label} className="glass-card rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
-                    <span className="text-[10px] text-[#E8EDF5]/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    <span className="text-[10px] text-[#FFFFFF]/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       {stat.label.toUpperCase()}
                     </span>
                   </div>
@@ -231,8 +231,8 @@ export default function LiveSignals() {
                   onClick={() => setHours(h)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
                     hours === h
-                      ? "bg-[rgba(0,212,200,0.12)] text-[#00D4C8] border border-[rgba(0,212,200,0.3)]"
-                      : "text-[#E8EDF5]/40 hover:text-[#E8EDF5]/70 border border-transparent"
+                      ? "bg-[rgba(201,162,39,0.12)] text-[#C9A227] border border-[rgba(201,162,39,0.3)]"
+                      : "text-[#FFFFFF]/40 hover:text-[#FFFFFF]/70 border border-transparent"
                   }`}
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 >
@@ -245,7 +245,7 @@ export default function LiveSignals() {
 
             {/* Severity filter */}
             <div className="flex items-center gap-1">
-              <Filter className="w-3.5 h-3.5 text-[#E8EDF5]/30" />
+              <Filter className="w-3.5 h-3.5 text-[#FFFFFF]/30" />
               {(["all", "positive", "neutral", "warning", "critical"] as const).map((f) => {
                 const count = f === "all" ? signals.length : signals.filter(s => severityFromSignalType(s.signalType) === f).length;
                 return (
@@ -254,8 +254,8 @@ export default function LiveSignals() {
                     onClick={() => setFilter(f)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 capitalize ${
                       filter === f
-                        ? "bg-[rgba(0,212,200,0.12)] text-[#00D4C8] border border-[rgba(0,212,200,0.3)]"
-                        : "text-[#E8EDF5]/50 hover:text-[#E8EDF5]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
+                        ? "bg-[rgba(201,162,39,0.12)] text-[#C9A227] border border-[rgba(201,162,39,0.3)]"
+                        : "text-[#FFFFFF]/50 hover:text-[#FFFFFF]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
                     }`}
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
@@ -275,7 +275,7 @@ export default function LiveSignals() {
           {/* Loading */}
           {isLoading && (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 text-[#00D4C8] animate-spin" />
+              <Loader2 className="w-8 h-8 text-[#C9A227] animate-spin" />
             </div>
           )}
 
@@ -283,16 +283,16 @@ export default function LiveSignals() {
           {!tenantId && !isLoading && (
             <AnimatedSection>
               <div className="text-center py-20 glass-card rounded-2xl">
-                <Activity className="w-12 h-12 text-[#E8EDF5]/20 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-[#E8EDF5]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <Activity className="w-12 h-12 text-[#FFFFFF]/20 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-[#FFFFFF]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   No GoHighLevel subaccounts connected
                 </h3>
-                <p className="text-sm text-[#E8EDF5]/30 mb-6">
+                <p className="text-sm text-[#FFFFFF]/30 mb-6">
                   Connect your GoHighLevel subaccounts to stream real business signals.
                 </p>
                 <Link
                   href="/connect-ghl"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   <Zap className="w-4 h-4" />
@@ -306,14 +306,14 @@ export default function LiveSignals() {
           {tenantId && !isLoading && signals.length === 0 && (
             <AnimatedSection>
               <div className="text-center py-20 glass-card rounded-2xl">
-                <Activity className="w-12 h-12 text-[#E8EDF5]/20 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-[#E8EDF5]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <Activity className="w-12 h-12 text-[#FFFFFF]/20 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-[#FFFFFF]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   No signals in the last {hours < 24 ? `${hours} hours` : hours === 24 ? "24 hours" : hours === 48 ? "2 days" : "7 days"}
                 </h3>
-                <p className="text-sm text-[#E8EDF5]/30 mb-4">
+                <p className="text-sm text-[#FFFFFF]/30 mb-4">
                   Signals appear here when GoHighLevel sends webhook events to EEOS.
                 </p>
-                <p className="text-xs text-[#E8EDF5]/25" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                <p className="text-xs text-[#FFFFFF]/25" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   Webhook endpoint: POST /api/ghl/webhook
                 </p>
               </div>
@@ -335,7 +335,7 @@ export default function LiveSignals() {
                 return (
                   <AnimatedSection key={signal.id} delay={i * 30}>
                     <div
-                      className="flex items-start gap-4 p-4 rounded-xl border transition-all duration-200 hover:border-[rgba(0,212,200,0.2)]"
+                      className="flex items-start gap-4 p-4 rounded-xl border transition-all duration-200 hover:border-[rgba(201,162,39,0.2)]"
                       style={{ background: sConfig.bg, borderColor: sConfig.border }}
                       role="listitem"
                     >
@@ -347,7 +347,7 @@ export default function LiveSignals() {
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                          <span className="text-sm font-semibold text-[#E8EDF5]">
+                          <span className="text-sm font-semibold text-[#FFFFFF]">
                             {titleFromSignalType(signal.signalType)}
                           </span>
                           {!signal.processed && (
@@ -362,14 +362,14 @@ export default function LiveSignals() {
                           )}
                         </div>
                         {entityName && (
-                          <p className="text-sm text-[#E8EDF5]/60 leading-snug">{entityName}</p>
+                          <p className="text-sm text-[#FFFFFF]/60 leading-snug">{entityName}</p>
                         )}
                         <div className="flex flex-wrap items-center gap-3 mt-1.5">
-                          <span className="text-[10px] text-[#E8EDF5]/35" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          <span className="text-[10px] text-[#FFFFFF]/35" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                             GoHighLevel
                           </span>
                           {signal.sourceEventId && (
-                            <span className="text-[10px] text-[#E8EDF5]/25" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                            <span className="text-[10px] text-[#FFFFFF]/25" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                               {signal.sourceEventId}
                             </span>
                           )}
@@ -378,7 +378,7 @@ export default function LiveSignals() {
 
                       {/* Right */}
                       <div className="flex flex-col items-end gap-1 shrink-0">
-                        <div className="flex items-center gap-1 text-[10px] text-[#E8EDF5]/35">
+                        <div className="flex items-center gap-1 text-[10px] text-[#FFFFFF]/35">
                           <Clock className="w-3 h-3" />
                           <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                             {timeAgo(signal.receivedAt)}
@@ -395,8 +395,8 @@ export default function LiveSignals() {
           {/* No results for filter */}
           {tenantId && !isLoading && signals.length > 0 && filtered.length === 0 && (
             <div className="text-center py-12 glass-card rounded-2xl">
-              <p className="text-sm text-[#E8EDF5]/40">No "{filter}" signals in this time range.</p>
-              <button onClick={() => setFilter("all")} className="mt-3 text-xs text-[#00D4C8] hover:text-[#00E8DB] transition-colors" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <p className="text-sm text-[#FFFFFF]/40">No "{filter}" signals in this time range.</p>
+              <button onClick={() => setFilter("all")} className="mt-3 text-xs text-[#C9A227] hover:text-[#D8B84A] transition-colors" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 Show all →
               </button>
             </div>

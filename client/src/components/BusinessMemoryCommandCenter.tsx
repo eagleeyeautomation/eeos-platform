@@ -260,15 +260,15 @@ export default function BusinessMemoryCommandCenter() {
   }
 
   return (
-    <section data-testid="business-memory-command-center" className="rounded-lg border border-[#0EA5E9]/30 bg-[#061527] p-5 shadow-[0_24px_80px_rgba(14,165,233,0.06)]">
+    <section data-testid="business-memory-command-center" className="rounded-lg border border-[#C9A227]/30 bg-[#FFFFFF] p-5 shadow-[0_24px_80px_rgba(201,162,39,0.06)]">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#38BDF8]/35 bg-[#08233D] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#7DD3FC]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#8C6F12]">
             <BookOpen className="h-3.5 w-3.5" />
             Business Memory Command Center
           </div>
           <h2 className="mt-3 text-2xl font-semibold text-white">Strategic Continuity and Accountability</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#B7C5D8]">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#D8D8D8]">
             User-entered goals, priorities, decisions, outcomes, milestones, and lessons learned that shape future EEOS recommendations.
           </p>
         </div>
@@ -279,7 +279,7 @@ export default function BusinessMemoryCommandCenter() {
             type="button"
             onClick={() => void loadMemory()}
             disabled={loading}
-            className="inline-flex h-8 items-center gap-2 rounded-md border border-[#1D4F73] bg-[#08233D] px-3 text-xs font-semibold text-[#DDF7FF] transition hover:border-[#38BDF8] hover:bg-[#0B2D4D] disabled:opacity-60"
+            className="inline-flex h-8 items-center gap-2 rounded-md border border-[#D9C579] bg-[#F8F4E8] px-3 text-xs font-semibold text-[#0B0B0B] transition hover:border-[#C9A227] hover:bg-[#F1E7C5] disabled:opacity-60"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
             Refresh Memory
@@ -385,10 +385,10 @@ export default function BusinessMemoryCommandCenter() {
               {influencedRecommendations.length === 0 ? <EmptyText text="No current recommendations show memory influence." /> : (
                 <div className="space-y-3">
                   {influencedRecommendations.slice(0, 6).map((recommendation) => (
-                    <div key={recommendation.id} className="rounded-md border border-[#12314D] bg-[#050F1D] p-4">
+                    <div key={recommendation.id} className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full border border-[#38BDF8]/35 bg-[#08233D] px-2 py-0.5 text-xs font-semibold text-[#7DD3FC]">Memory influenced</span>
-                        <span className="text-xs uppercase tracking-[0.14em] text-[#86A6C8]">{recommendation.category}</span>
+                        <span className="rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] px-2 py-0.5 text-xs font-semibold text-[#8C6F12]">Memory influenced</span>
+                        <span className="text-xs uppercase tracking-[0.14em] text-[#B8B8B8]">{recommendation.category}</span>
                       </div>
                       <p className="mt-2 text-sm text-white">{recommendation.observation}</p>
                       <MemoryInfluenceList recommendation={recommendation} />
@@ -435,8 +435,8 @@ function MemoryPanel({ icon: Icon, title, empty: _empty, children }: {
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-md border border-[#12314D] bg-[#071426] p-4">
-      <div className="flex items-center gap-2 text-[#38BDF8]">
+    <div className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4">
+      <div className="flex items-center gap-2 text-[#C9A227]">
         <Icon className="h-4 w-4" />
         <h3 className="text-sm font-semibold uppercase tracking-[0.14em]">{title}</h3>
       </div>
@@ -455,7 +455,7 @@ function MemoryRecordList({ records, endpoint, onUpdate }: {
   return (
     <div className="mt-4 space-y-3">
       {records.map((record) => (
-        <div key={record.id} className="rounded-md border border-[#12314D] bg-[#050F1D] p-3">
+        <div key={record.id} className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-3">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -463,14 +463,14 @@ function MemoryRecordList({ records, endpoint, onUpdate }: {
                 <StatusBadge status={record.status} />
               </div>
               <p className="mt-2 text-sm font-semibold text-white">{record.title}</p>
-              <p className="mt-1 text-xs leading-5 text-[#B7C5D8]">{record.description}</p>
+              <p className="mt-1 text-xs leading-5 text-[#D8D8D8]">{record.description}</p>
               <MetadataLine record={record} />
             </div>
             <div className="flex min-w-[160px] gap-2">
               <select
                 aria-label={`Update ${record.title} status`}
                 defaultValue={record.status}
-                className="h-8 flex-1 rounded-md border border-[#1D4F73] bg-[#061527] px-2 text-xs text-white"
+                className="h-8 flex-1 rounded-md border border-[#D9C579] bg-[#FFFFFF] px-2 text-xs text-white"
                 onChange={(event) => void onUpdate(`/api/prn/business-memory/${endpoint}/${record.id}`, { status: event.target.value })}
               >
                 {[...goalStatuses, "active", "archived", "reviewed"].map((status) => <option key={status} value={status}>{status}</option>)}
@@ -493,9 +493,9 @@ function PriorityRow({ priority, index, total, onUpdate }: {
   const path = `/api/prn/business-memory/priorities/${priority.id}`;
 
   return (
-    <div className="rounded-md border border-[#12314D] bg-[#050F1D] p-3">
+    <div className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-3">
       <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-center">
-        <input value={title} onChange={(event) => setTitle(event.target.value)} className="h-9 rounded-md border border-[#1D4F73] bg-[#061527] px-3 text-sm text-white" />
+        <input value={title} onChange={(event) => setTitle(event.target.value)} className="h-9 rounded-md border border-[#D9C579] bg-[#FFFFFF] px-3 text-sm text-[#0B0B0B]" />
         <div className="flex flex-wrap gap-2">
           <IconButton label="Save priority" onClick={() => void onUpdate(path, { title })} icon={Save} />
           <IconButton label="Move up" onClick={() => void onUpdate(path, { sortOrder: Math.max(1, index) })} icon={Flag} disabled={index === 0} />
@@ -518,18 +518,18 @@ function OutcomeList({ outcomes, onUpdate }: {
   return (
     <div className="mt-4 space-y-3">
       {outcomes.map((outcome) => (
-        <div key={outcome.id} className="rounded-md border border-[#12314D] bg-[#050F1D] p-3">
+        <div key={outcome.id} className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-3">
           <div className="flex flex-wrap items-center gap-2">
             <SourceBadge source={outcome.source} />
             <StatusBadge status={outcome.result} />
           </div>
           <p className="mt-2 text-sm font-semibold text-white">{outcome.recommendationId}</p>
-          <p className="mt-1 text-xs text-[#B7C5D8]">Action: {outcome.actionTaken}</p>
-          <p className="mt-1 text-xs text-[#B7C5D8]">Expected: {outcome.expectedOutcome}</p>
-          <p className="mt-1 text-xs text-[#B7C5D8]">Actual: {outcome.actualOutcome}</p>
+          <p className="mt-1 text-xs text-[#D8D8D8]">Action: {outcome.actionTaken}</p>
+          <p className="mt-1 text-xs text-[#D8D8D8]">Expected: {outcome.expectedOutcome}</p>
+          <p className="mt-1 text-xs text-[#D8D8D8]">Actual: {outcome.actualOutcome}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {outcomeResults.map((result) => (
-              <button key={result} type="button" onClick={() => void onUpdate(`/api/prn/business-memory/outcomes/${outcome.id}`, { result, status: "reviewed" })} className="rounded-md border border-[#1D4F73] px-2 py-1 text-xs text-[#DDF7FF] hover:border-[#38BDF8]">
+              <button key={result} type="button" onClick={() => void onUpdate(`/api/prn/business-memory/outcomes/${outcome.id}`, { result, status: "reviewed" })} className="rounded-md border border-[#D9C579] px-2 py-1 text-xs text-[#0B0B0B] hover:border-[#C9A227]">
                 {result}
               </button>
             ))}
@@ -546,10 +546,10 @@ function Timeline({ items }: { items: ReturnType<typeof buildMilestoneTimeline> 
   return (
     <div className="mt-4 space-y-3">
       {items.map((item) => (
-        <div key={item.id} className="border-l border-[#38BDF8]/35 pl-4">
-          <p className="text-xs uppercase tracking-[0.14em] text-[#7DD3FC]">{item.category} - {formatDate(item.date)}</p>
+        <div key={item.id} className="border-l border-[#C9A227]/35 pl-4">
+          <p className="text-xs uppercase tracking-[0.14em] text-[#8C6F12]">{item.category} - {formatDate(item.date)}</p>
           <p className="mt-1 text-sm font-semibold text-white">{item.title}</p>
-          <p className="mt-1 text-xs leading-5 text-[#B7C5D8]">{item.description}</p>
+          <p className="mt-1 text-xs leading-5 text-[#D8D8D8]">{item.description}</p>
           {item.lesson ? <p className="mt-1 text-xs text-[#A7F3D0]">Lesson learned: {item.lesson}</p> : null}
         </div>
       ))}
@@ -571,8 +571,8 @@ function MemoryInfluenceList({ recommendation }: { recommendation: IntelligenceR
     <div className="mt-3 space-y-2">
       {rows.map(([label, values]) => (
         <div key={label}>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#86A6C8]">{label}</p>
-          <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-[#B7C5D8]">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#B8B8B8]">{label}</p>
+          <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-[#D8D8D8]">
             {values.map((value) => <li key={value}>{value}</li>)}
           </ul>
         </div>
@@ -588,32 +588,32 @@ function MetadataLine({ record }: { record: MemoryRecord }) {
     readText(record.metadata?.priority) ? `Priority: ${readText(record.metadata?.priority)}` : "",
     readText(record.metadata?.owner) ? `Owner: ${readText(record.metadata?.owner)}` : "",
   ].filter(Boolean);
-  return values.length > 0 ? <p className="mt-2 text-xs text-[#7D91AA]">{values.join(" | ")}</p> : null;
+  return values.length > 0 ? <p className="mt-2 text-xs text-[#A0A0A0]">{values.join(" | ")}</p> : null;
 }
 
 function TextInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#86A6C8]">
+    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#B8B8B8]">
       {label}
-      <input value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-[#1D4F73] bg-[#050F1D] px-3 text-sm normal-case tracking-normal text-white outline-none focus:border-[#38BDF8]" />
+      <input value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-[#D9C579] bg-[#FFFFFF] px-3 text-sm normal-case tracking-normal text-[#0B0B0B] outline-none focus:border-[#C9A227]" />
     </label>
   );
 }
 
 function DateInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#86A6C8]">
+    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#B8B8B8]">
       {label}
-      <input type="date" value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-[#1D4F73] bg-[#050F1D] px-3 text-sm normal-case tracking-normal text-white outline-none focus:border-[#38BDF8]" />
+      <input type="date" value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-[#D9C579] bg-[#FFFFFF] px-3 text-sm normal-case tracking-normal text-[#0B0B0B] outline-none focus:border-[#C9A227]" />
     </label>
   );
 }
 
 function SelectInput({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
   return (
-    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#86A6C8]">
+    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#B8B8B8]">
       {label}
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-[#1D4F73] bg-[#050F1D] px-3 text-sm normal-case tracking-normal text-white outline-none focus:border-[#38BDF8]">
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-[#D9C579] bg-[#FFFFFF] px-3 text-sm normal-case tracking-normal text-[#0B0B0B] outline-none focus:border-[#C9A227]">
         {options.map((option) => <option key={option} value={option}>{option || "Select"}</option>)}
       </select>
     </label>
@@ -622,7 +622,7 @@ function SelectInput({ label, value, options, onChange }: { label: string; value
 
 function ActionButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
   return (
-    <button type="button" onClick={onClick} disabled={disabled} className="inline-flex h-9 items-center justify-center gap-2 self-end rounded-md border border-[#38BDF8]/40 bg-[#08233D] px-3 text-xs font-semibold text-[#DDF7FF] transition hover:border-[#7DD3FC] hover:bg-[#0B2D4D] disabled:opacity-60">
+    <button type="button" onClick={onClick} disabled={disabled} className="inline-flex h-9 items-center justify-center gap-2 self-end rounded-md border border-[#C9A227]/40 bg-[#F8F4E8] px-3 text-xs font-semibold text-[#0B0B0B] transition hover:border-[#8C6F12] hover:bg-[#F1E7C5] disabled:opacity-60">
       <Save className="h-3.5 w-3.5" />
       {label}
     </button>
@@ -631,7 +631,7 @@ function ActionButton({ label, onClick, disabled }: { label: string; onClick: ()
 
 function IconButton({ label, onClick, icon: Icon, disabled }: { label: string; onClick: () => void; icon: typeof Save; disabled?: boolean }) {
   return (
-    <button type="button" aria-label={label} title={label} onClick={onClick} disabled={disabled} className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#1D4F73] bg-[#061527] text-[#DDF7FF] transition hover:border-[#38BDF8] disabled:opacity-40">
+    <button type="button" aria-label={label} title={label} onClick={onClick} disabled={disabled} className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#D9C579] bg-[#FFFFFF] text-[#0B0B0B] transition hover:border-[#C9A227] disabled:opacity-40">
       <Icon className="h-3.5 w-3.5" />
     </button>
   );
@@ -639,19 +639,19 @@ function IconButton({ label, onClick, icon: Icon, disabled }: { label: string; o
 
 function SourceBadge({ source }: { source: "user" | "system" | string }) {
   return (
-    <span className={`inline-flex w-fit rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.12em] ${source === "user" ? "border-[#10B981]/35 bg-[#05291F] text-[#A7F3D0]" : "border-[#38BDF8]/35 bg-[#08233D] text-[#7DD3FC]"}`}>
+    <span className={`inline-flex w-fit rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.12em] ${source === "user" ? "border-[#10B981]/35 bg-[#05291F] text-[#A7F3D0]" : "border-[#C9A227]/35 bg-[#F8F4E8] text-[#8C6F12]"}`}>
       {source === "user" ? "User-entered" : "System-generated"}
     </span>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
-  return <span className="inline-flex w-fit rounded-full border border-[#1D4F73] bg-[#061527] px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.12em] text-[#DDF7FF]">{status}</span>;
+  return <span className="inline-flex w-fit rounded-full border border-[#D9C579] bg-[#FFFFFF] px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.12em] text-[#0B0B0B]">{status}</span>;
 }
 
 function MemoryState({ title, message, tone = "empty" }: { title: string; message: string; tone?: "empty" | "error" }) {
   return (
-    <div className={`mt-5 rounded-md border p-4 text-sm ${tone === "error" ? "border-[#F59E0B]/35 bg-[#2A1C05] text-[#FBBF24]" : "border-[#12314D] bg-[#050F1D] text-[#B7C5D8]"}`}>
+    <div className={`mt-5 rounded-md border p-4 text-sm ${tone === "error" ? "border-[#F59E0B]/35 bg-[#2A1C05] text-[#FBBF24]" : "border-[#E7D8A3] bg-[#FFFFFF] text-[#D8D8D8]"}`}>
       <p className="font-semibold text-white">{title}</p>
       <p className="mt-1">{message}</p>
     </div>
@@ -659,7 +659,7 @@ function MemoryState({ title, message, tone = "empty" }: { title: string; messag
 }
 
 function EmptyText({ text }: { text: string }) {
-  return <p className="rounded-md border border-[#12314D] bg-[#050F1D] p-3 text-sm text-[#7D91AA]">{text}</p>;
+  return <p className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-3 text-sm text-[#A0A0A0]">{text}</p>;
 }
 
 function readText(value: unknown) {

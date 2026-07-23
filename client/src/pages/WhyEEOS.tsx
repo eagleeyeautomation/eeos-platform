@@ -66,16 +66,16 @@ const TESTIMONIALS = [
 
 export default function WhyEEOS() {
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* Hero */}
-      <section className="pt-32 pb-20 bg-[#050C1A] scan-grid">
+      <section className="pt-32 pb-20 bg-[#0B0B0B] scan-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="max-w-3xl">
             <div className="section-label mb-4">The Case for EEOS</div>
             <h1
-              className="text-5xl sm:text-6xl font-bold text-[#E8EDF5] tracking-tight mb-6"
+              className="text-5xl sm:text-6xl font-bold text-[#FFFFFF] tracking-tight mb-6"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               The information gap
@@ -84,7 +84,7 @@ export default function WhyEEOS() {
               <br />
               <span className="gradient-text">more than you know.</span>
             </h1>
-            <p className="text-xl text-[#E8EDF5]/65 leading-relaxed">
+            <p className="text-xl text-[#FFFFFF]/65 leading-relaxed">
               Service business owners make decisions on incomplete, outdated, and siloed information every day. Eagle Eye Automation built EEOS to close that gap permanently — so you can stop managing and start leading.
             </p>
           </AnimatedSection>
@@ -92,16 +92,16 @@ export default function WhyEEOS() {
       </section>
 
       {/* Pain Points */}
-      <section className="bg-[#0A1628] py-24">
+      <section className="bg-[#141414] py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center mb-16">
             <h2
-              className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight mb-4"
+              className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight mb-4"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               The problem every enterprise faces
             </h2>
-            <p className="text-[#E8EDF5]/60 max-w-2xl mx-auto">
+            <p className="text-[#FFFFFF]/60 max-w-2xl mx-auto">
               These aren't edge cases. They're the daily reality for executives leading complex organizations.
             </p>
           </AnimatedSection>
@@ -117,12 +117,12 @@ export default function WhyEEOS() {
                     <point.icon className="w-5 h-5" style={{ color: point.color }} />
                   </div>
                   <h3
-                    className="text-xl font-semibold text-[#E8EDF5] mb-3"
+                    className="text-xl font-semibold text-[#FFFFFF] mb-3"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     {point.title}
                   </h3>
-                  <p className="text-[#E8EDF5]/60 leading-relaxed">{point.description}</p>
+                  <p className="text-[#FFFFFF]/60 leading-relaxed">{point.description}</p>
                 </div>
               </AnimatedSection>
             ))}
@@ -131,12 +131,12 @@ export default function WhyEEOS() {
       </section>
 
       {/* Comparison Table */}
-      <section className="bg-[#050C1A] py-24">
+      <section className="bg-[#0B0B0B] py-24">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center mb-16">
             <div className="section-label mb-4">The EEOS Difference</div>
             <h2
-              className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight"
+              className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Before and after EEOS
@@ -145,8 +145,8 @@ export default function WhyEEOS() {
 
           <AnimatedSection delay={200}>
             <div className="glass-card rounded-2xl overflow-hidden">
-              <div className="grid grid-cols-3 bg-[#0F1E35] px-6 py-4">
-                <div className="text-xs font-semibold text-[#E8EDF5]/40 uppercase tracking-wider"
+              <div className="grid grid-cols-3 bg-[#1A1A1A] px-6 py-4">
+                <div className="text-xs font-semibold text-[#FFFFFF]/40 uppercase tracking-wider"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   Category
                 </div>
@@ -154,7 +154,7 @@ export default function WhyEEOS() {
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   Without EEOS
                 </div>
-                <div className="text-xs font-semibold text-[#00D4C8] uppercase tracking-wider text-center"
+                <div className="text-xs font-semibold text-[#C9A227] uppercase tracking-wider text-center"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   With EEOS
                 </div>
@@ -162,16 +162,16 @@ export default function WhyEEOS() {
               {COMPARISON.map((row, i) => (
                 <div
                   key={row.category}
-                  className={`grid grid-cols-3 px-6 py-4 border-t border-[rgba(0,212,200,0.08)] ${
-                    i % 2 === 0 ? "bg-[rgba(0,212,200,0.02)]" : ""
+                  className={`grid grid-cols-3 px-6 py-4 border-t border-[rgba(201,162,39,0.08)] ${
+                    i % 2 === 0 ? "bg-[rgba(201,162,39,0.02)]" : ""
                   }`}
                 >
-                  <div className="text-sm font-medium text-[#E8EDF5]/80"
+                  <div className="text-sm font-medium text-[#FFFFFF]/80"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                     {row.category}
                   </div>
                   <div className="text-sm text-[#EF4444]/70 text-center">{row.without}</div>
-                  <div className="text-sm text-[#00D4C8] text-center font-medium flex items-center justify-center gap-1.5">
+                  <div className="text-sm text-[#C9A227] text-center font-medium flex items-center justify-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                     {row.with}
                   </div>
@@ -183,12 +183,12 @@ export default function WhyEEOS() {
       </section>
 
       {/* Testimonials */}
-      <section className="bg-[#0A1628] py-24">
+      <section className="bg-[#141414] py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center mb-16">
             <div className="section-label mb-4">Executive Perspectives</div>
             <h2
-              className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight"
+              className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               What leaders say about EEOS
@@ -199,20 +199,20 @@ export default function WhyEEOS() {
             {TESTIMONIALS.map((t, i) => (
               <AnimatedSection key={i} delay={i * 120}>
                 <div className="glass-card rounded-xl p-8 h-full flex flex-col">
-                  <div className="text-3xl text-[#00D4C8]/30 mb-4"
+                  <div className="text-3xl text-[#C9A227]/30 mb-4"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                     "
                   </div>
-                  <p className="text-[#E8EDF5]/80 leading-relaxed italic flex-1 mb-6">
+                  <p className="text-[#FFFFFF]/80 leading-relaxed italic flex-1 mb-6">
                     {t.quote}
                   </p>
-                  <div className="border-t border-[rgba(0,212,200,0.1)] pt-4">
-                    <div className="text-sm font-semibold text-[#E8EDF5]"
+                  <div className="border-t border-[rgba(201,162,39,0.1)] pt-4">
+                    <div className="text-sm font-semibold text-[#FFFFFF]"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                       {t.name}
                     </div>
-                    <div className="text-xs text-[#00D4C8] mt-0.5">{t.company}</div>
-                    <div className="text-xs text-[#E8EDF5]/40 mt-0.5"
+                    <div className="text-xs text-[#C9A227] mt-0.5">{t.company}</div>
+                    <div className="text-xs text-[#FFFFFF]/40 mt-0.5"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       {t.size}
                     </div>
@@ -225,28 +225,28 @@ export default function WhyEEOS() {
       </section>
 
       {/* CTA */}
-      <section className="bg-[#0A1628] border-t border-[rgba(0,212,200,0.1)] py-20">
+      <section className="bg-[#141414] border-t border-[rgba(201,162,39,0.1)] py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
             <div className="flex flex-col lg:flex-row items-start lg:items-center gap-10 lg:gap-20">
               <div className="flex-1">
                 <div className="section-label mb-3">Command Briefing</div>
                 <h2
-                  className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight mb-4 leading-tight"
+                  className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight mb-4 leading-tight"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Observe EEOS under live conditions.
                   <br />
                   <span className="gradient-text">Six modules. Your data. Real decisions.</span>
                 </h2>
-                <p className="text-[#E8EDF5]/55 max-w-lg">
+                <p className="text-[#FFFFFF]/55 max-w-lg">
                   The interactive demo runs on a fictional Fortune 500 enterprise. Every signal, recommendation, and knowledge graph node is generated from the same intelligence engine that runs in production.
                 </p>
               </div>
               <div className="flex flex-col gap-3 shrink-0">
                 <Link
                   href="/demo"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200 shadow-[0_0_24px_rgba(0,212,200,0.4)]"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200 shadow-[0_0_24px_rgba(201,162,39,0.4)]"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Enter the Demo
@@ -254,7 +254,7 @@ export default function WhyEEOS() {
                 </Link>
                 <Link
                   href="/onboarding"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] transition-all duration-200"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] transition-all duration-200"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Begin Activation

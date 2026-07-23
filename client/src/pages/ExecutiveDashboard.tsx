@@ -258,20 +258,20 @@ export default function ExecutiveDashboard() {
   const hasLiveData = Boolean(data?.ok && data.metrics && (metrics.totalContacts > 0 || metrics.users > 0 || metrics.opportunities > 0));
 
   return (
-    <div className="min-h-screen bg-[#050B18] text-white">
+    <div className="min-h-screen bg-[#0B0B0B] text-white">
       <Navigation />
 
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        <section className="flex flex-col gap-5 border-b border-[#12314D] pb-6 lg:flex-row lg:items-end lg:justify-between">
+        <section className="flex flex-col gap-5 border-b border-[#E7D8A3] pb-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#0EA5E9]/40 bg-[#071C33] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#38BDF8]">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#C9A227]/40 bg-[#071C33] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#C9A227]">
               <Database className="h-3.5 w-3.5" />
               Live PRN Staffers GoHighLevel Data
             </div>
             <h1 className="text-3xl font-semibold tracking-normal text-white sm:text-4xl">
               EEOS Executive Dashboard
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#B7C5D8]">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#D8D8D8]">
               Eagle Eye operating view for PRN Staffers South Carolina, powered by the private GoHighLevel integration.
             </p>
           </div>
@@ -279,7 +279,7 @@ export default function ExecutiveDashboard() {
           <button
             type="button"
             onClick={() => void loadDashboard()}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[#1D4F73] bg-[#08233D] px-4 text-sm font-semibold text-[#DDF7FF] transition hover:border-[#38BDF8] hover:bg-[#0B2D4D] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[#D9C579] bg-[#F8F4E8] px-4 text-sm font-semibold text-[#0B0B0B] transition hover:border-[#C9A227] hover:bg-[#F1E7C5] disabled:cursor-not-allowed disabled:opacity-60"
             disabled={loading}
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -318,24 +318,24 @@ export default function ExecutiveDashboard() {
             </section>
 
             <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-              <div className="rounded-lg border border-[#12314D] bg-[#071426] p-5">
+              <div className="rounded-lg border border-[#E7D8A3] bg-[#FFFFFF] p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#38BDF8]">Business Health Score</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#C9A227]">Business Health Score</p>
                     <div className="mt-4 flex items-end gap-3">
                       <span className="text-6xl font-semibold text-white">{metrics.healthScore}</span>
-                      <span className="pb-2 text-lg text-[#86A6C8]">/ 100</span>
+                      <span className="pb-2 text-lg text-[#B8B8B8]">/ 100</span>
                     </div>
-                    <p className="mt-3 text-sm text-[#B7C5D8]">Live signal quality, opportunity coverage, and data availability are all healthy.</p>
+                    <p className="mt-3 text-sm text-[#D8D8D8]">Live signal quality, opportunity coverage, and data availability are all healthy.</p>
                   </div>
-                  <div className="rounded-full border border-[#0EA5E9]/40 bg-[#061A2F] p-3 text-[#38BDF8]">
+                  <div className="rounded-full border border-[#C9A227]/40 bg-[#061A2F] p-3 text-[#C9A227]">
                     <CheckCircle2 className="h-7 w-7" />
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-lg border border-[#12314D] bg-[#071426] p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#38BDF8]">Connection Details</p>
+              <div className="rounded-lg border border-[#E7D8A3] bg-[#FFFFFF] p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#C9A227]">Connection Details</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <DetailRow icon={Clock} label="Last Sync" value={formatDate(data?.lastSync)} />
                   <DetailRow icon={MapPin} label="Connected Location" value={locationName} />
@@ -343,10 +343,10 @@ export default function ExecutiveDashboard() {
               </div>
             </section>
 
-            <section className="rounded-lg border border-[#12314D] bg-[#071426] p-5">
+            <section className="rounded-lg border border-[#E7D8A3] bg-[#FFFFFF] p-5">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#38BDF8]">Endpoint Health Status</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#C9A227]">Endpoint Health Status</p>
                   <h2 className="mt-1 text-xl font-semibold text-white">GoHighLevel API checks</h2>
                 </div>
                 <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#10B981]/35 bg-[#05291F] px-3 py-1 text-xs font-semibold text-[#34D399]">
@@ -392,15 +392,15 @@ function ExecutiveRecommendations({ response, error, onRefresh }: {
   ] : [];
 
   return (
-    <section className="rounded-lg border border-[#0EA5E9]/35 bg-[#061527] p-5 shadow-[0_24px_80px_rgba(14,165,233,0.08)]">
+    <section className="rounded-lg border border-[#C9A227]/35 bg-[#FFFFFF] p-5 shadow-[0_24px_80px_rgba(201,162,39,0.08)]">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#38BDF8]/35 bg-[#08233D] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#7DD3FC]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#8C6F12]">
             <Brain className="h-3.5 w-3.5" />
             Executive Recommendations
           </div>
           <h2 className="mt-3 text-2xl font-semibold text-white">Intelligence Engine V1</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#B7C5D8]">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#D8D8D8]">
             Rules-based analysis of verified live PRN Staffers GoHighLevel metrics. No automatic actions are taken.
           </p>
         </div>
@@ -409,7 +409,7 @@ function ExecutiveRecommendations({ response, error, onRefresh }: {
           <button
             type="button"
             onClick={onRefresh}
-            className="inline-flex h-8 items-center gap-2 rounded-md border border-[#1D4F73] bg-[#08233D] px-3 text-xs font-semibold text-[#DDF7FF] transition hover:border-[#38BDF8] hover:bg-[#0B2D4D]"
+            className="inline-flex h-8 items-center gap-2 rounded-md border border-[#D9C579] bg-[#F8F4E8] px-3 text-xs font-semibold text-[#0B0B0B] transition hover:border-[#C9A227] hover:bg-[#F1E7C5]"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Refresh Recommendations
@@ -420,7 +420,7 @@ function ExecutiveRecommendations({ response, error, onRefresh }: {
       {error ? (
         <div className="mt-5 rounded-md border border-[#F59E0B]/35 bg-[#2A1C05] p-4 text-sm text-[#FBBF24]">{error}</div>
       ) : !response || response.recommendations.length === 0 ? (
-        <div className="mt-5 rounded-md border border-[#12314D] bg-[#050F1D] p-4 text-sm text-[#B7C5D8]">No recommendation data available. Insufficient data.</div>
+        <div className="mt-5 rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4 text-sm text-[#D8D8D8]">No recommendation data available. Insufficient data.</div>
       ) : (
         <>
           {response.stale ? (
@@ -447,37 +447,37 @@ function RecommendationCard({ label, value, icon: Icon, recommendation }: {
   recommendation?: ExecutiveRecommendation;
 }) {
   return (
-    <div className="rounded-md border border-[#12314D] bg-[#050F1D] p-4">
+    <div className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2 text-[#38BDF8]">
+        <div className="flex items-center gap-2 text-[#C9A227]">
           <Icon className="h-4 w-4" />
           <p className="text-xs font-semibold uppercase tracking-[0.14em]">{label}</p>
         </div>
         {recommendation ? <PriorityBadge priority={toDisplayPriority(recommendation.priority)} compact /> : null}
       </div>
-      <p className="mt-3 text-sm leading-6 text-[#D7E6F8]">{value}</p>
+      <p className="mt-3 text-sm leading-6 text-[#E8E8E8]">{value}</p>
       {recommendation ? (
-        <div className="mt-4 space-y-3 border-t border-[#12314D] pt-3">
+        <div className="mt-4 space-y-3 border-t border-[#E7D8A3] pt-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#86A6C8]">Confidence</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#B8B8B8]">Confidence</p>
             <p className="mt-1 text-sm text-white">{recommendation.confidence}/100</p>
-            <p className="mt-1 text-xs leading-5 text-[#7D91AA]">{recommendation.confidenceReason}</p>
+            <p className="mt-1 text-xs leading-5 text-[#A0A0A0]">{recommendation.confidenceReason}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#86A6C8]">Supporting Evidence</p>
-            <ul className="mt-1 space-y-1 text-xs leading-5 text-[#B7C5D8]">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#B8B8B8]">Supporting Evidence</p>
+            <ul className="mt-1 space-y-1 text-xs leading-5 text-[#D8D8D8]">
               {recommendation.evidence.map((item) => (
                 <li key={`${item.metric}-${item.value}`}>{item.metric}: {item.value} ({item.source})</li>
               ))}
             </ul>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#86A6C8]">Recommended Action</p>
-            <p className="mt-1 text-xs leading-5 text-[#D7E6F8]">{recommendation.recommendedAction}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#B8B8B8]">Recommended Action</p>
+            <p className="mt-1 text-xs leading-5 text-[#E8E8E8]">{recommendation.recommendedAction}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#86A6C8]">How Success Will Be Measured</p>
-            <p className="mt-1 text-xs leading-5 text-[#D7E6F8]">{recommendation.measurement}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#B8B8B8]">How Success Will Be Measured</p>
+            <p className="mt-1 text-xs leading-5 text-[#E8E8E8]">{recommendation.measurement}</p>
           </div>
         </div>
       ) : null}
@@ -489,7 +489,7 @@ function PriorityBadge({ priority, compact = false }: { priority: Recommendation
   const styles: Record<RecommendationPriority, string> = {
     Critical: "border-[#EF4444]/45 bg-[#2A0808] text-[#FCA5A5]",
     High: "border-[#F59E0B]/45 bg-[#2A1C05] text-[#FBBF24]",
-    Medium: "border-[#38BDF8]/45 bg-[#08233D] text-[#7DD3FC]",
+    Medium: "border-[#C9A227]/45 bg-[#F8F4E8] text-[#8C6F12]",
     Low: "border-[#10B981]/40 bg-[#05291F] text-[#34D399]",
   };
 
@@ -524,20 +524,20 @@ function B2BIntelligenceSection({ response, error }: {
   ] : [];
 
   return (
-    <section className="rounded-lg border border-[#0EA5E9]/30 bg-[#061527] p-5 shadow-[0_24px_80px_rgba(14,165,233,0.06)]">
+    <section className="rounded-lg border border-[#C9A227]/30 bg-[#FFFFFF] p-5 shadow-[0_24px_80px_rgba(201,162,39,0.06)]">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#38BDF8]/35 bg-[#08233D] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#7DD3FC]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#8C6F12]">
             <Database className="h-3.5 w-3.5" />
             B2B Intelligence
           </div>
           <h2 className="mt-3 text-2xl font-semibold text-white">GoHighLevel Business Development Signals</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#B7C5D8]">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#D8D8D8]">
             {response?.summary || "Insufficient data."}
           </p>
         </div>
         {response ? (
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#38BDF8]/35 bg-[#08233D] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#7DD3FC]">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#8C6F12]">
             Confidence {response.confidence}/100
           </span>
         ) : null}
@@ -546,7 +546,7 @@ function B2BIntelligenceSection({ response, error }: {
       {error ? (
         <div className="mt-5 rounded-md border border-[#F59E0B]/35 bg-[#2A1C05] p-4 text-sm text-[#FBBF24]">{error}</div>
       ) : !response ? (
-        <div className="mt-5 rounded-md border border-[#12314D] bg-[#050F1D] p-4 text-sm text-[#B7C5D8]">No B2B intelligence data available. Insufficient data.</div>
+        <div className="mt-5 rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4 text-sm text-[#D8D8D8]">No B2B intelligence data available. Insufficient data.</div>
       ) : (
         <div className="mt-5 grid gap-3 lg:grid-cols-3">
           {items.map((item) => (
@@ -566,15 +566,15 @@ function B2BInsightCard({ label, insight, icon: Icon }: {
   const displayInsight = insight || insufficientB2BInsight(label);
 
   return (
-    <div className="rounded-md border border-[#12314D] bg-[#050F1D] p-4">
-      <div className="flex items-center gap-2 text-[#38BDF8]">
+    <div className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4">
+      <div className="flex items-center gap-2 text-[#C9A227]">
         <Icon className="h-4 w-4" />
         <p className="text-xs font-semibold uppercase tracking-[0.14em]">{label}</p>
       </div>
-      <p className="mt-3 text-sm leading-6 text-[#D7E6F8]">{displayInsight.observation}</p>
-      <div className="mt-4 border-t border-[#12314D] pt-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#86A6C8]">Evidence</p>
-        <ul className="mt-1 space-y-1 text-xs leading-5 text-[#B7C5D8]">
+      <p className="mt-3 text-sm leading-6 text-[#E8E8E8]">{displayInsight.observation}</p>
+      <div className="mt-4 border-t border-[#E7D8A3] pt-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#B8B8B8]">Evidence</p>
+        <ul className="mt-1 space-y-1 text-xs leading-5 text-[#D8D8D8]">
           {displayInsight.evidence.map((item) => (
             <li key={`${item.metric}-${item.value}`}>{item.metric}: {item.value}</li>
           ))}
@@ -612,20 +612,20 @@ function C2BIntelligenceSection({ response, error }: {
   ] : [];
 
   return (
-    <section className="rounded-lg border border-[#0EA5E9]/30 bg-[#061527] p-5 shadow-[0_24px_80px_rgba(14,165,233,0.06)]">
+    <section className="rounded-lg border border-[#C9A227]/30 bg-[#FFFFFF] p-5 shadow-[0_24px_80px_rgba(201,162,39,0.06)]">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#38BDF8]/35 bg-[#08233D] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#7DD3FC]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#8C6F12]">
             <Users className="h-3.5 w-3.5" />
             C2B Intelligence
           </div>
           <h2 className="mt-3 text-2xl font-semibold text-white">Consumer Activity Signals</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#B7C5D8]">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#D8D8D8]">
             {response?.consumerDemandSummary || "Insufficient data."}
           </p>
         </div>
         {response ? (
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#38BDF8]/35 bg-[#08233D] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#7DD3FC]">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#8C6F12]">
             Confidence {response.confidence}/100
           </span>
         ) : null}
@@ -634,7 +634,7 @@ function C2BIntelligenceSection({ response, error }: {
       {error ? (
         <div className="mt-5 rounded-md border border-[#F59E0B]/35 bg-[#2A1C05] p-4 text-sm text-[#FBBF24]">{error}</div>
       ) : !response ? (
-        <div className="mt-5 rounded-md border border-[#12314D] bg-[#050F1D] p-4 text-sm text-[#B7C5D8]">No C2B intelligence data available. Insufficient data.</div>
+        <div className="mt-5 rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4 text-sm text-[#D8D8D8]">No C2B intelligence data available. Insufficient data.</div>
       ) : (
         <div className="mt-5 grid gap-3 lg:grid-cols-3">
           {items.map((item) => (
@@ -665,14 +665,14 @@ function MetricCard({ label, value, detail, icon: Icon }: {
   icon: typeof Users;
 }) {
   return (
-    <div className="rounded-lg border border-[#12314D] bg-[#071426] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.18)]">
+    <div className="rounded-lg border border-[#E7D8A3] bg-[#FFFFFF] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.18)]">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#86A6C8]">{label}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#B8B8B8]">{label}</p>
           <p className="mt-3 text-3xl font-semibold text-white">{value}</p>
-          <p className="mt-2 text-sm text-[#7D91AA]">{detail}</p>
+          <p className="mt-2 text-sm text-[#A0A0A0]">{detail}</p>
         </div>
-        <div className="rounded-md border border-[#0EA5E9]/35 bg-[#08233D] p-2.5 text-[#38BDF8]">
+        <div className="rounded-md border border-[#C9A227]/35 bg-[#F8F4E8] p-2.5 text-[#C9A227]">
           <Icon className="h-5 w-5" />
         </div>
       </div>
@@ -686,8 +686,8 @@ function DetailRow({ icon: Icon, label, value }: {
   value: string;
 }) {
   return (
-    <div className="rounded-md border border-[#12314D] bg-[#050F1D] p-4">
-      <div className="flex items-center gap-2 text-[#38BDF8]">
+    <div className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4">
+      <div className="flex items-center gap-2 text-[#C9A227]">
         <Icon className="h-4 w-4" />
         <span className="text-xs font-semibold uppercase tracking-[0.14em]">{label}</span>
       </div>
@@ -703,18 +703,18 @@ function EndpointRow({ name, health }: { name: string; health: EndpointHealth })
   const ok = Boolean(attempt?.ok ?? health.ok);
 
   return (
-    <div className="rounded-md border border-[#12314D] bg-[#050F1D] p-4">
+    <div className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold capitalize text-white">{name}</p>
-          <p className="mt-1 break-all text-xs text-[#7D91AA]">{visiblePath}</p>
+          <p className="mt-1 break-all text-xs text-[#A0A0A0]">{visiblePath}</p>
         </div>
         <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${ok ? "border-[#10B981]/35 bg-[#05291F] text-[#34D399]" : "border-[#F59E0B]/35 bg-[#2A1C05] text-[#FBBF24]"}`}>
           {ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
           HTTP {visibleStatus}
         </span>
       </div>
-      <p className="mt-3 text-xs text-[#86A6C8]">{health.responseTimeMs} ms response time</p>
+      <p className="mt-3 text-xs text-[#B8B8B8]">{health.responseTimeMs} ms response time</p>
       {health.errorSummary ? <p className="mt-2 text-xs text-[#FBBF24]">{health.errorSummary}</p> : null}
     </div>
   );
@@ -723,12 +723,12 @@ function EndpointRow({ name, health }: { name: string; health: EndpointHealth })
 function StatePanel({ title, message, tone }: { title: string; message: string; tone: "loading" | "error" | "empty" }) {
   const Icon = tone === "error" ? AlertTriangle : tone === "empty" ? Database : RefreshCw;
   return (
-    <section className="rounded-lg border border-[#12314D] bg-[#071426] p-8 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-[#0EA5E9]/35 bg-[#08233D] text-[#38BDF8]">
+    <section className="rounded-lg border border-[#E7D8A3] bg-[#FFFFFF] p-8 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] text-[#C9A227]">
         <Icon className={`h-6 w-6 ${tone === "loading" ? "animate-spin" : ""}`} />
       </div>
       <h2 className="mt-4 text-xl font-semibold text-white">{title}</h2>
-      <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#B7C5D8]">{message}</p>
+      <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#D8D8D8]">{message}</p>
     </section>
   );
 }

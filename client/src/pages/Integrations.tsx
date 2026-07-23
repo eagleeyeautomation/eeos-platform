@@ -118,23 +118,23 @@ export default function Integrations() {
     : INTEGRATIONS.filter((i) => i.category === activeCategory);
 
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* Hero */}
-      <section className="pt-32 pb-20 bg-[#050C1A] scan-grid">
+      <section className="pt-32 pb-20 bg-[#0B0B0B] scan-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center max-w-3xl mx-auto">
             <div className="section-label mb-4">Integration Readiness</div>
             <h1
-              className="text-5xl sm:text-6xl font-bold text-[#E8EDF5] tracking-tight mb-6"
+              className="text-5xl sm:text-6xl font-bold text-[#FFFFFF] tracking-tight mb-6"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Connect everything.
               <br />
               <span className="gradient-text">Control everything.</span>
             </h1>
-            <p className="text-xl text-[#E8EDF5]/65 leading-relaxed">
+            <p className="text-xl text-[#FFFFFF]/65 leading-relaxed">
               EEOS securely connects to every system your organization runs — reading signals without storing data, maintaining complete sovereignty over your information.
             </p>
           </AnimatedSection>
@@ -142,12 +142,12 @@ export default function Integrations() {
       </section>
 
       {/* How It Works */}
-      <section className="bg-[#0A1628] py-24">
+      <section className="bg-[#141414] py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center mb-16">
             <div className="section-label mb-4">Connection Architecture</div>
             <h2
-              className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight"
+              className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               How EEOS connects to your systems
@@ -160,14 +160,14 @@ export default function Integrations() {
               <div className="flex items-center justify-center gap-4 min-w-[600px]">
                 {/* Your Systems */}
                 <div className="flex flex-col gap-2">
-                  <div className="text-xs text-[#E8EDF5]/40 text-center mb-2"
+                  <div className="text-xs text-[#FFFFFF]/40 text-center mb-2"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     YOUR SYSTEMS
                   </div>
                   {["ERP", "CRM", "HR", "Finance", "Analytics"].map((sys) => (
                     <div
                       key={sys}
-                      className="px-4 py-2 rounded-lg bg-[rgba(0,212,200,0.06)] border border-[rgba(0,212,200,0.15)] text-xs text-[#E8EDF5]/70 text-center"
+                      className="px-4 py-2 rounded-lg bg-[rgba(201,162,39,0.06)] border border-[rgba(201,162,39,0.15)] text-xs text-[#FFFFFF]/70 text-center"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}
                     >
                       {sys}
@@ -177,15 +177,15 @@ export default function Integrations() {
 
                 {/* Arrow + Connector Layer */}
                 <div className="flex flex-col items-center gap-1">
-                  <div className="text-xs text-[#E8EDF5]/40 mb-2"
+                  <div className="text-xs text-[#FFFFFF]/40 mb-2"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     READ-ONLY
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-16 h-px bg-gradient-to-r from-[rgba(0,212,200,0.3)] to-[#00D4C8]" />
-                    <ArrowRight className="w-4 h-4 text-[#00D4C8]" />
+                    <div className="w-16 h-px bg-gradient-to-r from-[rgba(201,162,39,0.3)] to-[#C9A227]" />
+                    <ArrowRight className="w-4 h-4 text-[#C9A227]" />
                   </div>
-                  <div className="text-[10px] text-[#00D4C8]/60 mt-1"
+                  <div className="text-[10px] text-[#C9A227]/60 mt-1"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     TLS 1.3 · Encrypted
                   </div>
@@ -193,49 +193,49 @@ export default function Integrations() {
 
                 {/* EEOS Connector Layer */}
                 <div className="flex flex-col items-center">
-                  <div className="text-xs text-[#E8EDF5]/40 mb-2"
+                  <div className="text-xs text-[#FFFFFF]/40 mb-2"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     EEOS CONNECTOR LAYER
                   </div>
-                  <div className="px-6 py-8 rounded-xl bg-[rgba(0,212,200,0.08)] border-2 border-[rgba(0,212,200,0.3)] text-center shadow-[0_0_24px_rgba(0,212,200,0.1)]">
-                    <Server className="w-8 h-8 text-[#00D4C8] mx-auto mb-2" />
-                    <div className="text-sm font-semibold text-[#00D4C8]"
+                  <div className="px-6 py-8 rounded-xl bg-[rgba(201,162,39,0.08)] border-2 border-[rgba(201,162,39,0.3)] text-center shadow-[0_0_24px_rgba(201,162,39,0.1)]">
+                    <Server className="w-8 h-8 text-[#C9A227] mx-auto mb-2" />
+                    <div className="text-sm font-semibold text-[#C9A227]"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                       Signal Processor
                     </div>
-                    <div className="text-xs text-[#E8EDF5]/50 mt-1">No data stored</div>
+                    <div className="text-xs text-[#FFFFFF]/50 mt-1">No data stored</div>
                   </div>
                 </div>
 
                 {/* Arrow */}
                 <div className="flex flex-col items-center gap-1">
-                  <div className="text-xs text-[#E8EDF5]/40 mb-2"
+                  <div className="text-xs text-[#FFFFFF]/40 mb-2"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     INTELLIGENCE
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-16 h-px bg-gradient-to-r from-[#00D4C8] to-[rgba(0,212,200,0.3)]" />
-                    <ArrowRight className="w-4 h-4 text-[#00D4C8]" />
+                    <div className="w-16 h-px bg-gradient-to-r from-[#C9A227] to-[rgba(201,162,39,0.3)]" />
+                    <ArrowRight className="w-4 h-4 text-[#C9A227]" />
                   </div>
                 </div>
 
                 {/* EEOS Platform */}
                 <div className="flex flex-col items-center">
-                  <div className="text-xs text-[#E8EDF5]/40 mb-2"
+                  <div className="text-xs text-[#FFFFFF]/40 mb-2"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     EEOS PLATFORM
                   </div>
-                  <div className="px-6 py-8 rounded-xl bg-[rgba(0,212,200,0.12)] border-2 border-[#00D4C8] text-center shadow-[0_0_32px_rgba(0,212,200,0.2)]">
+                  <div className="px-6 py-8 rounded-xl bg-[rgba(201,162,39,0.12)] border-2 border-[#C9A227] text-center shadow-[0_0_32px_rgba(201,162,39,0.2)]">
                     <img
                       src="/manus-storage/eeos-logo-mark_707d59ff.png"
                       alt="EEOS"
                       className="w-8 h-8 mx-auto mb-2 object-contain"
                     />
-                    <div className="text-sm font-bold text-[#00D4C8]"
+                    <div className="text-sm font-bold text-[#C9A227]"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                       EEOS
                     </div>
-                    <div className="text-xs text-[#E8EDF5]/50 mt-1">Executive Intelligence</div>
+                    <div className="text-xs text-[#FFFFFF]/50 mt-1">Executive Intelligence</div>
                   </div>
                 </div>
               </div>
@@ -263,23 +263,23 @@ export default function Integrations() {
                 <div className="glass-card rounded-xl p-6 h-full">
                   <div className="flex items-center justify-between mb-4">
                     <div
-                      className="text-3xl font-bold text-[rgba(0,212,200,0.2)]"
+                      className="text-3xl font-bold text-[rgba(201,162,39,0.2)]"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}
                     >
                       {step.step}
                     </div>
                     <span className="tag-teal">{step.duration}</span>
                   </div>
-                  <div className="w-8 h-8 rounded-lg bg-[rgba(0,212,200,0.1)] border border-[rgba(0,212,200,0.2)] flex items-center justify-center mb-3">
-                    <step.icon className="w-4 h-4 text-[#00D4C8]" />
+                  <div className="w-8 h-8 rounded-lg bg-[rgba(201,162,39,0.1)] border border-[rgba(201,162,39,0.2)] flex items-center justify-center mb-3">
+                    <step.icon className="w-4 h-4 text-[#C9A227]" />
                   </div>
                   <h3
-                    className="text-base font-semibold text-[#E8EDF5] mb-2"
+                    className="text-base font-semibold text-[#FFFFFF] mb-2"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     {step.title}
                   </h3>
-                  <p className="text-sm text-[#E8EDF5]/60 leading-relaxed">{step.description}</p>
+                  <p className="text-sm text-[#FFFFFF]/60 leading-relaxed">{step.description}</p>
                 </div>
               </AnimatedSection>
             ))}
@@ -288,12 +288,12 @@ export default function Integrations() {
       </section>
 
       {/* Security Principles */}
-      <section className="bg-[#050C1A] py-24 scan-grid">
+      <section className="bg-[#0B0B0B] py-24 scan-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center mb-16">
             <div className="section-label mb-4">Security by Design</div>
             <h2
-              className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight"
+              className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Six principles of secure connection
@@ -303,17 +303,17 @@ export default function Integrations() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {SECURITY_PRINCIPLES.map((principle, i) => (
               <AnimatedSection key={principle.title} delay={i * 80}>
-                <div className="glass-card rounded-xl p-6 h-full group hover:border-[rgba(0,212,200,0.3)] transition-all duration-300">
-                  <div className="w-10 h-10 rounded-lg bg-[rgba(0,212,200,0.1)] border border-[rgba(0,212,200,0.2)] flex items-center justify-center mb-4 group-hover:bg-[rgba(0,212,200,0.15)] transition-colors">
-                    <principle.icon className="w-5 h-5 text-[#00D4C8]" />
+                <div className="glass-card rounded-xl p-6 h-full group hover:border-[rgba(201,162,39,0.3)] transition-all duration-300">
+                  <div className="w-10 h-10 rounded-lg bg-[rgba(201,162,39,0.1)] border border-[rgba(201,162,39,0.2)] flex items-center justify-center mb-4 group-hover:bg-[rgba(201,162,39,0.15)] transition-colors">
+                    <principle.icon className="w-5 h-5 text-[#C9A227]" />
                   </div>
                   <h3
-                    className="text-base font-semibold text-[#E8EDF5] mb-2"
+                    className="text-base font-semibold text-[#FFFFFF] mb-2"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     {principle.title}
                   </h3>
-                  <p className="text-sm text-[#E8EDF5]/60 leading-relaxed">{principle.description}</p>
+                  <p className="text-sm text-[#FFFFFF]/60 leading-relaxed">{principle.description}</p>
                 </div>
               </AnimatedSection>
             ))}
@@ -322,16 +322,16 @@ export default function Integrations() {
       </section>
 
       {/* Connector Types */}
-      <section className="bg-[#0A1628] py-24">
+      <section className="bg-[#141414] py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center mb-16">
             <h2
-              className="text-3xl font-bold text-[#E8EDF5] tracking-tight"
+              className="text-3xl font-bold text-[#FFFFFF] tracking-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Connector types
             </h2>
-            <p className="text-[#E8EDF5]/55 mt-2">
+            <p className="text-[#FFFFFF]/55 mt-2">
               EEOS supports four integration patterns to connect any enterprise system.
             </p>
           </AnimatedSection>
@@ -342,26 +342,26 @@ export default function Integrations() {
                 <div className="glass-card rounded-xl p-6">
                   <div className="flex items-start justify-between mb-3">
                     <h3
-                      className="text-lg font-bold text-[#E8EDF5]"
+                      className="text-lg font-bold text-[#FFFFFF]"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
                       {ct.type}
                     </h3>
                     <span className="tag-teal">{ct.latency}</span>
                   </div>
-                  <p className="text-sm text-[#E8EDF5]/60 mb-4">{ct.description}</p>
+                  <p className="text-sm text-[#FFFFFF]/60 mb-4">{ct.description}</p>
                   <div className="flex flex-wrap gap-2 mb-3">
                     {ct.protocols.map((p) => (
                       <span
                         key={p}
-                        className="text-xs px-2 py-1 rounded bg-[rgba(0,212,200,0.06)] border border-[rgba(0,212,200,0.15)] text-[#E8EDF5]/60"
+                        className="text-xs px-2 py-1 rounded bg-[rgba(201,162,39,0.06)] border border-[rgba(201,162,39,0.15)] text-[#FFFFFF]/60"
                         style={{ fontFamily: "'JetBrains Mono', monospace" }}
                       >
                         {p}
                       </span>
                     ))}
                   </div>
-                  <div className="text-xs text-[#E8EDF5]/40"
+                  <div className="text-xs text-[#FFFFFF]/40"
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     Examples: {ct.examples.join(" · ")}
                   </div>
@@ -373,17 +373,17 @@ export default function Integrations() {
       </section>
 
       {/* Integration Catalog */}
-      <section className="bg-[#050C1A] py-24">
+      <section className="bg-[#0B0B0B] py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center mb-12">
             <div className="section-label mb-4">Integration Catalog</div>
             <h2
-              className="text-3xl font-bold text-[#E8EDF5] tracking-tight mb-3"
+              className="text-3xl font-bold text-[#FFFFFF] tracking-tight mb-3"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               50+ pre-built connectors
             </h2>
-            <p className="text-[#E8EDF5]/55">
+            <p className="text-[#FFFFFF]/55">
               Ready to connect on day one. Custom connectors available for any system.
             </p>
           </AnimatedSection>
@@ -396,8 +396,8 @@ export default function Integrations() {
                 onClick={() => setActiveCategory(cat)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   activeCategory === cat
-                    ? "bg-[rgba(0,212,200,0.15)] border border-[rgba(0,212,200,0.4)] text-[#00D4C8]"
-                    : "border border-[rgba(0,212,200,0.1)] text-[#E8EDF5]/60 hover:border-[rgba(0,212,200,0.2)]"
+                    ? "bg-[rgba(201,162,39,0.15)] border border-[rgba(201,162,39,0.4)] text-[#C9A227]"
+                    : "border border-[rgba(201,162,39,0.1)] text-[#FFFFFF]/60 hover:border-[rgba(201,162,39,0.2)]"
                 }`}
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
@@ -412,8 +412,8 @@ export default function Integrations() {
                 <div
                   className={`glass-card rounded-xl p-5 text-center transition-all duration-300 cursor-pointer ${
                     hoveredIntegration === integration.name
-                      ? "border-[rgba(0,212,200,0.35)] shadow-[0_0_20px_rgba(0,212,200,0.1)]"
-                      : "hover:border-[rgba(0,212,200,0.2)]"
+                      ? "border-[rgba(201,162,39,0.35)] shadow-[0_0_20px_rgba(201,162,39,0.1)]"
+                      : "hover:border-[rgba(201,162,39,0.2)]"
                   }`}
                   onMouseEnter={() => setHoveredIntegration(integration.name)}
                   onMouseLeave={() => setHoveredIntegration(null)}
@@ -430,12 +430,12 @@ export default function Integrations() {
                     {integration.logo}
                   </div>
                   <div
-                    className="text-sm font-semibold text-[#E8EDF5] mb-1"
+                    className="text-sm font-semibold text-[#FFFFFF] mb-1"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     {integration.name}
                   </div>
-                  <div className="text-xs text-[#E8EDF5]/40">{integration.category}</div>
+                  <div className="text-xs text-[#FFFFFF]/40">{integration.category}</div>
                   {hoveredIntegration === integration.name && (
                     <div className="mt-2">
                       <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] mx-auto" />
@@ -447,15 +447,15 @@ export default function Integrations() {
 
             {/* Custom connector card */}
             <AnimatedSection delay={filtered.length * 40}>
-              <div className="glass-card rounded-xl p-5 text-center border-dashed border-[rgba(0,212,200,0.2)] hover:border-[rgba(0,212,200,0.4)] transition-all duration-300">
-                <div className="w-12 h-12 rounded-xl bg-[rgba(0,212,200,0.05)] border border-dashed border-[rgba(0,212,200,0.3)] flex items-center justify-center mx-auto mb-3">
-                  <Code className="w-5 h-5 text-[#00D4C8]/60" />
+              <div className="glass-card rounded-xl p-5 text-center border-dashed border-[rgba(201,162,39,0.2)] hover:border-[rgba(201,162,39,0.4)] transition-all duration-300">
+                <div className="w-12 h-12 rounded-xl bg-[rgba(201,162,39,0.05)] border border-dashed border-[rgba(201,162,39,0.3)] flex items-center justify-center mx-auto mb-3">
+                  <Code className="w-5 h-5 text-[#C9A227]/60" />
                 </div>
-                <div className="text-sm font-semibold text-[#E8EDF5]/60 mb-1"
+                <div className="text-sm font-semibold text-[#FFFFFF]/60 mb-1"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   Custom
                 </div>
-                <div className="text-xs text-[#E8EDF5]/35">Any system</div>
+                <div className="text-xs text-[#FFFFFF]/35">Any system</div>
               </div>
             </AnimatedSection>
           </div>
@@ -463,25 +463,25 @@ export default function Integrations() {
       </section>
 
       {/* CTA */}
-      <section className="bg-[#0A1628] py-20">
+      <section className="bg-[#141414] py-20">
         <div className="max-w-3xl mx-auto px-4 text-center">
           <AnimatedSection>
             <div className="section-label mb-4">Integration Briefing</div>
             <h2
-              className="text-3xl font-bold text-[#E8EDF5] tracking-tight mb-4"
+              className="text-3xl font-bold text-[#FFFFFF] tracking-tight mb-4"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Map your systems.
               <br />
               <span className="gradient-text">Activate your intelligence layer.</span>
             </h2>
-            <p className="text-[#E8EDF5]/60 mb-8">
+            <p className="text-[#FFFFFF]/60 mb-8">
               Request an integration assessment. Our technical team will map your existing systems, design a zero-replication connector architecture, and brief your security team before a single credential is shared.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/onboarding"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200 shadow-[0_0_24px_rgba(0,212,200,0.4)]"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200 shadow-[0_0_24px_rgba(201,162,39,0.4)]"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 Begin Integration Assessment
@@ -489,7 +489,7 @@ export default function Integrations() {
               </Link>
               <Link
                 href="/security"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.35)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] transition-all duration-200"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] transition-all duration-200"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 Review Security Architecture

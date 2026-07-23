@@ -59,7 +59,7 @@ const PIPELINE_STAGES = [
   { stage: "Qualified", count: 31, value: 890000, color: "#1E40AF" },
   { stage: "Proposal", count: 18, value: 620000, color: "#0369A1" },
   { stage: "Negotiation", count: 9, value: 380000, color: "#0891B2" },
-  { stage: "Closing", count: 4, value: 210000, color: "#00D4C8" },
+  { stage: "Closing", count: 4, value: 210000, color: "#C9A227" },
 ];
 
 const TEAM_UTILIZATION = [
@@ -108,13 +108,13 @@ function formatCurrency(n: number) {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="glass-card rounded-lg p-3 text-xs border border-[rgba(0,212,200,0.2)]">
-      <div className="text-[#00D4C8] font-semibold mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{label}</div>
+    <div className="glass-card rounded-lg p-3 text-xs border border-[rgba(201,162,39,0.2)]">
+      <div className="text-[#C9A227] font-semibold mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{label}</div>
       {payload.map((p: any) => (
         <div key={p.name} className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-          <span className="text-[#E8EDF5]/70">{p.name}:</span>
-          <span className="text-[#E8EDF5] font-semibold">{typeof p.value === "number" ? formatCurrency(p.value) : p.value}</span>
+          <span className="text-[#FFFFFF]/70">{p.name}:</span>
+          <span className="text-[#FFFFFF] font-semibold">{typeof p.value === "number" ? formatCurrency(p.value) : p.value}</span>
         </div>
       ))}
     </div>
@@ -126,11 +126,11 @@ export default function BusinessHealth() {
   const [activeTab, setActiveTab] = useState<"revenue" | "pipeline" | "team" | "clients">("revenue");
 
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* Header */}
-      <section className="pt-24 pb-6 bg-[#050C1A] scan-grid">
+      <section className="pt-24 pb-6 bg-[#0B0B0B] scan-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -150,26 +150,26 @@ export default function BusinessHealth() {
                   </div>
                 </div>
                 <h1
-                  className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight"
+                  className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Business Health Overview
                 </h1>
-                <p className="text-sm text-[#E8EDF5]/50 mt-1 max-w-xl">
+                <p className="text-sm text-[#FFFFFF]/50 mt-1 max-w-xl">
                   EEOS transforms business data into accurate executive intelligence. {DATA_SOURCE.source === "ghl" ? "Showing live GoHighLevel data." : "Showing demonstration data — connect GoHighLevel to see your real business health score."}
                 </p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <Link
                   href="/connect-ghl"
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(0,212,200,0.3)]"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)]"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   <Zap className="w-4 h-4" />
                   Connect GoHighLevel
                 </Link>
                 <button
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.3)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   aria-label="Refresh data"
                 >
@@ -186,13 +186,13 @@ export default function BusinessHealth() {
       <section className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection delay={100}>
-            <div className="glass-card rounded-2xl p-6 border border-[rgba(0,212,200,0.15)]">
+            <div className="glass-card rounded-2xl p-6 border border-[rgba(201,162,39,0.15)]">
               <div className="flex flex-col lg:flex-row items-start lg:items-center gap-8">
                 {/* Score Ring */}
                 <div className="flex items-center gap-6 shrink-0">
                   <div className="relative w-24 h-24">
                     <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96" aria-label={`Business health score: ${HEALTH_SCORE.overall}`}>
-                      <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(0,212,200,0.1)" strokeWidth="8" />
+                      <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(201,162,39,0.1)" strokeWidth="8" />
                       <circle
                         cx="48" cy="48" r="40" fill="none"
                         stroke={scoreColor(HEALTH_SCORE.overall)}
@@ -204,14 +204,14 @@ export default function BusinessHealth() {
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-2xl font-bold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                      <span className="text-2xl font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                         {HEALTH_SCORE.overall}
                       </span>
-                      <span className="text-[10px] text-[#E8EDF5]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>/ 100</span>
+                      <span className="text-[10px] text-[#FFFFFF]/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>/ 100</span>
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-[#E8EDF5]/50 mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>OVERALL HEALTH</div>
+                    <div className="text-xs text-[#FFFFFF]/50 mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>OVERALL HEALTH</div>
                     <div className="text-2xl font-bold" style={{ color: scoreColor(HEALTH_SCORE.overall), fontFamily: "'Space Grotesk', sans-serif" }}>
                       {scoreLabel(HEALTH_SCORE.overall)}
                     </div>
@@ -219,7 +219,7 @@ export default function BusinessHealth() {
                       <TrendingUp className="w-3 h-3 text-[#10B981]" />
                       <span className="text-xs text-[#10B981]">{HEALTH_SCORE.change} this month</span>
                     </div>
-                    <div className="mt-2 text-[10px] text-[#E8EDF5]/35 leading-relaxed max-w-[180px]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div className="mt-2 text-[10px] text-[#FFFFFF]/35 leading-relaxed max-w-[180px]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       Weighted composite of 5 GHL signal categories. Updated on each sync.
                     </div>
                   </div>
@@ -228,12 +228,12 @@ export default function BusinessHealth() {
                 {/* Component Scores */}
                 <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 w-full">
                   {HEALTH_SCORE.components.map((comp) => (
-                    <div key={comp.label} className="bg-[rgba(255,255,255,0.03)] rounded-xl p-3 border border-[rgba(255,255,255,0.05)] hover:border-[rgba(0,212,200,0.2)] transition-colors duration-200">
-                      <div className="text-[10px] text-[#E8EDF5]/45 mb-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div key={comp.label} className="bg-[rgba(255,255,255,0.03)] rounded-xl p-3 border border-[rgba(255,255,255,0.05)] hover:border-[rgba(201,162,39,0.2)] transition-colors duration-200">
+                      <div className="text-[10px] text-[#FFFFFF]/45 mb-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                         {comp.label.toUpperCase()}
                       </div>
                       <div className="flex items-end justify-between mb-2">
-                        <span className="text-xl font-bold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                        <span className="text-xl font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                           {comp.score}
                         </span>
                         <div className="flex flex-col items-end gap-0.5">
@@ -249,7 +249,7 @@ export default function BusinessHealth() {
                           style={{ width: `${comp.score}%`, background: scoreColor(comp.score) }}
                         />
                       </div>
-                      <div className="text-[9px] text-[#E8EDF5]/25" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      <div className="text-[9px] text-[#FFFFFF]/25" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                         Weight: {Math.round(comp.weight * 100)}% of score
                       </div>
                     </div>
@@ -275,7 +275,7 @@ export default function BusinessHealth() {
                         ? "bg-[rgba(245,158,11,0.08)] border-[rgba(245,158,11,0.2)] text-[#F59E0B]"
                         : alert.type === "success"
                         ? "bg-[rgba(16,185,129,0.08)] border-[rgba(16,185,129,0.2)] text-[#10B981]"
-                        : "bg-[rgba(0,212,200,0.06)] border-[rgba(0,212,200,0.15)] text-[#00D4C8]"
+                        : "bg-[rgba(201,162,39,0.06)] border-[rgba(201,162,39,0.15)] text-[#C9A227]"
                     }`}
                     role="alert"
                   >
@@ -283,7 +283,7 @@ export default function BusinessHealth() {
                       {alert.type === "warning" && <AlertTriangle className="w-4 h-4 shrink-0" />}
                       {alert.type === "success" && <CheckCircle2 className="w-4 h-4 shrink-0" />}
                       {alert.type === "info" && <Activity className="w-4 h-4 shrink-0" />}
-                      <span className="text-[#E8EDF5]/80">{alert.message}</span>
+                      <span className="text-[#FFFFFF]/80">{alert.message}</span>
                     </div>
                     <button className="text-xs font-semibold shrink-0 hover:underline" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       {alert.action} →
@@ -308,8 +308,8 @@ export default function BusinessHealth() {
                 onClick={() => setActiveTab(tab)}
                 className={`px-5 py-2.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
                   activeTab === tab
-                    ? "bg-[rgba(0,212,200,0.12)] text-[#00D4C8] border border-[rgba(0,212,200,0.3)]"
-                    : "text-[#E8EDF5]/50 hover:text-[#E8EDF5]/80 hover:bg-[rgba(255,255,255,0.04)]"
+                    ? "bg-[rgba(201,162,39,0.12)] text-[#C9A227] border border-[rgba(201,162,39,0.3)]"
+                    : "text-[#FFFFFF]/50 hover:text-[#FFFFFF]/80 hover:bg-[rgba(255,255,255,0.04)]"
                 }`}
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
@@ -333,23 +333,23 @@ export default function BusinessHealth() {
               <div className="glass-card rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h2 className="text-lg font-bold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Revenue vs Target</h2>
-                    <p className="text-xs text-[#E8EDF5]/45 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    <h2 className="text-lg font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Revenue vs Target</h2>
+                    <p className="text-xs text-[#FFFFFF]/45 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       GHL data field: contact.revenue_ytd · opportunity.value · pipeline.stage
                     </p>
                   </div>
                   <div className="flex items-center gap-4 text-xs">
-                    <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-[#00D4C8]" /><span className="text-[#E8EDF5]/50">Actual</span></div>
-                    <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-[#E8EDF5]/30 border-dashed" /><span className="text-[#E8EDF5]/50">Target</span></div>
-                    <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-[#7C3AED]" /><span className="text-[#E8EDF5]/50">Forecast</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-[#C9A227]" /><span className="text-[#FFFFFF]/50">Actual</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-[#FFFFFF]/30 border-dashed" /><span className="text-[#FFFFFF]/50">Target</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-[#7C3AED]" /><span className="text-[#FFFFFF]/50">Forecast</span></div>
                   </div>
                 </div>
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={REVENUE_TREND} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
                     <defs>
                       <linearGradient id="actualGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#00D4C8" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#00D4C8" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#C9A227" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#C9A227" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="forecastGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.2} />
@@ -359,7 +359,7 @@ export default function BusinessHealth() {
                     <XAxis dataKey="month" tick={{ fill: "rgba(232,237,245,0.4)", fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "rgba(232,237,245,0.4)", fontSize: 10 }} axisLine={false} tickLine={false} width={60} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Area type="monotone" dataKey="actual" name="Actual" stroke="#00D4C8" strokeWidth={2} fill="url(#actualGrad)" connectNulls={false} dot={{ fill: "#00D4C8", r: 3 }} />
+                    <Area type="monotone" dataKey="actual" name="Actual" stroke="#C9A227" strokeWidth={2} fill="url(#actualGrad)" connectNulls={false} dot={{ fill: "#C9A227", r: 3 }} />
                     <Area type="monotone" dataKey="forecast" name="Forecast" stroke="#7C3AED" strokeWidth={2} strokeDasharray="4 4" fill="url(#forecastGrad)" connectNulls={false} dot={{ fill: "#7C3AED", r: 3 }} />
                     <Line type="monotone" dataKey="target" name="Target" stroke="rgba(232,237,245,0.3)" strokeWidth={1} strokeDasharray="3 3" dot={false} />
                   </AreaChart>
@@ -373,8 +373,8 @@ export default function BusinessHealth() {
             <AnimatedSection>
               <div className="glass-card rounded-2xl p-6">
                 <div className="mb-6">
-                  <h2 className="text-lg font-bold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Pipeline by Stage</h2>
-                  <p className="text-xs text-[#E8EDF5]/45 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <h2 className="text-lg font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Pipeline by Stage</h2>
+                  <p className="text-xs text-[#FFFFFF]/45 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     GHL data field: opportunity.pipeline_stage · opportunity.monetary_value · opportunity.status
                   </p>
                 </div>
@@ -396,17 +396,17 @@ export default function BusinessHealth() {
                       <div key={stage.stage} className="flex items-center justify-between p-3 bg-[rgba(255,255,255,0.03)] rounded-xl border border-[rgba(255,255,255,0.05)]">
                         <div className="flex items-center gap-3">
                           <div className="w-2.5 h-2.5 rounded-full" style={{ background: stage.color }} />
-                          <span className="text-sm text-[#E8EDF5]/80">{stage.stage}</span>
+                          <span className="text-sm text-[#FFFFFF]/80">{stage.stage}</span>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm font-bold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{formatCurrency(stage.value)}</div>
-                          <div className="text-[10px] text-[#E8EDF5]/40">{stage.count} deals</div>
+                          <div className="text-sm font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{formatCurrency(stage.value)}</div>
+                          <div className="text-[10px] text-[#FFFFFF]/40">{stage.count} deals</div>
                         </div>
                       </div>
                     ))}
-                    <div className="flex items-center justify-between p-3 bg-[rgba(0,212,200,0.06)] rounded-xl border border-[rgba(0,212,200,0.2)] mt-2">
-                      <span className="text-sm font-semibold text-[#00D4C8]">Total Pipeline</span>
-                      <span className="text-sm font-bold text-[#00D4C8]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    <div className="flex items-center justify-between p-3 bg-[rgba(201,162,39,0.06)] rounded-xl border border-[rgba(201,162,39,0.2)] mt-2">
+                      <span className="text-sm font-semibold text-[#C9A227]">Total Pipeline</span>
+                      <span className="text-sm font-bold text-[#C9A227]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                         {formatCurrency(PIPELINE_STAGES.reduce((s, p) => s + p.value, 0))}
                       </span>
                     </div>
@@ -421,8 +421,8 @@ export default function BusinessHealth() {
             <AnimatedSection>
               <div className="glass-card rounded-2xl p-6">
                 <div className="mb-6">
-                  <h2 className="text-lg font-bold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Team Utilization by Department</h2>
-                  <p className="text-xs text-[#E8EDF5]/45 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <h2 className="text-lg font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Team Utilization by Department</h2>
+                  <p className="text-xs text-[#FFFFFF]/45 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     GHL data field: user.department · task.assigned_to · calendar.booked_slots
                   </p>
                 </div>
@@ -431,9 +431,9 @@ export default function BusinessHealth() {
                     <div key={dept.dept} className="p-4 bg-[rgba(255,255,255,0.03)] rounded-xl border border-[rgba(255,255,255,0.05)]">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <Users className="w-4 h-4 text-[#00D4C8]" />
-                          <span className="text-sm font-semibold text-[#E8EDF5]">{dept.dept}</span>
-                          <span className="text-xs text-[#E8EDF5]/40">{dept.headcount} people</span>
+                          <Users className="w-4 h-4 text-[#C9A227]" />
+                          <span className="text-sm font-semibold text-[#FFFFFF]">{dept.dept}</span>
+                          <span className="text-xs text-[#FFFFFF]/40">{dept.headcount} people</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span
@@ -469,8 +469,8 @@ export default function BusinessHealth() {
             <AnimatedSection>
               <div className="glass-card rounded-2xl p-6">
                 <div className="mb-6">
-                  <h2 className="text-lg font-bold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Client Health Scores</h2>
-                  <p className="text-xs text-[#E8EDF5]/45 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <h2 className="text-lg font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Client Health Scores</h2>
+                  <p className="text-xs text-[#FFFFFF]/45 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     GHL data field: contact.last_activity · opportunity.close_date · conversation.response_time
                   </p>
                 </div>
@@ -478,7 +478,7 @@ export default function BusinessHealth() {
                   {CLIENT_HEALTH.map((client) => (
                     <div
                       key={client.name}
-                      className={`p-4 rounded-xl border transition-all duration-200 hover:border-[rgba(0,212,200,0.3)] ${
+                      className={`p-4 rounded-xl border transition-all duration-200 hover:border-[rgba(201,162,39,0.3)] ${
                         client.risk === "high"
                           ? "border-[rgba(239,68,68,0.2)] bg-[rgba(239,68,68,0.04)]"
                           : client.risk === "medium"
@@ -488,8 +488,8 @@ export default function BusinessHealth() {
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <div className="text-sm font-semibold text-[#E8EDF5]">{client.name}</div>
-                          <div className="text-xs text-[#E8EDF5]/40 mt-0.5">{formatCurrency(client.revenue)}/yr</div>
+                          <div className="text-sm font-semibold text-[#FFFFFF]">{client.name}</div>
+                          <div className="text-xs text-[#FFFFFF]/40 mt-0.5">{formatCurrency(client.revenue)}/yr</div>
                         </div>
                         <div
                           className="text-xl font-bold"
@@ -529,23 +529,23 @@ export default function BusinessHealth() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 bg-[#0A1628]">
+      <section className="py-16 bg-[#141414]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 glass-card rounded-2xl border border-[rgba(0,212,200,0.15)]">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 glass-card rounded-2xl border border-[rgba(201,162,39,0.15)]">
               <div>
-                <div className="text-xs text-[#00D4C8] mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>EAGLE EYE AUTOMATION · EEOS</div>
-                <h2 className="text-xl font-bold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <div className="text-xs text-[#C9A227] mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>EAGLE EYE AUTOMATION · EEOS</div>
+                <h2 className="text-xl font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   See your real business health.
                 </h2>
-                <p className="text-sm text-[#E8EDF5]/55 mt-1">
+                <p className="text-sm text-[#FFFFFF]/55 mt-1">
                   Connect GoHighLevel and these metrics populate with your live data — instantly.
                 </p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <Link
                   href="/connect-ghl"
-                  className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(0,212,200,0.3)]"
+                  className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)]"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   <Zap className="w-4 h-4" />
@@ -553,7 +553,7 @@ export default function BusinessHealth() {
                 </Link>
                 <Link
                   href="/executive-home"
-                  className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.3)] rounded-lg hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200"
+                  className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Open Dashboard

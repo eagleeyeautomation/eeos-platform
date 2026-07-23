@@ -44,23 +44,23 @@ export default function Contact() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* Hero */}
-      <section className="pt-32 pb-16 bg-[#050C1A] scan-grid">
+      <section className="pt-32 pb-16 bg-[#0B0B0B] scan-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center max-w-2xl mx-auto">
             <div className="section-label mb-4">Contact</div>
             <h1
-              className="text-5xl font-bold text-[#E8EDF5] tracking-tight mb-4"
+              className="text-5xl font-bold text-[#FFFFFF] tracking-tight mb-4"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Let's talk about
               <br />
               <span className="gradient-text">growing your business</span>
             </h1>
-            <p className="text-lg text-[#E8EDF5]/65">
+            <p className="text-lg text-[#FFFFFF]/65">
               Eagle Eye Automation's team responds within 24 hours. For urgent inquiries, call us directly.
             </p>
           </AnimatedSection>
@@ -68,7 +68,7 @@ export default function Contact() {
       </section>
 
       {/* Contact Form + Info */}
-      <section className="bg-[#0A1628] py-16">
+      <section className="bg-[#141414] py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-3 gap-12">
             {/* Form */}
@@ -76,7 +76,7 @@ export default function Contact() {
               <AnimatedSection>
                 <div className="glass-card rounded-2xl p-8">
                   <h2
-                    className="text-2xl font-bold text-[#E8EDF5] mb-6"
+                    className="text-2xl font-bold text-[#FFFFFF] mb-6"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     Send us a message
@@ -84,7 +84,7 @@ export default function Contact() {
 
                   {/* Contact Type */}
                   <div className="mb-6">
-                    <label className="block text-xs font-semibold text-[#E8EDF5]/60 uppercase tracking-wider mb-3"
+                    <label className="block text-xs font-semibold text-[#FFFFFF]/60 uppercase tracking-wider mb-3"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       What can we help you with?
                     </label>
@@ -96,8 +96,8 @@ export default function Contact() {
                           onClick={() => setFormData({ ...formData, type: type.id })}
                           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                             formData.type === type.id
-                              ? "bg-[rgba(0,212,200,0.15)] border border-[rgba(0,212,200,0.5)] text-[#00D4C8]"
-                              : "border border-[rgba(0,212,200,0.15)] text-[#E8EDF5]/60 hover:border-[rgba(0,212,200,0.3)] hover:text-[#E8EDF5]/80"
+                              ? "bg-[rgba(201,162,39,0.15)] border border-[rgba(201,162,39,0.5)] text-[#C9A227]"
+                              : "border border-[rgba(201,162,39,0.15)] text-[#FFFFFF]/60 hover:border-[rgba(201,162,39,0.3)] hover:text-[#FFFFFF]/80"
                           }`}
                           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                         >
@@ -110,7 +110,7 @@ export default function Contact() {
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                        <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                           style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           First Name *
                         </label>
@@ -124,7 +124,7 @@ export default function Contact() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                        <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                           style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           Last Name *
                         </label>
@@ -140,7 +140,7 @@ export default function Contact() {
                     </div>
 
                     <div>
-                      <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                      <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                         style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                         Work Email *
                       </label>
@@ -156,7 +156,7 @@ export default function Contact() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                        <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                           style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           Company *
                         </label>
@@ -170,7 +170,7 @@ export default function Contact() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                        <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                           style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           Title
                         </label>
@@ -185,7 +185,7 @@ export default function Contact() {
                     </div>
 
                     <div>
-                      <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                      <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                         style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                         Organization Size
                       </label>
@@ -203,7 +203,7 @@ export default function Contact() {
                     </div>
 
                     <div>
-                      <label className="block text-xs text-[#E8EDF5]/50 mb-1.5 uppercase tracking-wider"
+                      <label className="block text-xs text-[#FFFFFF]/50 mb-1.5 uppercase tracking-wider"
                         style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                         Message
                       </label>
@@ -218,7 +218,7 @@ export default function Contact() {
 
                     <button
                       type="submit"
-                      className="w-full flex items-center justify-center gap-2 px-6 py-4 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200 shadow-[0_0_20px_rgba(0,212,200,0.35)] active:scale-[0.98]"
+                      className="w-full flex items-center justify-center gap-2 px-6 py-4 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200 shadow-[0_0_20px_rgba(201,162,39,0.35)] active:scale-[0.98]"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
                       <Send className="w-4 h-4" />
@@ -234,50 +234,50 @@ export default function Contact() {
               <AnimatedSection delay={200}>
                 <div className="glass-card rounded-xl p-6">
                   <h3
-                    className="text-base font-semibold text-[#E8EDF5] mb-4"
+                    className="text-base font-semibold text-[#FFFFFF] mb-4"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     Direct Contact
                   </h3>
                   <div className="space-y-4">
                     <div className="flex items-start gap-3">
-                      <Mail className="w-4 h-4 text-[#00D4C8] mt-0.5 shrink-0" />
+                      <Mail className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
                       <div>
-                        <div className="text-xs text-[#E8EDF5]/40 mb-0.5"
+                        <div className="text-xs text-[#FFFFFF]/40 mb-0.5"
                           style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           General
                         </div>
-                        <div className="text-sm text-[#E8EDF5]/80">intelligence@eagleeyeautomation.com</div>
+                        <div className="text-sm text-[#FFFFFF]/80">intelligence@eagleeyeautomation.com</div>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Mail className="w-4 h-4 text-[#00D4C8] mt-0.5 shrink-0" />
+                      <Mail className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
                       <div>
-                        <div className="text-xs text-[#E8EDF5]/40 mb-0.5"
+                        <div className="text-xs text-[#FFFFFF]/40 mb-0.5"
                           style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           Security
                         </div>
-                        <div className="text-sm text-[#E8EDF5]/80">security@eagleeyeautomation.com</div>
+                        <div className="text-sm text-[#FFFFFF]/80">security@eagleeyeautomation.com</div>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Phone className="w-4 h-4 text-[#00D4C8] mt-0.5 shrink-0" />
+                      <Phone className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
                       <div>
-                        <div className="text-xs text-[#E8EDF5]/40 mb-0.5"
+                        <div className="text-xs text-[#FFFFFF]/40 mb-0.5"
                           style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           Sales
                         </div>
-                        <div className="text-sm text-[#E8EDF5]/80">+1 (888) EEOS-NOW</div>
+                        <div className="text-sm text-[#FFFFFF]/80">+1 (888) EEOS-NOW</div>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Clock className="w-4 h-4 text-[#00D4C8] mt-0.5 shrink-0" />
+                      <Clock className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
                       <div>
-                        <div className="text-xs text-[#E8EDF5]/40 mb-0.5"
+                        <div className="text-xs text-[#FFFFFF]/40 mb-0.5"
                           style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           Response Time
                         </div>
-                        <div className="text-sm text-[#E8EDF5]/80">Within 24 hours</div>
+                        <div className="text-sm text-[#FFFFFF]/80">Within 24 hours</div>
                       </div>
                     </div>
                   </div>
@@ -287,7 +287,7 @@ export default function Contact() {
               <AnimatedSection delay={300}>
                 <div className="glass-card rounded-xl p-6">
                   <h3
-                    className="text-base font-semibold text-[#E8EDF5] mb-4"
+                    className="text-base font-semibold text-[#FFFFFF] mb-4"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     Global Offices
@@ -295,14 +295,14 @@ export default function Contact() {
                   <div className="space-y-4">
                     {OFFICES.map((office) => (
                       <div key={office.city} className="flex items-start gap-3">
-                        <MapPin className="w-4 h-4 text-[#00D4C8] mt-0.5 shrink-0" />
+                        <MapPin className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
                         <div>
-                          <div className="text-sm font-medium text-[#E8EDF5]/90"
+                          <div className="text-sm font-medium text-[#FFFFFF]/90"
                             style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                             {office.city}
                           </div>
-                          <div className="text-xs text-[#00D4C8]/70 mb-0.5">{office.role}</div>
-                          <div className="text-xs text-[#E8EDF5]/45">{office.address}</div>
+                          <div className="text-xs text-[#C9A227]/70 mb-0.5">{office.role}</div>
+                          <div className="text-xs text-[#FFFFFF]/45">{office.address}</div>
                         </div>
                       </div>
                     ))}

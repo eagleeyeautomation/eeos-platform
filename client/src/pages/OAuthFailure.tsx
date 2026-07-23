@@ -51,7 +51,7 @@ export default function OAuthFailure() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       <div className="min-h-screen flex flex-col items-center justify-center px-4 pt-20 pb-16">
@@ -64,14 +64,14 @@ export default function OAuthFailure() {
         <div className="text-center mb-10 max-w-xl">
           <div className="section-label mb-3" style={{ color: "#EF4444" }}>Connection Failed</div>
           <h1
-            className="text-4xl sm:text-5xl font-bold text-[#E8EDF5] tracking-tight mb-4"
+            className="text-4xl sm:text-5xl font-bold text-[#FFFFFF] tracking-tight mb-4"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             {providerLabel} authorization
             <br />
             <span style={{ color: "#EF4444" }}>was not completed.</span>
           </h1>
-          <p className="text-lg text-[#E8EDF5]/60 leading-relaxed">
+          <p className="text-lg text-[#FFFFFF]/60 leading-relaxed">
             Don't worry — your account is secure and no changes were made. Here's what happened and how to resolve it.
           </p>
         </div>
@@ -84,26 +84,26 @@ export default function OAuthFailure() {
                 <AlertCircle className="w-4 h-4 text-[#EF4444]" />
               </div>
               <div>
-                <div className="text-sm font-semibold text-[#E8EDF5] mb-1"
+                <div className="text-sm font-semibold text-[#FFFFFF] mb-1"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   {matchedReason.label}
                 </div>
-                <div className="text-xs text-[#E8EDF5]/50 leading-relaxed mb-3">
+                <div className="text-xs text-[#FFFFFF]/50 leading-relaxed mb-3">
                   {matchedReason.description}
                 </div>
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-[rgba(0,212,200,0.05)] border border-[rgba(0,212,200,0.15)]">
-                  <HelpCircle className="w-3.5 h-3.5 text-[#00D4C8] mt-0.5 shrink-0" />
-                  <p className="text-xs text-[#E8EDF5]/65 leading-relaxed">
-                    <strong className="text-[#00D4C8]">Resolution:</strong> {matchedReason.resolution}
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-[rgba(201,162,39,0.05)] border border-[rgba(201,162,39,0.15)]">
+                  <HelpCircle className="w-3.5 h-3.5 text-[#C9A227] mt-0.5 shrink-0" />
+                  <p className="text-xs text-[#FFFFFF]/65 leading-relaxed">
+                    <strong className="text-[#C9A227]">Resolution:</strong> {matchedReason.resolution}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-[rgba(0,212,200,0.08)]">
-              <div className="flex items-center gap-2 text-xs text-[#E8EDF5]/35"
+            <div className="pt-4 border-t border-[rgba(201,162,39,0.08)]">
+              <div className="flex items-center gap-2 text-xs text-[#FFFFFF]/35"
                 style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                <Shield className="w-3 h-3 text-[#00D4C8]" />
+                <Shield className="w-3 h-3 text-[#C9A227]" />
                 <span>Error code: {errorCode} · No data was accessed or stored</span>
               </div>
             </div>
@@ -114,7 +114,7 @@ export default function OAuthFailure() {
         <div className="flex flex-col sm:flex-row gap-3 mb-12">
           <Link
             href="/connect-ghl"
-            className="flex items-center justify-center gap-2 px-8 py-4 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-xl hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(0,212,200,0.35)]"
+            className="flex items-center justify-center gap-2 px-8 py-4 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-xl hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(201,162,39,0.35)]"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             <RefreshCw className="w-4 h-4" />
@@ -122,7 +122,7 @@ export default function OAuthFailure() {
           </Link>
           <Link
             href="/contact"
-            className="flex items-center justify-center gap-2 px-6 py-4 text-sm font-semibold text-[#00D4C8] border border-[rgba(0,212,200,0.3)] rounded-xl hover:bg-[rgba(0,212,200,0.08)] active:scale-[0.97] transition-all duration-200"
+            className="flex items-center justify-center gap-2 px-6 py-4 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-xl hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             <MessageSquare className="w-4 h-4" />
@@ -132,28 +132,28 @@ export default function OAuthFailure() {
 
         {/* Common issues */}
         <div className="w-full max-w-2xl">
-          <p className="text-center text-xs text-[#E8EDF5]/35 mb-5"
+          <p className="text-center text-xs text-[#FFFFFF]/35 mb-5"
             style={{ fontFamily: "'JetBrains Mono', monospace" }}>
             COMMON ISSUES & RESOLUTIONS
           </p>
           <div className="space-y-3">
             {FAILURE_REASONS.map((reason) => (
               <div key={reason.code} className="glass-card rounded-xl p-4 flex items-start gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#00D4C8] mt-2 shrink-0" />
+                <div className="w-1.5 h-1.5 rounded-full bg-[#C9A227] mt-2 shrink-0" />
                 <div>
-                  <div className="text-sm font-semibold text-[#E8EDF5] mb-0.5"
+                  <div className="text-sm font-semibold text-[#FFFFFF] mb-0.5"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{reason.label}</div>
-                  <div className="text-xs text-[#E8EDF5]/50 leading-relaxed">{reason.resolution}</div>
+                  <div className="text-xs text-[#FFFFFF]/50 leading-relaxed">{reason.resolution}</div>
                 </div>
               </div>
             ))}
           </div>
 
           <div className="mt-8 text-center">
-            <p className="text-sm text-[#E8EDF5]/45 mb-3">Still having trouble?</p>
+            <p className="text-sm text-[#FFFFFF]/45 mb-3">Still having trouble?</p>
             <a
               href="mailto:intelligence@eagleeyeautomation.com"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-[#00D4C8] hover:text-[#00E8DB] transition-colors duration-200"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#C9A227] hover:text-[#D8B84A] transition-colors duration-200"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               <Mail className="w-4 h-4" />

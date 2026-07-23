@@ -29,7 +29,7 @@ type TimelineCategory = "revenue" | "relationship" | "operations" | "milestone" 
 // Map eventType prefixes to visual config
 const EVENT_CONFIG: Record<string, { color: string; bg: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; label: string }> = {
   "opportunity": { color: "#10B981", bg: "rgba(16,185,129,0.1)", icon: DollarSign, label: "Revenue" },
-  "contact": { color: "#00D4C8", bg: "rgba(0,212,200,0.1)", icon: Users, label: "Relationship" },
+  "contact": { color: "#C9A227", bg: "rgba(201,162,39,0.1)", icon: Users, label: "Relationship" },
   "appointment": { color: "#7C3AED", bg: "rgba(124,58,237,0.1)", icon: TrendingUp, label: "Operations" },
   "payment": { color: "#F59E0B", bg: "rgba(245,158,11,0.1)", icon: Star, label: "Milestone" },
   "conversation": { color: "#EF4444", bg: "rgba(239,68,68,0.1)", icon: MessageSquare, label: "Alert" },
@@ -44,7 +44,7 @@ function getEventConfig(eventType: string) {
 function getSignificanceConfig(significance: string | null) {
   if (significance === "critical") return { color: "#EF4444", label: "Critical" };
   if (significance === "high") return { color: "#F59E0B", label: "High Impact" };
-  if (significance === "medium") return { color: "#00D4C8", label: "Medium" };
+  if (significance === "medium") return { color: "#C9A227", label: "Medium" };
   return { color: "#6B7280", label: "Low" };
 }
 
@@ -108,11 +108,11 @@ export default function ExecutiveTimeline() {
   const eventPrefixes = Array.from(new Set(events.map(e => e.eventType.split(".")[0])));
 
   return (
-    <div className="min-h-screen bg-[#050C1A]">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
       {/* Header */}
-      <section className="pt-24 pb-6 bg-[#050C1A] scan-grid">
+      <section className="pt-24 pb-6 bg-[#0B0B0B] scan-grid">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -131,16 +131,16 @@ export default function ExecutiveTimeline() {
                     </div>
                   )}
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-[#E8EDF5] tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <h1 className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   Executive Timeline
                 </h1>
-                <p className="text-sm text-[#E8EDF5]/50 mt-1">
+                <p className="text-sm text-[#FFFFFF]/50 mt-1">
                   A chronological record of every significant business event, decision, and outcome.
                 </p>
               </div>
               <Link
                 href="/connect-ghl"
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(0,212,200,0.3)] shrink-0 self-start"
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)] shrink-0 self-start"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 <Zap className="w-4 h-4" />
@@ -162,8 +162,8 @@ export default function ExecutiveTimeline() {
                   onClick={() => setSelectedTenantId(sub.ghlLocationId)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
                     tenantId === sub.ghlLocationId
-                      ? "bg-[rgba(0,212,200,0.12)] text-[#00D4C8] border border-[rgba(0,212,200,0.3)]"
-                      : "text-[#E8EDF5]/50 hover:text-[#E8EDF5]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
+                      ? "bg-[rgba(201,162,39,0.12)] text-[#C9A227] border border-[rgba(201,162,39,0.3)]"
+                      : "text-[#FFFFFF]/50 hover:text-[#FFFFFF]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
                   }`}
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
@@ -192,14 +192,14 @@ export default function ExecutiveTimeline() {
                     onClick={() => setActiveFilter(f)}
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 capitalize ${
                       activeFilter === f
-                        ? "bg-[rgba(0,212,200,0.12)] text-[#00D4C8] border border-[rgba(0,212,200,0.3)]"
-                        : "text-[#E8EDF5]/50 hover:text-[#E8EDF5]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
+                        ? "bg-[rgba(201,162,39,0.12)] text-[#C9A227] border border-[rgba(201,162,39,0.3)]"
+                        : "text-[#FFFFFF]/50 hover:text-[#FFFFFF]/80 hover:bg-[rgba(255,255,255,0.04)] border border-transparent"
                     }`}
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
-                    {config && <config.icon className="w-3.5 h-3.5" style={{ color: activeFilter === f ? "#00D4C8" : config.color }} />}
+                    {config && <config.icon className="w-3.5 h-3.5" style={{ color: activeFilter === f ? "#C9A227" : config.color }} />}
                     {f === "all" ? "All Events" : (config?.label ?? f.charAt(0).toUpperCase() + f.slice(1))}
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeFilter === f ? "bg-[rgba(0,212,200,0.2)]" : "bg-[rgba(255,255,255,0.06)]"}`}>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeFilter === f ? "bg-[rgba(201,162,39,0.2)]" : "bg-[rgba(255,255,255,0.06)]"}`}>
                       {count}
                     </span>
                   </button>
@@ -217,7 +217,7 @@ export default function ExecutiveTimeline() {
           {/* Loading */}
           {isLoading && (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 text-[#00D4C8] animate-spin" />
+              <Loader2 className="w-8 h-8 text-[#C9A227] animate-spin" />
             </div>
           )}
 
@@ -225,16 +225,16 @@ export default function ExecutiveTimeline() {
           {!tenantId && !isLoading && (
             <AnimatedSection>
               <div className="text-center py-20 glass-card rounded-2xl">
-                <Calendar className="w-12 h-12 text-[#E8EDF5]/20 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-[#E8EDF5]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <Calendar className="w-12 h-12 text-[#FFFFFF]/20 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-[#FFFFFF]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   No GoHighLevel subaccounts connected
                 </h3>
-                <p className="text-sm text-[#E8EDF5]/30 mb-6">
+                <p className="text-sm text-[#FFFFFF]/30 mb-6">
                   Connect your GoHighLevel subaccounts to populate the Executive Timeline.
                 </p>
                 <Link
                   href="/connect-ghl"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#050C1A] bg-[#00D4C8] rounded-lg hover:bg-[#00E8DB] transition-all duration-200"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] transition-all duration-200"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   <Zap className="w-4 h-4" />
@@ -248,11 +248,11 @@ export default function ExecutiveTimeline() {
           {tenantId && !isLoading && events.length === 0 && (
             <AnimatedSection>
               <div className="text-center py-20 glass-card rounded-2xl">
-                <Calendar className="w-12 h-12 text-[#E8EDF5]/20 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-[#E8EDF5]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <Calendar className="w-12 h-12 text-[#FFFFFF]/20 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-[#FFFFFF]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   No timeline events yet
                 </h3>
-                <p className="text-sm text-[#E8EDF5]/30">
+                <p className="text-sm text-[#FFFFFF]/30">
                   Timeline events are created as GoHighLevel sends webhook signals to EEOS.
                 </p>
               </div>
@@ -264,19 +264,19 @@ export default function ExecutiveTimeline() {
             <div key={dateLabel} className="mb-8">
               <AnimatedSection delay={groupIdx * 80}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(0,212,200,0.08)] border border-[rgba(0,212,200,0.15)]">
-                    <Calendar className="w-3.5 h-3.5 text-[#00D4C8]" />
-                    <span className="text-sm font-bold text-[#00D4C8]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{dateLabel}</span>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(201,162,39,0.08)] border border-[rgba(201,162,39,0.15)]">
+                    <Calendar className="w-3.5 h-3.5 text-[#C9A227]" />
+                    <span className="text-sm font-bold text-[#C9A227]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{dateLabel}</span>
                   </div>
-                  <div className="flex-1 h-px bg-[rgba(0,212,200,0.08)]" />
-                  <span className="text-xs text-[#E8EDF5]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <div className="flex-1 h-px bg-[rgba(201,162,39,0.08)]" />
+                  <span className="text-xs text-[#FFFFFF]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     {dateEvents.length} event{dateEvents.length > 1 ? "s" : ""}
                   </span>
                 </div>
               </AnimatedSection>
 
               <div className="relative pl-6">
-                <div className="absolute left-2 top-0 bottom-0 w-px bg-[rgba(0,212,200,0.1)]" aria-hidden="true" />
+                <div className="absolute left-2 top-0 bottom-0 w-px bg-[rgba(201,162,39,0.1)]" aria-hidden="true" />
                 <div className="space-y-3">
                   {dateEvents.map((event, eventIdx) => {
                     const cConfig = getEventConfig(event.eventType);
@@ -290,16 +290,16 @@ export default function ExecutiveTimeline() {
                         <div className="relative">
                           {/* Timeline dot */}
                           <div
-                            className="absolute -left-6 top-5 w-4 h-4 rounded-full border-2 border-[#050C1A] flex items-center justify-center"
+                            className="absolute -left-6 top-5 w-4 h-4 rounded-full border-2 border-[#0B0B0B] flex items-center justify-center"
                             style={{ background: cConfig.color }}
                             aria-hidden="true"
                           >
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#050C1A]" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#0B0B0B]" />
                           </div>
 
                           <button
-                            className={`w-full text-left p-4 rounded-xl border transition-all duration-200 hover:border-[rgba(0,212,200,0.2)] ${
-                              isExpanded ? "border-[rgba(0,212,200,0.25)] bg-[rgba(0,212,200,0.04)]" : "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)]"
+                            className={`w-full text-left p-4 rounded-xl border transition-all duration-200 hover:border-[rgba(201,162,39,0.2)] ${
+                              isExpanded ? "border-[rgba(201,162,39,0.25)] bg-[rgba(201,162,39,0.04)]" : "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)]"
                             }`}
                             onClick={() => setExpandedId(isExpanded ? null : event.id)}
                             aria-expanded={isExpanded}
@@ -310,13 +310,13 @@ export default function ExecutiveTimeline() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                                  <span className="text-sm font-semibold text-[#E8EDF5]">{event.title}</span>
+                                  <span className="text-sm font-semibold text-[#FFFFFF]">{event.title}</span>
                                   {event.entityName && (
-                                    <span className="text-xs text-[#E8EDF5]/40">· {event.entityName}</span>
+                                    <span className="text-xs text-[#FFFFFF]/40">· {event.entityName}</span>
                                   )}
                                 </div>
                                 {event.description && (
-                                  <p className="text-xs text-[#E8EDF5]/55 leading-relaxed">{event.description}</p>
+                                  <p className="text-xs text-[#FFFFFF]/55 leading-relaxed">{event.description}</p>
                                 )}
 
                                 {isExpanded && (
@@ -328,14 +328,14 @@ export default function ExecutiveTimeline() {
                                         </span>
                                       </div>
                                     {event.businessImpact && (
-                                      <p className="text-xs text-[#E8EDF5]/50 leading-relaxed">{event.businessImpact}</p>
+                                      <p className="text-xs text-[#FFFFFF]/50 leading-relaxed">{event.businessImpact}</p>
                                     )}
-                                    <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[rgba(0,212,200,0.04)] border border-[rgba(0,212,200,0.1)]">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-[#00D4C8] mt-1 shrink-0" />
+                                    <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[rgba(201,162,39,0.04)] border border-[rgba(201,162,39,0.1)]">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#C9A227] mt-1 shrink-0" />
                                         <div>
-                                          <div className="text-[10px] font-bold text-[#00D4C8] mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>EVENT TYPE</div>
-                                          <div className="text-[10px] text-[#E8EDF5]/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{event.eventType}</div>
-                                          <div className="text-[10px] text-[#E8EDF5]/30 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>GoHighLevel · Read-only</div>
+                                          <div className="text-[10px] font-bold text-[#C9A227] mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>EVENT TYPE</div>
+                                          <div className="text-[10px] text-[#FFFFFF]/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{event.eventType}</div>
+                                          <div className="text-[10px] text-[#FFFFFF]/30 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>GoHighLevel · Read-only</div>
                                         </div>
                                       </div>
                                   </div>
@@ -347,7 +347,7 @@ export default function ExecutiveTimeline() {
                                     {typeof metadata.value === "number" ? `$${(metadata.value as number).toLocaleString()}` : String(metadata.value as string | number)}
                                   </span>
                                 )}
-                                <div className="flex items-center gap-1 text-[10px] text-[#E8EDF5]/30">
+                                <div className="flex items-center gap-1 text-[10px] text-[#FFFFFF]/30">
                                   <Clock className="w-3 h-3" />
                                   <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{formatTime(event.occurredAt)}</span>
                                 </div>
@@ -368,11 +368,11 @@ export default function ExecutiveTimeline() {
           {!isLoading && events.length > 0 && filtered.length === 0 && (
             <AnimatedSection>
               <div className="text-center py-20 glass-card rounded-2xl">
-                <Calendar className="w-12 h-12 text-[#E8EDF5]/20 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-[#E8EDF5]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <Calendar className="w-12 h-12 text-[#FFFFFF]/20 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-[#FFFFFF]/50 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   No events in this category
                 </h3>
-                <button onClick={() => setActiveFilter("all")} className="mt-3 text-xs text-[#00D4C8] hover:text-[#00E8DB] transition-colors" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                <button onClick={() => setActiveFilter("all")} className="mt-3 text-xs text-[#C9A227] hover:text-[#D8B84A] transition-colors" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   Show all →
                 </button>
               </div>

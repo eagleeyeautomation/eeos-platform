@@ -144,19 +144,19 @@ export default function AthenaLearningLoop() {
   }
 
   return (
-    <section data-testid="athena-learning-loop" className="rounded-lg border border-[#0EA5E9]/30 bg-[#061527] p-5 shadow-[0_24px_80px_rgba(14,165,233,0.06)]">
+    <section data-testid="athena-learning-loop" className="rounded-lg border border-[#C9A227]/30 bg-[#FFFFFF] p-5 shadow-[0_24px_80px_rgba(201,162,39,0.06)]">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#38BDF8]/35 bg-[#08233D] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#7DD3FC]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#8C6F12]">
             <BookOpen className="h-3.5 w-3.5" />
             Athena Learning Loop
           </div>
           <h2 className="mt-3 text-2xl font-semibold text-white">Outcome Evidence and Executive-Approved Learning</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#B7C5D8]">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#D8D8D8]">
             Athena adapts only from verified recorded outcomes and executive-approved lessons for this business.
           </p>
         </div>
-        <button type="button" onClick={() => void loadLearning()} disabled={loading} className="inline-flex h-9 items-center gap-2 rounded-md border border-[#1D4F73] bg-[#08233D] px-3 text-xs font-semibold text-[#DDF7FF] hover:border-[#38BDF8] disabled:opacity-60">
+        <button type="button" onClick={() => void loadLearning()} disabled={loading} className="inline-flex h-9 items-center gap-2 rounded-md border border-[#D9C579] bg-[#F8F4E8] px-3 text-xs font-semibold text-[#0B0B0B] hover:border-[#C9A227] disabled:opacity-60">
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
           Refresh Learning
         </button>
@@ -166,12 +166,12 @@ export default function AthenaLearningLoop() {
       {success ? <div className="mt-4 rounded-md border border-[#10B981]/35 bg-[#05291F] p-3 text-sm text-[#A7F3D0]">{success}</div> : null}
 
       {loading ? (
-        <p className="mt-5 rounded-md border border-[#12314D] bg-[#050F1D] p-4 text-sm text-[#B7C5D8]">Loading Athena Learning.</p>
+        <p className="mt-5 rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4 text-sm text-[#D8D8D8]">Loading Athena Learning.</p>
       ) : learning ? (
         <div className="mt-5 space-y-5">
-          <div className="rounded-md border border-[#12314D] bg-[#050F1D] p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#38BDF8]">Recent Learning Influence</p>
-            <p className="mt-2 text-sm text-[#D7E6F8]">{learning.adaptiveLearningReady ? "Adaptive learning is available for at least one category." : learning.adaptiveLearningReason}</p>
+          <div className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#C9A227]">Recent Learning Influence</p>
+            <p className="mt-2 text-sm text-[#E8E8E8]">{learning.adaptiveLearningReady ? "Adaptive learning is available for at least one category." : learning.adaptiveLearningReason}</p>
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">
@@ -209,9 +209,9 @@ export default function AthenaLearningLoop() {
             </LearningPanel>
             <LearningPanel icon={CheckCircle2} title="Outcomes Awaiting Review">
               {awaitingReview.length === 0 ? <EmptyText text="No outcomes awaiting review." /> : awaitingReview.map((item) => (
-                <div key={item.id} className="mt-3 rounded-md border border-[#12314D] bg-[#050F1D] p-3">
+                <div key={item.id} className="mt-3 rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-3">
                   <p className="text-sm font-semibold text-white">{item.recommendationId}</p>
-                  <button type="button" onClick={() => void reviewOutcome(item.recommendationId)} className="mt-2 rounded-md border border-[#1D4F73] px-2 py-1 text-xs text-[#DDF7FF] hover:border-[#38BDF8]">Review Outcome</button>
+                  <button type="button" onClick={() => void reviewOutcome(item.recommendationId)} className="mt-2 rounded-md border border-[#D9C579] px-2 py-1 text-xs text-[#0B0B0B] hover:border-[#C9A227]">Review Outcome</button>
                 </div>
               ))}
             </LearningPanel>
@@ -224,10 +224,10 @@ export default function AthenaLearningLoop() {
           <LearningPanel icon={TrendingUp} title="Category Reliability Scores">
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {learning.profiles.map((profile) => (
-                <div key={profile.category} className="rounded-md border border-[#12314D] bg-[#050F1D] p-3">
+                <div key={profile.category} className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-3">
                   <p className="text-sm font-semibold capitalize text-white">{profile.category.replace("_", " ")}</p>
-                  <p className="mt-2 text-2xl font-semibold text-[#7DD3FC]">{profile.reliabilityScore}/100</p>
-                  <p className="mt-1 text-xs text-[#7D91AA]">{profile.evidenceCount} evidence items; {profile.successfulOutcomeCount} successful; {profile.unsuccessfulOutcomeCount} unsuccessful; {profile.inconclusiveOutcomeCount} inconclusive</p>
+                  <p className="mt-2 text-2xl font-semibold text-[#8C6F12]">{profile.reliabilityScore}/100</p>
+                  <p className="mt-1 text-xs text-[#A0A0A0]">{profile.evidenceCount} evidence items; {profile.successfulOutcomeCount} successful; {profile.unsuccessfulOutcomeCount} unsuccessful; {profile.inconclusiveOutcomeCount} inconclusive</p>
                 </div>
               ))}
             </div>
@@ -244,8 +244,8 @@ export function learningControlsAvailable() {
 
 function LearningPanel({ icon: Icon, title, children }: { icon: typeof BookOpen; title: string; children: ReactNode }) {
   return (
-    <div className="rounded-md border border-[#12314D] bg-[#071426] p-4">
-      <div className="flex items-center gap-2 text-[#38BDF8]">
+    <div className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4">
+      <div className="flex items-center gap-2 text-[#C9A227]">
         <Icon className="h-4 w-4" />
         <h3 className="text-sm font-semibold uppercase tracking-[0.14em]">{title}</h3>
       </div>
@@ -261,15 +261,15 @@ function LearningList({ items, empty }: { items: FeedbackRecord[]; empty: string
 
 function FeedbackRow({ item }: { item: FeedbackRecord }) {
   return (
-    <div className="rounded-md border border-[#12314D] bg-[#050F1D] p-3">
+    <div className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-3">
       <div className="flex flex-wrap gap-2">
         <Badge text="User-entered feedback" tone="green" />
         <Badge text={item.executiveDecision} />
         <Badge text={item.status} />
       </div>
       <p className="mt-2 text-sm font-semibold text-white">{item.recommendationId}</p>
-      <p className="mt-1 text-xs text-[#B7C5D8]">{item.feedback}</p>
-      <p className="mt-1 text-xs text-[#7D91AA]">Owner: {item.owner}</p>
+      <p className="mt-1 text-xs text-[#D8D8D8]">{item.feedback}</p>
+      <p className="mt-1 text-xs text-[#A0A0A0]">Owner: {item.owner}</p>
     </div>
   );
 }
@@ -279,12 +279,12 @@ function MeasurementList({ items }: { items: MeasurementRecord[] }) {
   return (
     <div className="mt-4 space-y-3">
       {items.map((item) => (
-        <div key={item.id} className="rounded-md border border-[#12314D] bg-[#050F1D] p-3">
+        <div key={item.id} className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-3">
           <div className="flex flex-wrap gap-2">
             <Badge text={item.verified ? "Verified measurement" : "User-entered evidence"} tone={item.verified ? "green" : "blue"} />
           </div>
           <p className="mt-2 text-sm font-semibold text-white">{item.metricName}</p>
-          <p className="mt-1 text-xs text-[#B7C5D8]">Actual {item.actualValue ?? "not entered"} / Target {item.targetValue ?? "not entered"} {item.unit}</p>
+          <p className="mt-1 text-xs text-[#D8D8D8]">Actual {item.actualValue ?? "not entered"} / Target {item.targetValue ?? "not entered"} {item.unit}</p>
         </div>
       ))}
     </div>
@@ -293,16 +293,16 @@ function MeasurementList({ items }: { items: MeasurementRecord[] }) {
 
 function LessonRow({ lesson, onApprove }: { lesson: LessonRecord; onApprove: (lessonId: string, approved: boolean) => Promise<void> }) {
   return (
-    <div className="mt-3 rounded-md border border-[#12314D] bg-[#050F1D] p-3">
+    <div className="mt-3 rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-3">
       <div className="flex flex-wrap gap-2">
         <Badge text={lesson.approvedForReuse ? "Executive-approved lesson" : "Athena analysis"} tone={lesson.approvedForReuse ? "green" : "blue"} />
         <Badge text={lesson.lessonType} />
       </div>
-      <p className="mt-2 text-xs leading-5 text-[#B7C5D8]">{lesson.summary}</p>
+      <p className="mt-2 text-xs leading-5 text-[#D8D8D8]">{lesson.summary}</p>
       <div className="mt-2 flex flex-wrap gap-2">
-        <button type="button" onClick={() => void onApprove(lesson.id, true)} className="rounded-md border border-[#1D4F73] px-2 py-1 text-xs text-[#DDF7FF] hover:border-[#38BDF8]">Approve Lesson</button>
-        <button type="button" onClick={() => void onApprove(lesson.id, false)} className="rounded-md border border-[#1D4F73] px-2 py-1 text-xs text-[#DDF7FF] hover:border-[#38BDF8]">Reject Lesson</button>
-        <button type="button" className="rounded-md border border-[#1D4F73] px-2 py-1 text-xs text-[#DDF7FF]">Request More Evidence</button>
+        <button type="button" onClick={() => void onApprove(lesson.id, true)} className="rounded-md border border-[#D9C579] px-2 py-1 text-xs text-[#0B0B0B] hover:border-[#C9A227]">Approve Lesson</button>
+        <button type="button" onClick={() => void onApprove(lesson.id, false)} className="rounded-md border border-[#D9C579] px-2 py-1 text-xs text-[#0B0B0B] hover:border-[#C9A227]">Reject Lesson</button>
+        <button type="button" className="rounded-md border border-[#D9C579] px-2 py-1 text-xs text-[#0B0B0B]">Request More Evidence</button>
       </div>
     </div>
   );
@@ -310,18 +310,18 @@ function LessonRow({ lesson, onApprove }: { lesson: LessonRecord; onApprove: (le
 
 function TextInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#86A6C8]">
+    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#B8B8B8]">
       {label}
-      <input value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-[#1D4F73] bg-[#050F1D] px-3 text-sm normal-case tracking-normal text-white outline-none focus:border-[#38BDF8]" />
+      <input value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-[#D9C579] bg-[#FFFFFF] px-3 text-sm normal-case tracking-normal text-[#0B0B0B] outline-none focus:border-[#C9A227]" />
     </label>
   );
 }
 
 function SelectInput({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
   return (
-    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#86A6C8]">
+    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#B8B8B8]">
       {label}
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-[#1D4F73] bg-[#050F1D] px-3 text-sm normal-case tracking-normal text-white outline-none focus:border-[#38BDF8]">
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-[#D9C579] bg-[#FFFFFF] px-3 text-sm normal-case tracking-normal text-[#0B0B0B] outline-none focus:border-[#C9A227]">
         {options.map((option) => <option key={option} value={option}>{option}</option>)}
       </select>
     </label>
@@ -330,7 +330,7 @@ function SelectInput({ label, value, options, onChange }: { label: string; value
 
 function ActionButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="inline-flex h-9 items-center justify-center gap-2 self-end rounded-md border border-[#38BDF8]/40 bg-[#08233D] px-3 text-xs font-semibold text-[#DDF7FF] hover:border-[#7DD3FC]">
+    <button type="button" onClick={onClick} className="inline-flex h-9 items-center justify-center gap-2 self-end rounded-md border border-[#C9A227]/40 bg-[#F8F4E8] px-3 text-xs font-semibold text-[#0B0B0B] hover:border-[#8C6F12]">
       <Save className="h-3.5 w-3.5" />
       {label}
     </button>
@@ -338,11 +338,11 @@ function ActionButton({ label, onClick }: { label: string; onClick: () => void }
 }
 
 function Badge({ text, tone = "blue" }: { text: string; tone?: "blue" | "green" }) {
-  return <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.12em] ${tone === "green" ? "border-[#10B981]/35 bg-[#05291F] text-[#A7F3D0]" : "border-[#38BDF8]/35 bg-[#08233D] text-[#7DD3FC]"}`}>{text}</span>;
+  return <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.12em] ${tone === "green" ? "border-[#10B981]/35 bg-[#05291F] text-[#A7F3D0]" : "border-[#C9A227]/35 bg-[#F8F4E8] text-[#8C6F12]"}`}>{text}</span>;
 }
 
 function EmptyText({ text }: { text: string }) {
-  return <p className="rounded-md border border-[#12314D] bg-[#050F1D] p-3 text-sm text-[#7D91AA]">{text}</p>;
+  return <p className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-3 text-sm text-[#A0A0A0]">{text}</p>;
 }
 
 function numberOrNull(value: string) {
