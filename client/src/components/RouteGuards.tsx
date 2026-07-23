@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Redirect } from "wouter";
 import { startLogin } from "@/const";
 import { isCustomerRole, useProductSession } from "@/contexts/ProductSessionContext";
@@ -14,16 +14,37 @@ function LoadingGate({ label = "Loading EEOS session" }: { label?: string }) {
   );
 }
 
+function AuthenticationBlocked({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen bg-[#0B0B0B] flex items-center justify-center px-4">
+      <div className="glass-card max-w-lg rounded-2xl p-8 text-center">
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#C9A227]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          Authentication Required
+        </p>
+        <h1 className="mt-3 text-2xl font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          EEOS sign-in needs configuration
+        </h1>
+        <p className="mt-3 text-sm leading-6 text-[#FFFFFF]/60">{message}</p>
+      </div>
+    </div>
+  );
+}
+
 export function OwnerRoute({ children, allowOnboarding = false }: { children: ReactNode; allowOnboarding?: boolean }) {
   const session = useProductSession();
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session.loading && !session.authenticated) {
-      startLogin();
+      const started = startLogin();
+      if (!started) {
+        setAuthError("The production sign-in portal URL is not configured for this EEOS deployment.");
+      }
     }
   }, [session.authenticated, session.loading]);
 
   if (session.loading) return <LoadingGate />;
+  if (!session.authenticated && authError) return <AuthenticationBlocked message={authError} />;
   if (!session.authenticated) return <LoadingGate label="Redirecting to sign in" />;
   if (session.role === "PLATFORM_ADMIN") return <Redirect to="/access-denied" />;
   if (!isCustomerRole(session.role)) return <Redirect to="/access-denied" />;
@@ -34,14 +55,19 @@ export function OwnerRoute({ children, allowOnboarding = false }: { children: Re
 
 export function PlatformAdminRoute({ children }: { children: ReactNode }) {
   const session = useProductSession();
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session.loading && !session.authenticated) {
-      startLogin();
+      const started = startLogin();
+      if (!started) {
+        setAuthError("The production sign-in portal URL is not configured for this EEOS deployment.");
+      }
     }
   }, [session.authenticated, session.loading]);
 
   if (session.loading) return <LoadingGate />;
+  if (!session.authenticated && authError) return <AuthenticationBlocked message={authError} />;
   if (!session.authenticated) return <LoadingGate label="Redirecting to sign in" />;
   if (session.role !== "PLATFORM_ADMIN") return <Redirect to="/access-denied" />;
 
