@@ -140,6 +140,15 @@ export function buildDropdownRouteInventory(
   );
 }
 
+function isActiveRoute(currentPath: string, href: string) {
+  return href !== "#" && (currentPath === href || currentPath.startsWith(`${href}/`));
+}
+
+function isActiveNavItem(currentPath: string, link: NavItem) {
+  return isActiveRoute(currentPath, link.href)
+    || Boolean(link.children?.some((child) => isActiveRoute(currentPath, child.href)));
+}
+
 export default function Navigation() {
   const session = useProductSession();
   const [scrolled, setScrolled] = useState(false);
@@ -254,7 +263,7 @@ export default function Navigation() {
                       aria-expanded={dropdownOpen === link.label}
                       onClick={() => setDropdownOpen((open) => open === link.label ? null : link.label)}
                       className={`flex items-center gap-1 px-4 py-2 text-sm transition-colors duration-200 font-medium focus:outline-none ${
-                        link.href !== "#" && location === link.href
+                        isActiveNavItem(location, link)
                           ? "text-[#C9A227]"
                           : "text-[#FFFFFF]/75 hover:text-[#C9A227] focus:text-[#C9A227]"
                       }`}
@@ -281,7 +290,11 @@ export default function Navigation() {
                                 href={child.href}
                                 role="menuitem"
                                 onClick={() => setDropdownOpen(null)}
-                                className="flex items-center gap-2 px-4 py-3 text-sm text-[#FFFFFF]/75 hover:text-[#C9A227] hover:bg-[rgba(201,162,39,0.06)] focus:text-[#C9A227] focus:bg-[rgba(201,162,39,0.06)] focus:outline-none transition-all duration-150"
+                                className={`flex items-center gap-2 px-4 py-3 text-sm hover:text-[#C9A227] hover:bg-[rgba(201,162,39,0.06)] focus:text-[#C9A227] focus:bg-[rgba(201,162,39,0.06)] focus:outline-none transition-all duration-150 ${
+                                  isActiveRoute(location, child.href)
+                                    ? "text-[#C9A227] bg-[rgba(201,162,39,0.08)]"
+                                    : "text-[#FFFFFF]/75"
+                                }`}
                                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                               >
                                 {child.label}
@@ -308,7 +321,7 @@ export default function Navigation() {
                     key={link.href}
                     href={link.href}
                     className={`px-4 py-2 text-sm font-medium transition-colors duration-200 ${
-                      location === link.href
+                      isActiveRoute(location, link.href)
                         ? "text-[#C9A227]"
                         : "text-[#FFFFFF]/75 hover:text-[#C9A227]"
                     }`}
@@ -401,7 +414,11 @@ export default function Navigation() {
                       <Link
                         key={child.href}
                         href={child.href}
-                        className="flex items-center gap-2 px-3 py-3 text-base text-[#FFFFFF]/75 hover:text-[#C9A227] hover:bg-[rgba(201,162,39,0.05)] rounded-lg transition-all"
+                        className={`flex items-center gap-2 px-3 py-3 text-base hover:text-[#C9A227] hover:bg-[rgba(201,162,39,0.05)] rounded-lg transition-all ${
+                          isActiveRoute(location, child.href)
+                            ? "text-[#C9A227] bg-[rgba(201,162,39,0.08)]"
+                            : "text-[#FFFFFF]/75"
+                        }`}
                         style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                       >
                         <ChevronDown className="w-3.5 h-3.5 -rotate-90 opacity-40" />
@@ -428,7 +445,7 @@ export default function Navigation() {
                   key={link.href}
                   href={link.href}
                   className={`flex items-center justify-between px-3 py-3.5 text-base font-medium rounded-lg transition-all ${
-                    location === link.href
+                    isActiveRoute(location, link.href)
                       ? "text-[#C9A227] bg-[rgba(201,162,39,0.08)]"
                       : "text-[#FFFFFF]/80 hover:text-[#C9A227] hover:bg-[rgba(201,162,39,0.05)]"
                   }`}
