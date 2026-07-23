@@ -33,8 +33,9 @@ const NAV_LINKS = [
   },
   {
     label: "Dashboard",
-    href: "#",
+    href: "/dashboard",
     children: [
+      { label: "Executive Dashboard", href: "/dashboard" },
       { label: "Executive Home", href: "/executive-home" },
       { label: "Business Health", href: "/business-health" },
       { label: "AI Recommendations", href: "/ai-recommendations" },
@@ -119,7 +120,25 @@ export default function Navigation() {
                     onMouseEnter={() => setDropdownOpen(link.label)}
                     onMouseLeave={() => setDropdownOpen(null)}
                   >
-                    <button
+                    {link.href !== "#" ? (
+                      <Link
+                        href={link.href}
+                        className={`flex items-center gap-1 px-4 py-2 text-sm transition-colors duration-200 font-medium ${
+                          location === link.href
+                            ? "text-[#00D4C8]"
+                            : "text-[#E8EDF5]/75 hover:text-[#00D4C8]"
+                        }`}
+                        style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                      >
+                        {link.label}
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                            dropdownOpen === link.label ? "rotate-180" : ""
+                          }`}
+                        />
+                      </Link>
+                    ) : (
+                      <button
                       className="flex items-center gap-1 px-4 py-2 text-sm text-[#E8EDF5]/75 hover:text-[#00D4C8] transition-colors duration-200 font-medium"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
@@ -130,6 +149,7 @@ export default function Navigation() {
                         }`}
                       />
                     </button>
+                    )}
                     {dropdownOpen === link.label && (
                       <div className="absolute top-full left-0 mt-1 w-52 glass-card rounded-lg overflow-hidden shadow-xl">
                         {link.children.map((child) => (
@@ -207,12 +227,23 @@ export default function Navigation() {
             {NAV_LINKS.map((link) =>
               link.children ? (
                 <div key={link.label} className="py-2">
-                  <div
-                    className="text-[10px] font-semibold text-[#00D4C8] uppercase tracking-[0.2em] mb-2 px-2"
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  >
-                    {link.label}
-                  </div>
+                  {link.href !== "#" ? (
+                    <Link
+                      href={link.href}
+                      className="mb-2 flex items-center justify-between rounded-lg px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#00D4C8] hover:bg-[rgba(0,212,200,0.05)]"
+                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                    >
+                      {link.label}
+                      <ArrowRight className="w-3.5 h-3.5 opacity-60" />
+                    </Link>
+                  ) : (
+                    <div
+                      className="text-[10px] font-semibold text-[#00D4C8] uppercase tracking-[0.2em] mb-2 px-2"
+                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                    >
+                      {link.label}
+                    </div>
+                  )}
                   {link.children.map((child) => (
                     <Link
                       key={child.href}
@@ -262,7 +293,7 @@ export default function Navigation() {
               View Integration Health
             </Link>
             <Link
-              href="/executive-home"
+              href="/dashboard"
               className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#E8EDF5]/70 hover:text-[#E8EDF5] transition-all"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               aria-label="Open Executive Dashboard"

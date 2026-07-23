@@ -17,6 +17,7 @@ import Onboarding from "./pages/Onboarding";
 import Integrations from "./pages/Integrations";
 import GoHighLevelIntegration from "./pages/GoHighLevelIntegration";
 import ConnectGHL from "./pages/ConnectGHL";
+import Dashboard from "./pages/Dashboard";
 // Sprint 11 pages
 import OAuthSuccess from "./pages/OAuthSuccess";
 import OAuthFailure from "./pages/OAuthFailure";
@@ -55,6 +56,7 @@ function Router() {
       <Route path="/integrations" component={Integrations} />
       <Route path="/integrations/gohighlevel" component={GoHighLevelIntegration} />
       <Route path="/connect-ghl" component={ConnectGHL} />
+      <Route path="/dashboard" component={Dashboard} />
       {/* Sprint 11 — GHL Connection Journey */}
       <Route path="/oauth-success" component={OAuthSuccess} />
       <Route path="/oauth-failure" component={OAuthFailure} />
