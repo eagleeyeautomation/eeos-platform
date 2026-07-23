@@ -5,11 +5,11 @@ import { FormEvent, useMemo, useState } from "react";
 import { Link } from "wouter";
 
 function readReturnTo() {
-  if (typeof window === "undefined") return "/executive-home";
+  if (typeof window === "undefined") return undefined;
   const params = new URLSearchParams(window.location.search);
   const value = params.get("returnTo");
   if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/api/")) {
-    return "/executive-home";
+    return undefined;
   }
   return value;
 }
