@@ -227,7 +227,7 @@ export default function Integrations() {
                   </div>
                   <div className="px-6 py-8 rounded-xl bg-[rgba(201,162,39,0.12)] border-2 border-[#C9A227] text-center shadow-[0_0_32px_rgba(201,162,39,0.2)]">
                     <img
-                      src="/manus-storage/eeos-logo-mark_707d59ff.png"
+                      src="/eeos-assets/eeos-logo-mark.svg"
                       alt="EEOS"
                       className="w-8 h-8 mx-auto mb-2 object-contain"
                     />

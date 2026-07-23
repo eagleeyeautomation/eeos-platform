@@ -2,21 +2,21 @@
 // Updated with new CTAs, GoHighLevel journey link, mobile-first layout
 
 import { Link } from "wouter";
-import { Shield, Mail, Phone, MapPin, Zap, ArrowRight } from "lucide-react";
+import { Shield, Mail, Phone, MapPin, Zap } from "lucide-react";
 
 export default function Footer({ hideConnectionLinks = false }: { hideConnectionLinks?: boolean }) {
   return (
     <footer className="bg-[#0B0B0B] border-t border-[rgba(201,162,39,0.1)]">
       {/* Mini CTA Bar */}
-      <div className="border-b border-[rgba(201,162,39,0.08)] bg-[#141414]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <p className="text-sm text-[#FFFFFF]/60">
-              <span className="text-[#FFFFFF] font-semibold">EEOS Private Beta is open.</span>{" "}
-              Connect your business systems and go live in 6 weeks.
-            </p>
-            <div className="flex items-center gap-3 shrink-0">
-              {!hideConnectionLinks && (
+      {!hideConnectionLinks ? (
+        <div className="border-b border-[rgba(201,162,39,0.08)] bg-[#141414]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <p className="text-sm text-[#FFFFFF]/60">
+                <span className="text-[#FFFFFF] font-semibold">EEOS Private Beta is open.</span>{" "}
+                Connect your business systems and go live in 6 weeks.
+              </p>
+              <div className="flex items-center gap-3 shrink-0">
                 <Link
                   href="/connect-ghl"
                   className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.35)]"
@@ -25,18 +25,18 @@ export default function Footer({ hideConnectionLinks = false }: { hideConnection
                   <Zap className="w-3 h-3" />
                   Start Private Beta
                 </Link>
-              )}
-              <Link
-                href="/demo"
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                Request Demo
-              </Link>
+                <Link
+                  href="/demo"
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  Request Demo
+                </Link>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-10">
@@ -44,7 +44,7 @@ export default function Footer({ hideConnectionLinks = false }: { hideConnection
           <div className="col-span-2 md:col-span-3 lg:col-span-2">
             <div className="flex items-center gap-3 mb-4">
               <img
-                src="/manus-storage/eeos-logo-mark_707d59ff.png"
+                src="/eeos-assets/eeos-logo-mark.svg"
                 alt="Eagle Eye Automation"
                 className="w-8 h-8 object-contain"
               />
@@ -64,10 +64,10 @@ export default function Footer({ hideConnectionLinks = false }: { hideConnection
               </div>
             </div>
             <p className="text-[#FFFFFF]/55 text-sm leading-relaxed max-w-xs mb-3">
-              Eagle Eye Automation builds AI software that helps service businesses grow. EEOS connects to your business systems, reads approved signals, and turns them into executive recommendations.
+              Eagle Eye Automation builds EEOS, the AI Operating System that gives small businesses the power of Fortune 500 companies through AI, automation, and executive intelligence.
             </p>
             <p className="text-[#C9A227]/70 text-xs italic mb-5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              “Transcend Your Business. Stop Managing. Start Leading.”
+              “Enterprise-level capabilities for small businesses.”
             </p>
             <div
               className="flex items-center gap-2 text-xs text-[#FFFFFF]/35"
@@ -121,7 +121,7 @@ export default function Footer({ hideConnectionLinks = false }: { hideConnection
                 { label: "Contact Us", href: "/contact" },
                 { label: "Request Demo", href: "/demo" },
                 ...(!hideConnectionLinks ? [{ label: "Connect GoHighLevel", href: "/connect-ghl" }] : []),
-                { label: "Connect Your Business", href: "/onboarding" },
+                ...(!hideConnectionLinks ? [{ label: "Connect Your Business", href: "/onboarding" }] : []),
               ].map((link) => (
                 <li key={link.href}>
                   <Link
@@ -167,18 +167,21 @@ export default function Footer({ hideConnectionLinks = false }: { hideConnection
             className="text-xs text-[#FFFFFF]/30"
             style={{ fontFamily: "'JetBrains Mono', monospace" }}
           >
-            © 2026 Eagle Eye Automation, Inc. All rights reserved. · AI Software for Service Businesses
+            © 2026 Eagle Eye Automation, Inc. All rights reserved. · AI Operating System for Small Businesses
           </p>
           <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-            {["Privacy Policy", "Terms of Service", "Security Policy", "Cookie Settings"].map((item) => (
-              <button
-                key={item}
-                className="text-xs text-[#FFFFFF]/30 hover:text-[#C9A227] transition-colors duration-200"
-                onClick={() => {}}
-              >
-                {item}
-              </button>
-            ))}
+            <span className="text-xs text-[#FFFFFF]/30" aria-disabled="true">
+              Privacy Policy
+            </span>
+            <span className="text-xs text-[#FFFFFF]/30" aria-disabled="true">
+              Terms of Service
+            </span>
+            <Link href="/security" className="text-xs text-[#FFFFFF]/30 hover:text-[#C9A227] transition-colors duration-200">
+              Security Policy
+            </Link>
+            <span className="text-xs text-[#FFFFFF]/30" aria-disabled="true">
+              Cookie Settings
+            </span>
           </div>
         </div>
       </div>

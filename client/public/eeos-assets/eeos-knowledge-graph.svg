@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-label="EEOS knowledge graph preview">
+  <rect width="1200" height="760" rx="36" fill="#0B0B0B"/>
+  <g stroke="#C9A227" stroke-width="4" opacity=".7">
+    <path d="M600 380 330 235M600 380l250-180M600 380l310 185M600 380 350 560M330 235l20 325M850 200l60 365M350 560l560 5"/>
+  </g>
+  <g>
+    <circle cx="600" cy="380" r="78" fill="#C9A227"/>
+    <circle cx="330" cy="235" r="52" fill="#FFFFFF"/>
+    <circle cx="850" cy="200" r="52" fill="#FFFFFF"/>
+    <circle cx="910" cy="565" r="52" fill="#FFFFFF"/>
+    <circle cx="350" cy="560" r="52" fill="#FFFFFF"/>
+  </g>
+  <g fill="#0B0B0B" font-family="Arial, sans-serif" font-size="26" font-weight="700" text-anchor="middle">
+    <text x="600" y="389">EEOS</text>
+    <text x="330" y="244">CRM</text>
+    <text x="850" y="209">AI</text>
+    <text x="910" y="574">OPS</text>
+    <text x="350" y="569">TEAM</text>
+  </g>
+</svg>

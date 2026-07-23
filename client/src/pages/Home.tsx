@@ -25,33 +25,33 @@ const STATS = [
 const VALUE_PROPS = [
   {
     icon: Brain,
-    title: "Executive Intelligence",
-    description: "EEOS synthesizes data from every corner of your business into clear, actionable intelligence — delivered before you need to ask.",
+    title: "AI Executive Intelligence",
+    description: "EEOS turns daily business activity into executive-level insight so small business owners can lead with the clarity of a much larger company.",
   },
   {
     icon: Zap,
-    title: "Decisive Speed",
-    description: "From signal to decision in minutes, not weeks. EEOS surfaces what matters, when it matters, with the context to act.",
+    title: "Intelligent Automation",
+    description: "Automate follow-up, workflows, alerts, and decision support without turning EEOS into another tool your team has to manage.",
   },
   {
     icon: Shield,
-    title: "Enterprise Security",
-    description: "SOC 2 Type II certified. Zero-trust architecture. Your data never leaves your control — EEOS connects, not copies.",
+    title: "Secure Operations",
+    description: "Bring disciplined access controls, connection health, and operational visibility to the systems your business already uses.",
   },
   {
     icon: Globe,
-    title: "Universal Integration",
-    description: "Connect every system your business runs — CRM, HR, finance, operations — into one unified intelligence layer.",
+    title: "GoHighLevel Integration",
+    description: "Connect GoHighLevel first, then turn contacts, opportunities, conversations, appointments, and tasks into a trusted owner view.",
   },
   {
     icon: BarChart3,
-    title: "Business DNA Mapping",
-    description: "EEOS builds a living model of your business's strengths, risks, and strategic momentum — updated in real time.",
+    title: "Business Health Monitoring",
+    description: "Monitor the signals that matter most: growth, response, staffing, operations, pipeline, risk, and execution quality.",
   },
   {
     icon: Users,
-    title: "Built for Business Owners",
-    description: "Designed for founders, operators, and their leadership teams. No dashboards to configure. No data science required. Just intelligence.",
+    title: "Decision Support",
+    description: "Designed for owners and leadership teams who need answers, priorities, and next steps without hiring a Fortune 500 analytics department.",
   },
 ];
 
@@ -65,7 +65,7 @@ const HOW_IT_WORKS = [
     step: "01",
     icon: Database,
     title: "Connects to your business systems",
-    description: "EEOS uses read-only connectors to securely link your existing software — CRM, ERP, HR, finance, and operations platforms. No data is copied or stored.",
+    description: "EEOS securely connects to the systems your business already uses, starting with GoHighLevel, and reads approved activity signals.",
     color: "#C9A227",
   },
   {
@@ -123,7 +123,7 @@ export default function Home() {
         {/* Background */}
         <div className="absolute inset-0">
           <img
-            src="/manus-storage/eeos-hero-bg_c4a9cb00.png"
+            src="/eeos-assets/eeos-hero-bg.svg"
             alt=""
             className="w-full h-full object-cover opacity-55"
           />
@@ -145,9 +145,9 @@ export default function Home() {
 
             {/* Company badge */}
             <div className="flex items-center gap-3 mb-8 animate-fade-up">
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-[rgba(201,162,39,0.25)] bg-[rgba(201,162,39,0.06)]">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-[rgba(201,162,39,0.25)] bg-[rgba(201,162,39,0.06)]">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#C9A227] animate-pulse" />
-                <span className="section-label text-[10px]">Eagle Eye Automation — AI Software for Service Businesses</span>
+                <span className="section-label text-[10px]">Eagle Eye Automation — AI Operating System for Small Businesses</span>
               </div>
             </div>
 
@@ -156,27 +156,27 @@ export default function Home() {
               className="text-5xl sm:text-6xl lg:text-7xl font-bold text-[#FFFFFF] leading-[1.05] tracking-tight mb-4 animate-fade-up"
               style={{ fontFamily: "'Space Grotesk', sans-serif", animationDelay: "100ms" }}
             >
-              Transcend Your
+              Fortune 500 Power
               <br />
-              Business.
+              for Small Business.
             </h1>
             <p
               className="text-2xl sm:text-3xl font-semibold text-[#FFFFFF]/70 mb-6 animate-fade-up"
               style={{ fontFamily: "'Space Grotesk', sans-serif", animationDelay: "150ms" }}
             >
-              Stop managing.{" "}
-              <span className="gradient-text">Start leading.</span>
+              The AI Operating System that helps owners{" "}
+              <span className="gradient-text">lead with executive intelligence.</span>
             </p>
 
             {/* The core explanation */}
             <div className="mb-8 animate-fade-up" style={{ animationDelay: "200ms" }}>
                 <p className="text-base sm:text-lg text-[#FFFFFF]/65 leading-relaxed max-w-2xl mb-5">
-                  Eagle Eye Automation builds AI software that helps service businesses grow. Our flagship product, <span className="text-[#C9A227] font-semibold">EEOS</span>, transforms your business data into accurate executive intelligence — helping leaders move beyond reacting to today's problems and begin making tomorrow's decisions with confidence.
+                  Eagle Eye Automation builds AI, automation, and executive intelligence for small businesses. Our flagship product, <span className="text-[#C9A227] font-semibold">EEOS</span>, gives owners enterprise-level visibility, decision support, workflow automation, and secure operations without requiring an enterprise-size team.
                 </p>
               <div className="flex items-start gap-3 p-4 rounded-xl border border-[rgba(201,162,39,0.2)] bg-[rgba(201,162,39,0.04)]">
                 <Lock className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
                 <p className="text-sm text-[#FFFFFF]/75 leading-relaxed">
-                  <span className="text-[#C9A227] font-semibold">How EEOS works:</span> Connects to your business systems, reads approved signals, and turns them into executive recommendations — all without storing your data.
+                  <span className="text-[#C9A227] font-semibold">How EEOS works:</span> Connects to your business systems, reads approved signals, and turns them into executive intelligence — all without storing your source data.
                 </p>
               </div>
             </div>
@@ -283,7 +283,7 @@ export default function Home() {
                 <span className="gradient-text">to confident leader.</span>
               </h2>
               <p className="text-[#FFFFFF]/55 max-w-sm text-sm leading-relaxed lg:text-right">
-                EEOS doesn't just report what happened — it tells you what to do next, and why it matters now.
+                EEOS brings enterprise-level intelligence, automation, and business health monitoring into one owner command center.
               </p>
             </div>
           </AnimatedSection>
@@ -333,7 +333,7 @@ export default function Home() {
                 <span className="gradient-text">data to decision.</span>
               </h2>
               <p className="text-[#FFFFFF]/55 max-w-sm text-sm leading-relaxed lg:text-right">
-                EEOS connects to your business systems, reads approved signals, and turns them into executive recommendations.
+                EEOS connects to your business systems, reads approved signals, and turns them into executive intelligence and decision support.
               </p>
             </div>
           </AnimatedSection>
@@ -393,7 +393,7 @@ export default function Home() {
           className="text-center text-[10px] text-[#FFFFFF]/25 tracking-[0.2em] uppercase mb-6"
           style={{ fontFamily: "'JetBrains Mono', monospace" }}
         >
-          Trusted by service businesses across industries
+          Trusted by small businesses ready for enterprise-level intelligence
         </p>
         <div
           className="flex gap-16 items-center"
@@ -431,7 +431,7 @@ export default function Home() {
               <span className="gradient-text">at the speed of leadership</span>
             </h2>
             <p className="text-[#FFFFFF]/55 max-w-lg text-sm leading-relaxed">
-              EEOS doesn't just report what happened — it tells you what to do next, and why it matters now.
+              EEOS doesn't just report what happened — it helps small business owners understand what matters, what changed, and what to do next.
             </p>
           </AnimatedSection>
 
@@ -471,7 +471,7 @@ export default function Home() {
                 <span className="gradient-text">Decide faster.</span>
               </h2>
               <p className="text-[#FFFFFF]/62 leading-relaxed mb-6 text-sm sm:text-base">
-                The EEOS Executive Dashboard delivers a real-time command view of your entire business — from financial performance to team utilization, pipeline health to strategic momentum — in a single, actionable interface.
+                The EEOS Executive Dashboard delivers a command view of your entire small business — from lead flow and response speed to operations, staffing, pipeline health, and strategic momentum — in a single, actionable interface.
               </p>
               <ul className="space-y-2.5 mb-8">
                 {[
@@ -510,7 +510,7 @@ export default function Home() {
               <div className="relative">
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[rgba(201,162,39,0.08)] to-transparent" />
                 <img
-                  src="/manus-storage/eeos-demo-dashboard_bc692339.png"
+                  src="/eeos-assets/eeos-demo-dashboard.svg"
                   alt="EEOS Executive Dashboard"
                   className="w-full rounded-2xl border border-[rgba(201,162,39,0.15)] shadow-[0_0_60px_rgba(201,162,39,0.1)]"
                 />
@@ -537,7 +537,7 @@ export default function Home() {
             <AnimatedSection delay={200} className="order-2 lg:order-1">
               <div className="relative">
                 <img
-                  src="/manus-storage/eeos-knowledge-graph_63f83141.png"
+                  src="/eeos-assets/eeos-knowledge-graph.svg"
                   alt="EEOS Knowledge Graph"
                   className="w-full rounded-2xl border border-[rgba(201,162,39,0.15)] shadow-[0_0_60px_rgba(201,162,39,0.08)]"
                 />
@@ -590,7 +590,7 @@ export default function Home() {
                   <span className="gradient-text">your business?</span>
                 </h2>
                 <p className="text-[#FFFFFF]/55 max-w-lg text-sm sm:text-base leading-relaxed">
-                  Join the service business owners who have moved beyond managing and started leading. EEOS is live in 6 weeks — from onboarding to full organizational intelligence.
+                  Join the small business owners who are moving beyond reactive management into executive intelligence. EEOS brings Fortune 500-level visibility, automation, and decision support into one owner command center.
                 </p>
               </div>
               <div className="flex flex-col gap-3 w-full sm:w-auto shrink-0">

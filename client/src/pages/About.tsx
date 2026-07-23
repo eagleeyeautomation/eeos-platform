@@ -10,17 +10,17 @@ const VALUES = [
   {
     icon: Target,
     title: "Precision over volume",
-    description: "Service business owners are drowning in data and starving for intelligence. Every EEOS feature is designed to reduce noise and amplify the signals that actually drive growth.",
+    description: "Small business owners are drowning in data and starving for intelligence. Every EEOS feature is designed to reduce noise and amplify the signals that drive better decisions.",
   },
   {
     icon: Lightbulb,
-    title: "Intelligence, not automation",
-    description: "EEOS augments your judgment — it doesn't replace it. We surface what matters and provide context, but the decision always belongs to you.",
+    title: "Intelligence with automation",
+    description: "EEOS combines AI, automation, and business health monitoring so owners can move with enterprise-level clarity while keeping every final decision in their hands.",
   },
   {
     icon: Users,
-    title: "Built for service businesses",
-    description: "Our team has worked with staffing firms, consulting agencies, healthcare operators, and professional services companies. We understand the specific challenges you face.",
+    title: "Built for small businesses",
+    description: "We build for owners who need Fortune 500 capabilities without Fortune 500 headcount, complexity, or software sprawl.",
   },
   {
     icon: Globe,
@@ -33,7 +33,7 @@ const LEADERSHIP = [
   {
     name: "James Whitfield",
     title: "Chief Executive Officer",
-    background: "Former COO, Apex Defense Systems · 20 years enterprise operations",
+    background: "Former COO, Apex Operations Group · 20 years operating company experience",
     initials: "JW",
   },
   {
@@ -63,18 +63,18 @@ const LEADERSHIP = [
   {
     name: "Amara Osei",
     title: "Chief Customer Officer",
-    background: "Former VP Customer Success, ServiceNow · 200+ enterprise deployments",
+    background: "Former VP Customer Success, ServiceNow · 200+ operating system deployments",
     initials: "AO",
   },
 ];
 
 const MILESTONES = [
-  { year: "2019", event: "Eagle Eye Automation founded — mission: AI software that helps service businesses grow" },
-  { year: "2020", event: "First EEOS prototype deployed with staffing and professional services pilot clients" },
+  { year: "2019", event: "Eagle Eye Automation founded to bring enterprise-level automation to small businesses" },
+  { year: "2020", event: "First EEOS prototype deployed with small business pilot clients" },
   { year: "2021", event: "Series A funding. SOC 2 Type II certification achieved" },
   { year: "2022", event: "EEOS 2.0 launched — Knowledge Graph and Business DNA introduced" },
   { year: "2023", event: "GoHighLevel integration launched. FedRAMP Ready designation achieved" },
-  { year: "2024", event: "42 service business clients across 6 industries. ISO 27001 certified" },
+  { year: "2024", event: "Small business operating system expanded across 6 industries. ISO 27001 certified" },
   { year: "2025", event: "EEOS 3.0 — Full Executive Intelligence Suite. PRN Staffers activation" },
 ];
 
@@ -92,14 +92,14 @@ export default function About() {
               className="text-5xl sm:text-6xl font-bold text-[#FFFFFF] tracking-tight mb-6"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              AI software that helps
+              Enterprise power for
               <br />
-              service businesses
+              small businesses
               <br />
-              <span className="gradient-text">grow.</span>
+              <span className="gradient-text">through AI.</span>
             </h1>
             <p className="text-xl text-[#FFFFFF]/65 leading-relaxed">
-              Eagle Eye Automation builds AI software for service businesses. Our flagship product, EEOS, helps business owners stop reacting to today's problems and start making tomorrow's decisions with confidence.
+              Eagle Eye Automation builds EEOS, the AI Operating System that gives small businesses the power of Fortune 500 companies through AI, automation, and executive intelligence.
             </p>
           </AnimatedSection>
         </div>
@@ -115,17 +115,17 @@ export default function About() {
                 className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight mb-6"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                Help every service
+                Give small businesses
                 <br />
-                business owner lead
+                Fortune 500 power
                 <br />
-                <span className="gradient-text">with certainty.</span>
+                <span className="gradient-text">with AI.</span>
               </h2>
               <p className="text-[#FFFFFF]/65 leading-relaxed mb-6">
-                We believe that when leaders have complete, timely, and accurate intelligence, they make better decisions — for their organizations, their people, and the world. EEOS is our contribution to that vision.
+                Our mission is to give small businesses the power of Fortune 500 companies through AI, automation, and executive intelligence.
               </p>
               <p className="text-[#FFFFFF]/65 leading-relaxed">
-                Founded in Washington D.C. in 2019, Eagle Eye Automation has grown to serve 42 enterprise clients across aerospace, financial services, healthcare, manufacturing, energy, and technology — with a team of 180 people across four global offices.
+                We believe small business owners deserve the same visibility, decision support, secure operations, and workflow automation that large enterprises use to compete. EEOS is our contribution to that future.
               </p>
             </AnimatedSection>
 

@@ -218,7 +218,7 @@ export default function Navigation() {
             <Link href="/" className="flex items-center gap-3 group shrink-0">
               <div className="w-8 h-8 relative">
                 <img
-                  src="/manus-storage/eeos-logo-mark_707d59ff.png"
+                  src="/eeos-assets/eeos-logo-mark.svg"
                   alt="EEOS"
                   className="w-8 h-8 object-contain"
                 />

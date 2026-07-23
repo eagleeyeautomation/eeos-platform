@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Eagle Eye Automation">
+  <rect width="96" height="96" rx="22" fill="#0B0B0B"/>
+  <path d="M18 51c14-22 34-31 60-28-16 5-28 13-36 24 10-4 20-5 30-2-12 4-22 11-30 20-7-1-15-5-24-14Z" fill="#C9A227"/>
+  <path d="M43 44c8-8 18-12 31-12-8 3-15 8-20 15-4 0-8-1-11-3Z" fill="#FFFFFF"/>
+  <circle cx="61" cy="41" r="5" fill="#0F2747"/>
+  <circle cx="62" cy="40" r="2" fill="#C9A227"/>
+  <path d="M31 65h34" stroke="#C9A227" stroke-width="4" stroke-linecap="round"/>
+</svg>

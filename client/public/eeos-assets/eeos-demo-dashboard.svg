@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-label="EEOS dashboard preview">
+  <rect width="1200" height="760" rx="36" fill="#0B0B0B"/>
+  <rect x="36" y="36" width="1128" height="688" rx="28" fill="#FFFFFF"/>
+  <rect x="76" y="80" width="250" height="600" rx="18" fill="#0B0B0B"/>
+  <rect x="362" y="80" width="762" height="124" rx="20" fill="#0F2747"/>
+  <rect x="394" y="116" width="275" height="18" rx="9" fill="#C9A227"/>
+  <rect x="394" y="154" width="510" height="12" rx="6" fill="#FFFFFF" opacity=".55"/>
+  <g fill="#F7F7F7" stroke="#E7E1D0">
+    <rect x="362" y="236" width="225" height="150" rx="18"/>
+    <rect x="620" y="236" width="225" height="150" rx="18"/>
+    <rect x="878" y="236" width="246" height="150" rx="18"/>
+    <rect x="362" y="418" width="762" height="262" rx="18"/>
+  </g>
+  <g fill="#C9A227">
+    <rect x="398" y="282" width="92" height="12" rx="6"/>
+    <rect x="656" y="282" width="92" height="12" rx="6"/>
+    <rect x="914" y="282" width="92" height="12" rx="6"/>
+  </g>
+  <path d="M414 605 508 540l85 34 92-88 86 51 104-102 132 87" fill="none" stroke="#0F2747" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M414 630 508 580l85 18 92-52 86 26 104-58 132 42" fill="none" stroke="#C9A227" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

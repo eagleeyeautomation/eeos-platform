@@ -691,7 +691,7 @@ export default function Demo() {
             <p className="text-lg text-[#FFFFFF]/60 max-w-xl">
               All six EEOS intelligence modules loaded with demonstration data from{" "}
               <span className="text-[#C9A227] font-semibold">{DEMO_COMPANY.name}</span> — a fictional{" "}
-              {DEMO_COMPANY.industry} service business with {DEMO_COMPANY.employees.toLocaleString()} employees.
+              {DEMO_COMPANY.industry} business with {DEMO_COMPANY.employees.toLocaleString()} employees.
             </p>
           </div>
         </div>

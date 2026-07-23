@@ -10,7 +10,7 @@ import { PRICING_TIERS } from "@/lib/demo-data";
 const FAQS = [
   {
     q: "How long does implementation take?",
-    a: "EEOS is live in 6 weeks for most enterprise deployments. Our dedicated onboarding team handles all integration configuration, data mapping, and executive training.",
+    a: "EEOS is typically live in 6 weeks. Our onboarding team helps configure GoHighLevel, map approved signals, and train owners on the Command Center.",
   },
   {
     q: "Does EEOS store our data?",
@@ -18,11 +18,11 @@ const FAQS = [
   },
   {
     q: "What integrations are included?",
-    a: "All tiers include access to our full library of 50+ pre-built connectors. Custom connectors are available for proprietary or legacy systems on Sovereign and Apex tiers.",
+    a: "Version 1 focuses on GoHighLevel. Future connectors will expand EEOS after the GoHighLevel experience is complete and production-ready.",
   },
   {
     q: "Can we start with a pilot?",
-    a: "Yes. We offer a 90-day pilot program for qualified enterprises. Contact our sales team to discuss pilot scope and terms.",
+    a: "Yes. We offer focused pilots for qualified small businesses that want to evaluate executive intelligence, business health monitoring, and workflow automation.",
   },
   {
     q: "Is EEOS available for government agencies?",
@@ -30,7 +30,7 @@ const FAQS = [
   },
   {
     q: "What does 'Contact Sales' mean for pricing?",
-    a: "EEOS is priced based on organizational complexity, number of integrations, and deployment requirements. Our starting price points are listed as guidance. All pricing is transparent and contract-based.",
+    a: "EEOS is priced based on business complexity, number of locations, integration needs, and onboarding support. Starting price points are listed as guidance.",
   },
 ];
 
@@ -44,17 +44,17 @@ export default function Pricing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row items-start gap-12 lg:gap-24">
             <AnimatedSection className="flex-1">
-              <div className="section-label mb-4">Pricing Architecture</div>
+              <div className="section-label mb-4">Pricing</div>
               <h1
                 className="text-5xl sm:text-6xl font-bold text-[#FFFFFF] tracking-tight mb-6 leading-tight"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                Investment-grade
+                Enterprise-level power
                 <br />
-                <span className="gradient-text">business intelligence</span>
+                <span className="gradient-text">for small businesses</span>
               </h1>
               <p className="text-xl text-[#FFFFFF]/60 leading-relaxed max-w-xl">
-                Eagle Eye Automation's EEOS delivers an average 340% ROI within the first year. Pricing scales with your business complexity — not your headcount.
+                EEOS gives owners AI executive intelligence, workflow automation, business health monitoring, and secure operations without enterprise software sprawl. Pricing scales with your business complexity, not your headcount.
               </p>
             </AnimatedSection>
             <AnimatedSection delay={200} className="shrink-0 lg:w-72">
@@ -77,7 +77,7 @@ export default function Pricing() {
                 </div>
                 <div className="mt-4 pt-4 border-t border-[rgba(201,162,39,0.1)]">
                   <div className="text-[10px] text-[#FFFFFF]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    Based on 42 service business deployments · 2023–2025
+                    Based on small business operating system deployments · 2023–2025
                   </div>
                 </div>
               </div>
@@ -185,7 +185,7 @@ export default function Pricing() {
                 EEOS pays for itself — fast
               </h2>
               <p className="text-[#FFFFFF]/60 mb-8 max-w-2xl mx-auto">
-                Our clients report an average 340% ROI in year one. A single prevented supply chain disruption, talent attrition event, or missed contract opportunity typically exceeds the annual cost of EEOS.
+                EEOS is designed to help owners prevent missed opportunities, reduce decision delays, improve follow-up, and understand business health sooner. One avoided breakdown or recovered opportunity can justify the platform.
               </p>
               <div className="grid grid-cols-3 gap-6 mb-8">
                 {[

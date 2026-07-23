@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useLocation } from "wouter";
 
 export type ProductRole =
   | "PLATFORM_ADMIN"
@@ -39,13 +40,45 @@ const anonymousSession: SessionContextValue = {
 
 const ProductSessionContext = createContext<SessionContextValue>(anonymousSession);
 
+const SESSION_REQUIRED_PREFIXES = [
+  "/admin",
+  "/ai-recommendations",
+  "/business-health",
+  "/connect-ghl",
+  "/connected-apps",
+  "/dashboard",
+  "/executive-dashboard",
+  "/executive-home",
+  "/executive-timeline",
+  "/integration-health",
+  "/integration-status",
+  "/integrations/gohighlevel",
+  "/knowledge-graph",
+  "/live-signals",
+  "/live-status",
+  "/notifications",
+  "/prn-onboarding",
+  "/system-health",
+  "/tenant-confirmation",
+];
+
+function routeNeedsSession(path: string) {
+  return SESSION_REQUIRED_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}
+
 export function ProductSessionProvider({ children }: { children: ReactNode }) {
+  const [location] = useLocation();
   const [session, setSession] = useState<SessionContextValue>(anonymousSession);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadSession() {
+      if (!routeNeedsSession(location)) {
+        setSession({ ...anonymousSession, loading: false });
+        return;
+      }
+
       setSession((current) => ({ ...current, loading: true }));
       try {
         const response = await fetch("/api/auth/session", {
@@ -67,7 +100,7 @@ export function ProductSessionProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [location]);
 
   return (
     <ProductSessionContext.Provider value={session}>

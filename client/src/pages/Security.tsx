@@ -82,7 +82,7 @@ export default function Security() {
       <section className="relative pt-32 pb-20 overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src="/manus-storage/eeos-security-bg_46b86bea.png"
+            src="/eeos-assets/eeos-security-bg.svg"
             alt=""
             className="w-full h-full object-cover opacity-25"
           />
@@ -96,12 +96,12 @@ export default function Security() {
               className="text-5xl sm:text-6xl font-bold text-[#FFFFFF] tracking-tight mb-6"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              Security built for
+              Enterprise-grade security
               <br />
-              <span className="gradient-text">sovereign intelligence</span>
+              <span className="gradient-text">for small business</span>
             </h1>
             <p className="text-xl text-[#FFFFFF]/65 leading-relaxed">
-              Eagle Eye Automation built EEOS for service businesses that cannot afford data exposure. Enterprise-grade security architecture — your data never leaves your control.
+              EEOS gives small businesses secure operations, controlled access, and trusted business intelligence without exposing private source data.
             </p>
           </AnimatedSection>
         </div>
@@ -154,7 +154,7 @@ export default function Security() {
               className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              Four pillars of enterprise security
+              Four pillars of secure operations
             </h2>
           </AnimatedSection>
 
@@ -276,7 +276,7 @@ export default function Security() {
                   <span className="gradient-text">Talk to our team.</span>
                 </h2>
                 <p className="text-[#FFFFFF]/58 max-w-lg text-sm sm:text-base leading-relaxed">
-                  EEOS connects to your business systems, reads approved signals, and turns them into executive recommendations — without storing your data. Our security team is available for detailed technical briefings, penetration test results, and custom compliance reviews.
+                  EEOS connects to your business systems, reads approved signals, and turns them into executive intelligence — without storing your source data. Our security team is available for detailed technical briefings, penetration test results, and custom compliance reviews.
                 </p>
               </div>
               <div className="flex flex-col gap-3 w-full sm:w-auto shrink-0">

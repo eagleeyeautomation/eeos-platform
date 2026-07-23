@@ -11,8 +11,8 @@ const FEATURES = [
     id: "dashboard",
     icon: LayoutDashboard,
     name: "Executive Dashboard",
-    tagline: "Command-level visibility across your entire organization",
-    description: "A real-time synthesis of every critical metric, signal, and trend across your organization. The EEOS Executive Dashboard replaces the morning briefing, the status meeting, and the quarterly review — with a living, breathing command view that updates continuously.",
+    tagline: "Fortune 500 visibility for small business owners",
+    description: "A clear command view of the signals that matter most: business health, lead flow, operations, staffing, revenue, alerts, and priorities. EEOS gives owners executive-level visibility without enterprise complexity.",
     capabilities: [
       "Real-time KPI synthesis from all integrated systems",
       "Configurable executive view by role and priority",
@@ -27,7 +27,7 @@ const FEATURES = [
     icon: ListChecks,
     name: "Executive Priorities",
     tagline: "Your most important decisions, surfaced and sequenced",
-    description: "EEOS continuously monitors your organization and surfaces the decisions that require executive attention — ranked by urgency, impact, and time sensitivity. No more wondering what to focus on. EEOS tells you.",
+    description: "EEOS monitors your business signals and surfaces the decisions that need attention, ranked by urgency, impact, and time sensitivity. No more wondering what to focus on first.",
     capabilities: [
       "AI-ranked priority queue updated in real time",
       "Impact and urgency scoring for every item",
@@ -41,8 +41,8 @@ const FEATURES = [
     id: "dna",
     icon: Dna,
     name: "Business DNA",
-    tagline: "A living model of your organization's strengths and vulnerabilities",
-    description: "Business DNA is EEOS's proprietary organizational model — a continuously updated map of your company's core capabilities, strategic alignment, risk exposure, and cultural health. It's the foundation for every recommendation EEOS makes.",
+    tagline: "A living model of your strengths, risks, and momentum",
+    description: "Business DNA is EEOS's operating model for your company: a continuously updated map of what is working, where risk is forming, and where the next opportunity may be hiding.",
     capabilities: [
       "Organizational strength and capability scoring",
       "Strategic theme alignment measurement",
@@ -71,8 +71,8 @@ const FEATURES = [
     id: "timeline",
     icon: GitBranch,
     name: "Intelligence Timeline",
-    tagline: "The organizational story, told chronologically",
-    description: "The EEOS Timeline provides a complete chronological record of every significant event, decision, alert, and outcome across your organization. Understand what happened, when, and why — with full context and causal relationships.",
+    tagline: "Your business story, told chronologically",
+    description: "The EEOS Timeline organizes important activity, decisions, alerts, and outcomes into a clean sequence so owners can understand what happened, when, and why.",
     capabilities: [
       "Complete organizational event history",
       "Automated event detection and logging",
@@ -86,8 +86,8 @@ const FEATURES = [
     id: "knowledge-graph",
     icon: Network,
     name: "Knowledge Graph",
-    tagline: "Your organization, mapped as a living network",
-    description: "The EEOS Knowledge Graph is a dynamic, interactive visualization of every relationship in your organization — between people, departments, systems, risks, and external entities. See the hidden connections that drive your business.",
+    tagline: "Your business, mapped as a living network",
+    description: "The EEOS Knowledge Graph helps connect people, systems, customers, risks, and opportunities so leaders can see relationships that are easy to miss in everyday operations.",
     capabilities: [
       "Interactive organizational network visualization",
       "People, department, and system relationship mapping",
@@ -117,7 +117,7 @@ const FEATURES = [
     icon: Lock,
     name: "Zero-Trust Security",
     tagline: "Enterprise-grade security by design",
-    description: "EEOS was architected from the ground up for the security requirements of Fortune 500 enterprises. Zero-trust architecture, end-to-end encryption, and complete data sovereignty — your data never leaves your control.",
+    description: "EEOS brings enterprise-grade security principles to small businesses: disciplined access, encryption, auditability, and data sovereignty.",
     capabilities: [
       "Zero-trust network architecture",
       "End-to-end AES-256 encryption",
@@ -130,11 +130,11 @@ const FEATURES = [
   {
     id: "integrations",
     icon: Plug,
-    name: "Universal Integrations",
-    tagline: "Connect every system your organization runs",
-    description: "EEOS integrates with every major enterprise platform — ERP, CRM, HR, finance, operations, and more. Our secure connector framework reads data without storing it, maintaining complete data sovereignty while delivering unified intelligence.",
+    name: "Business System Integrations",
+    tagline: "Connect the systems your business already runs",
+    description: "EEOS starts with GoHighLevel and expands through secure connectors that read approved business signals without storing private source data.",
     capabilities: [
-      "Pre-built connectors for 50+ enterprise platforms",
+      "GoHighLevel integration foundation",
       "Custom API connector framework",
       "Real-time and batch data synchronization",
       "Read-only access model — EEOS never writes to source systems",
@@ -163,7 +163,7 @@ export default function Features() {
               <span className="gradient-text">a business leader needs</span>
             </h1>
             <p className="text-xl text-[#FFFFFF]/65 leading-relaxed">
-              EEOS is Eagle Eye Automation's flagship product — a complete business intelligence platform, not a collection of dashboards. Every feature is designed around how service business owners actually lead.
+              EEOS is Eagle Eye Automation's flagship product — the AI Operating System that gives small businesses the power of Fortune 500 companies through AI, automation, and executive intelligence.
             </p>
           </AnimatedSection>
         </div>
@@ -237,7 +237,7 @@ export default function Features() {
               Experience every feature live
             </h2>
             <p className="text-[#FFFFFF]/60 mb-8">
-              Our interactive demo uses real demonstration data to show you exactly how EEOS operates in a Fortune 500 environment.
+              Our interactive demo shows how EEOS brings enterprise-level capabilities to small businesses through AI executive intelligence, workflow automation, and secure business health monitoring.
             </p>
             <Link
               href="/demo"

@@ -25,12 +25,12 @@ export default function Industries() {
               className="text-5xl sm:text-6xl font-bold text-[#FFFFFF] tracking-tight mb-6"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              Built for service
+              Built for small
               <br />
-              <span className="gradient-text">businesses that grow</span>
+              <span className="gradient-text">businesses that lead</span>
             </h1>
             <p className="text-xl text-[#FFFFFF]/65 leading-relaxed">
-              Eagle Eye Automation's EEOS is purpose-configured for the unique intelligence needs of each service industry — from staffing firms to healthcare operators to professional services groups.
+              EEOS gives small businesses across industries the executive intelligence, workflow automation, and business health monitoring normally reserved for much larger companies.
             </p>
           </AnimatedSection>
         </div>
@@ -64,7 +64,7 @@ export default function Industries() {
                     </div>
                     <div className="text-xs text-[#FFFFFF]/40 mt-0.5"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                      {industry.metrics.clients} enterprise clients
+                      {industry.metrics.clients} businesses
                     </div>
                   </div>
                 </button>
@@ -92,7 +92,7 @@ export default function Industries() {
                   {[
                     { label: "Avg. ROI", value: active.metrics.avgROI },
                     { label: "Time to Value", value: active.metrics.timeToValue },
-                    { label: "Enterprise Clients", value: active.metrics.clients },
+                    { label: "Businesses", value: active.metrics.clients },
                   ].map((m) => (
                     <div
                       key={m.label}

@@ -246,7 +246,7 @@ function SummaryCard({
 
 function ConnectionCard({ connection }: { connection: GhlConnection }) {
   return (
-    <article className="rounded-2xl border border-[rgba(201,162,39,0.12)] bg-[#FFFFFF] p-5 transition hover:border-[rgba(201,162,39,0.28)]">
+    <article className="rounded-2xl border border-[rgba(201,162,39,0.12)] bg-[rgba(255,255,255,0.04)] p-5 transition hover:border-[rgba(201,162,39,0.28)]">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -302,7 +302,10 @@ function StatePanel({
   tone?: "neutral" | "error";
   animate?: boolean;
 }) {
-  const color = tone === "error" ? "text-[#FCA5A5] border-[#EF4444]/25 bg-[#2A0808]" : "text-[#D8D8D8] border-[rgba(201,162,39,0.1)] bg-[#FFFFFF]";
+  const color =
+    tone === "error"
+      ? "text-[#FCA5A5] border-[#EF4444]/25 bg-[#2A0808]"
+      : "text-[#D8D8D8] border-[rgba(201,162,39,0.1)] bg-[rgba(255,255,255,0.04)]";
   return (
     <div className={`mt-5 flex min-h-56 flex-col items-center justify-center rounded-2xl border p-8 text-center ${color}`}>
       <Icon className={`h-8 w-8 ${animate ? "animate-spin" : ""}`} />
