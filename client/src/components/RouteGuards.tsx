@@ -22,7 +22,7 @@ function AuthenticationBlocked({ message }: { message: string }) {
           Authentication Required
         </p>
         <h1 className="mt-3 text-2xl font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-          EEOS sign-in needs configuration
+          EEOS sign-in is required
         </h1>
         <p className="mt-3 text-sm leading-6 text-[#FFFFFF]/60">{message}</p>
       </div>
@@ -38,7 +38,7 @@ export function OwnerRoute({ children, allowOnboarding = false }: { children: Re
     if (!session.loading && !session.authenticated) {
       const started = startLogin();
       if (!started) {
-        setAuthError("The production sign-in portal URL is not configured for this EEOS deployment.");
+        setAuthError("The EEOS sign-in page could not be opened.");
       }
     }
   }, [session.authenticated, session.loading]);
@@ -61,7 +61,7 @@ export function PlatformAdminRoute({ children }: { children: ReactNode }) {
     if (!session.loading && !session.authenticated) {
       const started = startLogin();
       if (!started) {
-        setAuthError("The production sign-in portal URL is not configured for this EEOS deployment.");
+        setAuthError("The EEOS sign-in page could not be opened.");
       }
     }
   }, [session.authenticated, session.loading]);

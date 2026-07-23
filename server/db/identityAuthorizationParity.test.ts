@@ -15,7 +15,7 @@ type Fixture = {
 
 function fixture(): Fixture {
   const user = (id: number, openId: string, role: "user" | "admin" = "user"): CanonicalUser => ({
-    id, openId, name: openId, email: `${openId}@example.test`, loginMethod: "manus", role,
+    id, openId, name: openId, email: `${openId}@example.test`, loginMethod: "eeos", role,
     passwordHash: null, isActive: true, createdAt: now, updatedAt: now, lastSignedIn: now,
   });
   const organization = (id: number, name: string, isActive = true): CanonicalOrganization => ({

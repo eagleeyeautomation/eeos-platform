@@ -14,15 +14,13 @@ const productionConfig = {
   DATABASE_URL: "mysql://example.invalid/eeos",
   POSTGRES_DATABASE_URL: "postgres://example.invalid/eeos",
   JWT_SECRET: "test-session-secret",
-  VITE_APP_ID: "test-app",
-  OAUTH_SERVER_URL: "https://auth.example.invalid",
   EEOS_OAUTH_PRIVATE_KEY_PEM: testPrivateKey,
 };
 
 describe("Core startup and readiness", () => {
   it("requires every immutable Core production setting", () => {
     expect(() => assertCoreProductionConfig({ NODE_ENV: "production" })).toThrow(
-      /DATABASE_URL, POSTGRES_DATABASE_URL, JWT_SECRET, VITE_APP_ID, OAUTH_SERVER_URL/,
+      /DATABASE_URL, POSTGRES_DATABASE_URL, JWT_SECRET/,
     );
     const { EEOS_OAUTH_PRIVATE_KEY_PEM: _omittedKey, ...missingOAuthKey } = productionConfig;
     expect(() => assertCoreProductionConfig(missingOAuthKey)).toThrow(/EEOS_OAUTH_PRIVATE_KEY_PEM is required/);

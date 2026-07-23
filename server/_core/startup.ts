@@ -7,8 +7,6 @@ const REQUIRED_PRODUCTION_VARIABLES = [
   "DATABASE_URL",
   "POSTGRES_DATABASE_URL",
   "JWT_SECRET",
-  "VITE_APP_ID",
-  "OAUTH_SERVER_URL",
 ] as const;
 
 export function assertCoreProductionConfig(env: NodeJS.ProcessEnv = process.env) {

@@ -16,6 +16,7 @@ import Security from "./pages/Security";
 import Demo from "./pages/Demo";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import SignIn from "./pages/SignIn";
 import Onboarding from "./pages/Onboarding";
 import Integrations from "./pages/Integrations";
 import GoHighLevelIntegration from "./pages/GoHighLevelIntegration";
@@ -91,6 +92,7 @@ function Router() {
       <Route path="/demo" component={Demo} />
       <Route path="/about" component={About} />
       <Route path="/contact" component={Contact} />
+      <Route path="/sign-in" component={SignIn} />
       <Route path="/onboarding" component={Onboarding} />
       <Route path="/integrations" component={Integrations} />
       <Route path="/integrations/gohighlevel" component={ownerOnboarding(GoHighLevelIntegration)} />

@@ -1,6 +1,6 @@
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
+import { registerFirstPartyAuthRoutes } from "./firstPartyAuth";
 import { registerStorageProxy } from "./storageProxy";
 import { registerGhlOAuthRoutes } from "../ghl-oauth";
 import { registerGhlWebhookRoutes } from "../ghl-webhook";
@@ -27,7 +27,7 @@ export function createEeosApp() {
   app.get("/.well-known/openid-configuration", sendOpenIdConfiguration);
 
   registerStorageProxy(app);
-  registerOAuthRoutes(app);
+  registerFirstPartyAuthRoutes(app);
   registerAdminBootstrapRoute(app);
   registerGhlOAuthRoutes(app);
   registerGhlPitRoutes(app);

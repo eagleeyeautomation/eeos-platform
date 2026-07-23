@@ -12,7 +12,7 @@ describe("PostgresIdentityRepository", () => {
   it("maps the canonical users table without exposing bigint strings", async () => {
     const { repository } = repositoryWithRows([{
       id: "1", open_id: "legacy-open-id", name: "Admin", email: "admin@example.com",
-      login_method: "manus", role: "admin", password_hash: null, is_active: true,
+      login_method: "eeos", role: "admin", password_hash: null, is_active: true,
       created_at: now, updated_at: now, last_signed_in: now,
     }]);
     await expect(repository.getUserByOpenId("legacy-open-id")).resolves.toMatchObject({ id: 1, openId: "legacy-open-id", role: "admin" });

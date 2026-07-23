@@ -549,7 +549,7 @@ function getKeyId() {
 }
 
 function getIssuer(req: Request) {
-  const configured = process.env.OAUTH_SERVER_URL || process.env.EEOS_OAUTH_ISSUER || process.env.EEOS_APP_BASE_URL;
+  const configured = process.env.EEOS_OAUTH_ISSUER || process.env.EEOS_APP_BASE_URL;
 
   if (configured) {
     return configured.replace(/\/$/, "");

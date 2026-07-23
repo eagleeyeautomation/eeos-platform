@@ -17,6 +17,7 @@ export const AVAILABLE_NAV_ROUTES = new Set([
   "/demo",
   "/about",
   "/contact",
+  "/sign-in",
   "/onboarding",
   "/integrations",
   "/integrations/gohighlevel",

@@ -21,7 +21,7 @@ import {
 } from "drizzle-orm/mysql-core";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TIER 0: Platform Users (Manus Auth)
+// TIER 0: Platform Users
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const users = mysqlTable("users", {
@@ -31,6 +31,8 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  passwordHash: text("passwordHash"),
+  isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

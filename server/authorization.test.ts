@@ -26,7 +26,7 @@ function user(role: "user" | "admin" = "user"): User {
     openId: `${role}-open-id`,
     name: role,
     email: `${role}@example.test`,
-    loginMethod: "manus",
+    loginMethod: "eeos",
     role,
     createdAt: now,
     updatedAt: now,
