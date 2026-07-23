@@ -29,7 +29,7 @@ import { startLogin } from "@/const";
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-type ConnectionStatus = "idle" | "connecting" | "verifying" | "connected" | "error";
+type ConnectionStatus = "idle" | "loading" | "connecting" | "verifying" | "connected" | "error";
 
 interface SubaccountEntry {
   /** Unique key for this entry */
@@ -51,6 +51,17 @@ interface SubaccountEntry {
   /** Whether the form is expanded */
   expanded: boolean;
 }
+
+type PitStatusResponse = {
+  connected?: boolean;
+  locationId?: string;
+  tokenType?: string;
+  expiresAt?: string | null;
+  connectedAt?: string | null;
+  error?: string;
+};
+
+const SOUTH_CAROLINA_LOCATION_ID = "rJH8XytyAfEQSoOTQeuZ";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // How to get a Private Integration Token
@@ -97,11 +108,21 @@ function SubaccountCard({
   onVerify: (key: string) => void;
 }) {
   const isConnected = entry.status === "connected";
-  const isLoading = entry.status === "connecting" || entry.status === "verifying";
+  const isLoading = entry.status === "loading" || entry.status === "connecting" || entry.status === "verifying";
   const hasError = entry.status === "error";
 
   const statusColor = isConnected ? "#10B981" : hasError ? "#EF4444" : "#E8EDF5";
-  const statusLabel = isConnected ? "Connected" : hasError ? "Error" : entry.status === "connecting" ? "Connecting..." : entry.status === "verifying" ? "Verifying..." : "Not Connected";
+  const statusLabel = isConnected
+    ? "Connected"
+    : hasError
+      ? "Error"
+      : entry.status === "loading"
+        ? "Checking connection..."
+        : entry.status === "connecting"
+          ? "Connecting..."
+          : entry.status === "verifying"
+            ? "Verifying..."
+            : "Not Connected";
 
   return (
     <div className={`glass-card rounded-2xl overflow-hidden transition-all duration-300 ${
@@ -295,10 +316,109 @@ export default function ConnectGHL() {
   // Subaccount entries — start with 4 for PRN Staffers' divisions
   const [subaccounts, setSubaccounts] = useState<SubaccountEntry[]>([
     { key: "delaware", name: "Delaware", locationId: "", token: "", status: "idle", expanded: true },
-    { key: "south-carolina", name: "South Carolina", locationId: "", token: "", status: "idle", expanded: false },
+    { key: "south-carolina", name: "South Carolina", locationId: SOUTH_CAROLINA_LOCATION_ID, token: "", status: "idle", expanded: false },
     { key: "alabama", name: "Alabama", locationId: "", token: "", status: "idle", expanded: false },
     { key: "florida", name: "Florida", locationId: "", token: "", status: "idle", expanded: false },
   ]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const hydratePersistedStatuses = async () => {
+      const entriesWithLocationIds = subaccounts.filter(
+        (entry) => entry.locationId.trim().length > 0
+      );
+
+      await Promise.all(
+        entriesWithLocationIds.map(async (entry) => {
+          try {
+            setSubaccounts((current) =>
+              current.map((item) =>
+                item.key === entry.key
+                  ? {
+                      ...item,
+                      status: "loading",
+                      error: undefined,
+                    }
+                  : item
+              )
+            );
+
+            const response = await fetch(
+              `/api/ghl/pit/status/${encodeURIComponent(entry.locationId.trim())}`,
+              {
+                method: "GET",
+                headers: {
+                  Accept: "application/json",
+                },
+                credentials: "same-origin",
+                signal: controller.signal,
+              }
+            );
+
+            const contentType = response.headers.get("content-type") ?? "";
+            const payload: PitStatusResponse | string = contentType.includes("application/json")
+              ? await response.json()
+              : await response.text();
+
+            if (!response.ok) {
+              const message = typeof payload === "string"
+                ? payload
+                : payload.error ?? "Unable to load connection status";
+
+              throw new Error(`HTTP ${response.status}: ${message}`);
+            }
+
+            if (typeof payload === "string") {
+              throw new Error("The status endpoint returned an invalid response.");
+            }
+
+            setSubaccounts((current) =>
+              current.map((item) =>
+                item.key === entry.key
+                  ? {
+                      ...item,
+                      locationId: payload.locationId ?? item.locationId,
+                      status: payload.connected ? "connected" : "idle",
+                      token: "",
+                      connectedAt: payload.connectedAt ?? item.connectedAt,
+                      error: undefined,
+                    }
+                  : item
+              )
+            );
+          } catch (error) {
+            if (error instanceof DOMException && error.name === "AbortError") {
+              return;
+            }
+
+            const message = error instanceof Error
+              ? error.message
+              : "Unable to load connection status";
+
+            setSubaccounts((current) =>
+              current.map((item) =>
+                item.key === entry.key
+                  ? {
+                      ...item,
+                      status: "error",
+                      token: "",
+                      error: message,
+                    }
+                  : item
+              )
+            );
+          }
+        })
+      );
+    };
+
+    void hydratePersistedStatuses();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
 
   const connectedCount = subaccounts.filter(s => s.status === "connected").length;
   const totalCount = subaccounts.length;
@@ -364,6 +484,7 @@ export default function ConnectGHL() {
         s.key === key ? {
           ...s,
           status: "connected",
+          token: "",
           ghlLocationName: data.locationName,
           connectedAt: data.connectedAt,
           error: undefined,
