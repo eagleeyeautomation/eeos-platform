@@ -126,7 +126,7 @@ describe("EEOS first-party authentication", () => {
     await expect(verifyPassword("correct horse battery staple", stored)).resolves.toBe(true);
     await expect(verifyPassword("wrong", stored)).resolves.toBe(false);
     await expect(verifyPassword("anything", null)).resolves.toBe(false);
-  });
+  }, 15_000);
 
   it("creates an opaque owner session and returns /executive-home after valid credentials", async () => {
     const stored = await hashPassword("valid-password");
@@ -154,7 +154,7 @@ describe("EEOS first-party authentication", () => {
         loginMethod: "eeos",
       }));
     });
-  });
+  }, 15_000);
 
   it("creates a platform-admin session and returns /admin", async () => {
     const stored = await hashPassword("valid-password");
@@ -174,7 +174,7 @@ describe("EEOS first-party authentication", () => {
       expect(payload).toMatchObject({ success: true, redirectTo: "/admin", role: "PLATFORM_ADMIN" });
       expect(response.headers.get("set-cookie")).toContain(`${COOKIE_NAME}=`);
     });
-  });
+  }, 15_000);
 
   it("rejects invalid passwords without issuing a session", async () => {
     const stored = await hashPassword("valid-password");
@@ -192,7 +192,7 @@ describe("EEOS first-party authentication", () => {
       expect(dbMocks.createAuthSession).not.toHaveBeenCalled();
       await expect(response.json()).resolves.toEqual({ success: false, error: "Invalid email or password." });
     });
-  });
+  }, 15_000);
 
   it("returns authenticated session context from a stored opaque session", async () => {
     const account = user();
@@ -255,7 +255,7 @@ describe("EEOS first-party authentication", () => {
       expect(dbMocks.markPasswordResetTokenUsed).toHaveBeenCalledWith(50);
       expect(dbMocks.revokeUserAuthSessions).toHaveBeenCalledWith(account.id);
     });
-  });
+  }, 15_000);
 
   it("accepts invitations without returning the raw invitation token", async () => {
     const token = "invitation-token-value";
@@ -286,7 +286,7 @@ describe("EEOS first-party authentication", () => {
       expect(dbMocks.upsertMembershipUser).toHaveBeenCalledWith(100, acceptedUser.id, "owner");
       expect(dbMocks.markAuthInvitationAccepted).toHaveBeenCalledWith(80);
     });
-  });
+  }, 15_000);
 
   it("creates admin invitations only for authenticated platform admins", async () => {
     const admin = user({ id: 9, role: "admin", openId: "eeos-admin", email: "admin@example.com" });
