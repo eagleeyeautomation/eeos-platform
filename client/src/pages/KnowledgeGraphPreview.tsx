@@ -17,7 +17,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useOwnerConnectionState } from "@/hooks/useOwnerConnectionState";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Config
@@ -70,15 +70,10 @@ interface LiveEdge {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function KnowledgeGraphPreview() {
-  const { user } = useAuth();
+  const { subaccounts, hasConnectedLocations, connectionsLoading } = useOwnerConnectionState();
   const [selectedNode, setSelectedNode] = useState<LiveNode | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
-
-  // Load subaccounts
-  const { data: subaccounts = [] } = trpc.tenant.mySubaccounts.useQuery(undefined, {
-    enabled: !!user,
-  });
 
   // Auto-select first subaccount
   useEffect(() => {
@@ -140,14 +135,16 @@ export default function KnowledgeGraphPreview() {
                   EEOS maps every entity in your business — clients, contacts, opportunities — and the relationships between them.
                 </p>
               </div>
-              <Link
-                href="/connect-ghl"
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)] shrink-0 self-start"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                <Zap className="w-4 h-4" />
-                Connect GHL
-              </Link>
+              {!hasConnectedLocations && (
+                <Link
+                  href="/connect-ghl"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)] shrink-0 self-start"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  <Zap className="w-4 h-4" />
+                  Connect GHL
+                </Link>
+              )}
             </div>
           </AnimatedSection>
         </div>
@@ -241,14 +238,14 @@ export default function KnowledgeGraphPreview() {
               <div className="relative" style={{ height: "520px", background: "radial-gradient(ellipse at center, rgba(201,162,39,0.03) 0%, transparent 70%)" }}>
 
                 {/* Loading */}
-                {isLoading && (
+                {(isLoading || connectionsLoading) && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Loader2 className="w-8 h-8 text-[#C9A227] animate-spin" />
                   </div>
                 )}
 
                 {/* No tenant */}
-                {!tenantId && !isLoading && (
+                {!tenantId && !isLoading && !connectionsLoading && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
                     <Network className="w-12 h-12 text-[#FFFFFF]/15" />
                     <p className="text-sm text-[#FFFFFF]/40">Connect GoHighLevel to build your Knowledge Graph</p>
@@ -415,6 +412,7 @@ export default function KnowledgeGraphPreview() {
       )}
 
       {/* CTA */}
+      {!hasConnectedLocations && (
       <section className="py-16 bg-[#141414]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
@@ -450,8 +448,9 @@ export default function KnowledgeGraphPreview() {
           </AnimatedSection>
         </div>
       </section>
+      )}
 
-      <Footer />
+      <Footer hideConnectionLinks={hasConnectedLocations} />
     </div>
   );
 }

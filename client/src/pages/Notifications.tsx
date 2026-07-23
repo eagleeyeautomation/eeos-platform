@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import { useOwnerConnectionState } from "@/hooks/useOwnerConnectionState";
 
 const NOTIFICATIONS = [
   {
@@ -139,6 +140,7 @@ const TYPE_CONFIG = {
 };
 
 export default function Notifications() {
+  const { hasConnectedLocations } = useOwnerConnectionState();
   const [activeCategory, setActiveCategory] = useState("All");
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [notifications, setNotifications] = useState(NOTIFICATIONS);
@@ -335,18 +337,20 @@ export default function Notifications() {
             <Eye className="w-4 h-4" />
             Open Executive Dashboard
           </Link>
-          <Link
-            href="/connect-ghl"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            <Plug className="w-4 h-4" />
-            Connect GoHighLevel
-          </Link>
+          {!hasConnectedLocations && (
+            <Link
+              href="/connect-ghl"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              <Plug className="w-4 h-4" />
+              Connect GoHighLevel
+            </Link>
+          )}
         </div>
       </div>
 
-      <Footer />
+      <Footer hideConnectionLinks={hasConnectedLocations} />
     </div>
   );
 }

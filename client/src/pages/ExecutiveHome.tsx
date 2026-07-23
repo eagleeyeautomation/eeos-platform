@@ -25,7 +25,7 @@ import {
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useOwnerConnectionState } from "@/hooks/useOwnerConnectionState";
 import {
   AreaChart, Area, LineChart, Line,
   ResponsiveContainer, Tooltip, XAxis, YAxis
@@ -260,7 +260,8 @@ function RecommendationCard({ rec, index, tenantId }: { rec: LiveRec; index: num
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ExecutiveHome() {
-  const { user } = useAuth();
+  const ownerConnectionState = useOwnerConnectionState();
+  const { user, subaccounts, connectionsLoading, hasConnectedLocations, accessState } = ownerConnectionState;
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [showSubaccountPicker, setShowSubaccountPicker] = useState(false);
@@ -284,11 +285,6 @@ export default function ExecutiveHome() {
   });
 
   // ── Live Data Queries ──
-
-  // Subaccounts this user has access to
-  const { data: subaccounts = [] } = trpc.tenant.mySubaccounts.useQuery(undefined, {
-    enabled: !!user,
-  });
 
   // Auto-select the first subaccount when data loads
   useEffect(() => {
@@ -449,7 +445,7 @@ export default function ExecutiveHome() {
     ];
   }, [memory, healthScore, liveMetrics, prnLiveData]);
 
-  const isConnected = Boolean(prnLiveData?.ok) || (ghlStatus?.connected ?? false);
+  const isConnected = hasConnectedLocations || Boolean(prnLiveData?.ok) || (ghlStatus?.connected ?? false);
   const criticalCount = recommendations.filter(r => r.riskLevel === "critical").length;
 
   const userInitials = user?.name
@@ -566,7 +562,19 @@ export default function ExecutiveHome() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
         {/* ── No Subaccount State ── */}
-        {!user && (
+        {accessState === "loading" && (
+          <div className="glass-card rounded-2xl p-12 text-center">
+            <Brain className="w-12 h-12 text-[#C9A227]/40 mx-auto mb-4 animate-pulse" />
+            <h3 className="text-xl font-semibold text-[#FFFFFF] mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              Loading your EEOS dashboard
+            </h3>
+            <p className="text-sm text-[#FFFFFF]/50">
+              EEOS is hydrating your authenticated session and connected GoHighLevel locations.
+            </p>
+          </div>
+        )}
+
+        {accessState === "signin" && (
           <div className="glass-card rounded-2xl p-12 text-center">
             <Brain className="w-12 h-12 text-[#C9A227]/40 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-[#FFFFFF] mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -586,7 +594,7 @@ export default function ExecutiveHome() {
           </div>
         )}
 
-        {user && !tenantId && (
+        {accessState === "connect" && (
           <div className="glass-card rounded-2xl p-12 text-center">
             <Database className="w-12 h-12 text-[#C9A227]/40 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-[#FFFFFF] mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -606,7 +614,7 @@ export default function ExecutiveHome() {
           </div>
         )}
 
-        {user && tenantId && (
+        {accessState === "ready" && tenantId && (
           <>
             {/* ── ROW 1: Business Score + KPIs ── */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -657,7 +665,7 @@ export default function ExecutiveHome() {
 
               {/* KPI Grid */}
               <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {memoryLoading ? (
+                {memoryLoading || connectionsLoading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <div key={i} className="metric-card rounded-xl p-4 animate-pulse">
                       <div className="h-4 bg-[rgba(255,255,255,0.05)] rounded mb-2" />
@@ -855,7 +863,7 @@ export default function ExecutiveHome() {
                 <div className="section-label mb-4">Quick Actions</div>
                 <div className="space-y-2">
                   {[
-                    { label: "Connect GoHighLevel", href: "/connect-ghl", icon: Plug, primary: !isConnected },
+                    ...(!isConnected ? [{ label: "Connect GoHighLevel", href: "/connect-ghl", icon: Plug, primary: true }] : []),
                     { label: "AI Recommendations", href: "/ai-recommendations", icon: Brain, primary: false },
                     { label: "Business Health", href: "/business-health", icon: BarChart3, primary: false },
                     { label: "Live Signals", href: "/live-signals", icon: Zap, primary: false },
@@ -937,7 +945,7 @@ export default function ExecutiveHome() {
         )}
 
         {/* ── BOTTOM CTA ── */}
-        {!isConnected && user && (
+        {accessState === "connect" && (
           <div className="border-t border-[rgba(201,162,39,0.08)] pt-8 pb-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
@@ -961,7 +969,7 @@ export default function ExecutiveHome() {
         )}
       </div>
 
-      <Footer />
+      <Footer hideConnectionLinks={isConnected} />
     </div>
   );
 }

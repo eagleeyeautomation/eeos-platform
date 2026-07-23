@@ -205,7 +205,7 @@ export default function Dashboard() {
         </section>
       </main>
 
-      <Footer />
+      <Footer hideConnectionLinks={summary.connected > 0} />
     </div>
   );
 }

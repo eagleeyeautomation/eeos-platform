@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import { useOwnerConnectionState } from "@/hooks/useOwnerConnectionState";
 import {
   AreaChart, Area, BarChart, Bar, ResponsiveContainer,
   Tooltip, XAxis, YAxis
@@ -145,6 +146,7 @@ const INCIDENT_STATUS = {
 };
 
 export default function SystemHealth() {
+  const { hasConnectedLocations } = useOwnerConnectionState();
   const operational = SYSTEM_COMPONENTS.filter((c) => c.status === "operational").length;
   const degraded = SYSTEM_COMPONENTS.filter((c) => c.status === "degraded").length;
   const overallStatus = degraded > 0 ? "degraded" : "operational";
@@ -363,7 +365,7 @@ export default function SystemHealth() {
         </div>
       </div>
 
-      <Footer />
+      <Footer hideConnectionLinks={hasConnectedLocations} />
     </div>
   );
 }

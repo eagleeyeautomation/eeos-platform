@@ -4,7 +4,7 @@
 import { Link } from "wouter";
 import { Shield, Mail, Phone, MapPin, Zap, ArrowRight } from "lucide-react";
 
-export default function Footer() {
+export default function Footer({ hideConnectionLinks = false }: { hideConnectionLinks?: boolean }) {
   return (
     <footer className="bg-[#0B0B0B] border-t border-[rgba(201,162,39,0.1)]">
       {/* Mini CTA Bar */}
@@ -16,14 +16,16 @@ export default function Footer() {
               Connect your business systems and go live in 6 weeks.
             </p>
             <div className="flex items-center gap-3 shrink-0">
-              <Link
-                href="/connect-ghl"
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.35)]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                <Zap className="w-3 h-3" />
-                Start Private Beta
-              </Link>
+              {!hideConnectionLinks && (
+                <Link
+                  href="/connect-ghl"
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.35)]"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  <Zap className="w-3 h-3" />
+                  Start Private Beta
+                </Link>
+              )}
               <Link
                 href="/demo"
                 className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
@@ -118,7 +120,7 @@ export default function Footer() {
                 { label: "About Eagle Eye", href: "/about" },
                 { label: "Contact Us", href: "/contact" },
                 { label: "Request Demo", href: "/demo" },
-                { label: "Connect GoHighLevel", href: "/connect-ghl" },
+                ...(!hideConnectionLinks ? [{ label: "Connect GoHighLevel", href: "/connect-ghl" }] : []),
                 { label: "Connect Your Business", href: "/onboarding" },
               ].map((link) => (
                 <li key={link.href}>

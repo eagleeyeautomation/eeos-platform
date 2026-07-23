@@ -14,6 +14,7 @@ import {
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
+import { useOwnerConnectionState } from "@/hooks/useOwnerConnectionState";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 // ── GHL-READY DATA SHAPES ──────────────────────────────────────────────────
@@ -150,10 +151,29 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
+function truncateLocationId(locationId: string) {
+  const trimmed = locationId.trim();
+  if (trimmed.length <= 12) return trimmed;
+  return `${trimmed.slice(0, 8)}...${trimmed.slice(-4)}`;
+}
+
+function formatConnectionTimestamp(value?: string | null) {
+  if (!value) return "Not available";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not available";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
 export default function IntegrationStatus() {
   const [selectedConnector, setSelectedConnector] = useState<string | null>(null);
+  const { connectedConnections, connectionsLoading, connectionsError, hasConnectedLocations } = useOwnerConnectionState();
 
-  const connected = CONNECTORS.filter(c => c.status === "connected").length;
+  const connected = hasConnectedLocations ? connectedConnections.length : CONNECTORS.filter(c => c.status === "connected").length;
   const degraded = CONNECTORS.filter(c => c.status === "degraded").length;
   const pending = CONNECTORS.filter(c => c.status === "pending").length;
   const totalRecords = CONNECTORS.reduce((s, c) => s + c.recordsProcessed, 0);
@@ -172,7 +192,7 @@ export default function IntegrationStatus() {
                   <div className="section-label">Integration Status</div>
                   <div className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[rgba(16,185,129,0.1)] text-[#10B981]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-                    {connected}/{CONNECTORS.length} ACTIVE
+                    {connected}/{hasConnectedLocations ? connectedConnections.length : CONNECTORS.length} ACTIVE
                   </div>
                 </div>
                 <h1 className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -187,10 +207,12 @@ export default function IntegrationStatus() {
                   <RefreshCw className="w-4 h-4" />
                   <span className="hidden sm:inline">Refresh All</span>
                 </button>
-                <Link href="/connect-ghl" className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  <Zap className="w-4 h-4" />
-                  Connect GoHighLevel
-                </Link>
+                {!hasConnectedLocations && (
+                  <Link href="/connect-ghl" className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    <Zap className="w-4 h-4" />
+                    Connect GoHighLevel
+                  </Link>
+                )}
               </div>
             </div>
           </AnimatedSection>
@@ -218,6 +240,85 @@ export default function IntegrationStatus() {
                   </div>
                 </div>
               ))}
+            </div>
+          </AnimatedSection>
+        </div>
+      </section>
+
+      {/* Persisted GoHighLevel Connections */}
+      <section className="py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <AnimatedSection delay={130}>
+            <div className="glass-card rounded-2xl p-6 border border-[rgba(201,162,39,0.15)]">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 className="text-base font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Persisted GoHighLevel Locations
+                  </h2>
+                  <p className="text-xs text-[#FFFFFF]/40 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    {hasConnectedLocations ? `${connectedConnections.length} of ${connectedConnections.length} active locations connected` : "Connection metadata is hydrated from the backend"}
+                  </p>
+                </div>
+                <Link
+                  href="/connect-ghl"
+                  className="text-xs font-semibold text-[#C9A227] hover:text-[#D8B84A] transition-colors"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  Manage →
+                </Link>
+              </div>
+
+              {connectionsLoading ? (
+                <div className="flex items-center gap-2 text-sm text-[#FFFFFF]/50">
+                  <RefreshCw className="w-4 h-4 text-[#C9A227] animate-spin" />
+                  Loading persisted connection status...
+                </div>
+              ) : connectionsError ? (
+                <div className="flex items-center gap-2 text-sm text-[#F59E0B]">
+                  <AlertTriangle className="w-4 h-4" />
+                  {connectionsError}
+                </div>
+              ) : connectedConnections.length === 0 ? (
+                <div className="flex items-center gap-2 text-sm text-[#FFFFFF]/45">
+                  <WifiOff className="w-4 h-4" />
+                  No persisted GoHighLevel locations were returned for this session.
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {connectedConnections.map((connection) => (
+                    <div key={connection.locationId} className="rounded-xl border border-[rgba(16,185,129,0.22)] bg-[rgba(16,185,129,0.07)] p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                            {connection.subaccountName}
+                          </div>
+                          <div className="text-[10px] text-[#FFFFFF]/35 mt-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                            {truncateLocationId(connection.locationId)}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[rgba(16,185,129,0.14)] text-[10px] font-bold text-[#10B981]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          <CheckCircle2 className="w-3 h-3" />
+                          CONNECTED
+                        </div>
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-[10px]">
+                        <div>
+                          <div className="text-[#FFFFFF]/35 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>TOKEN TYPE</div>
+                          <div className="text-[#FFFFFF]/70">{connection.tokenType ?? "private_integration"}</div>
+                        </div>
+                        <div>
+                          <div className="text-[#FFFFFF]/35 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>WEBHOOK</div>
+                          <div className="text-[#FFFFFF]/70">{connection.webhookRegistered ? "Registered" : "Pending"}</div>
+                        </div>
+                        <div className="col-span-2">
+                          <div className="text-[#FFFFFF]/35 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>CONNECTED</div>
+                          <div className="text-[#FFFFFF]/70">{formatConnectionTimestamp(connection.connectedAt)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </AnimatedSection>
         </div>
@@ -363,7 +464,7 @@ export default function IntegrationStatus() {
         </section>
       )}
 
-      <Footer />
+      <Footer hideConnectionLinks={hasConnectedLocations} />
     </div>
   );
 }

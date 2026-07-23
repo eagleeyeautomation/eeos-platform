@@ -18,7 +18,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useOwnerConnectionState } from "@/hooks/useOwnerConnectionState";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Config
@@ -77,15 +77,10 @@ function titleFromSignalType(signalType: string): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function LiveSignals() {
-  const { user } = useAuth();
+  const { subaccounts, hasConnectedLocations, connectionsLoading } = useOwnerConnectionState();
   const [filter, setFilter] = useState<string>("all");
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [hours, setHours] = useState(24);
-
-  // Load subaccounts
-  const { data: subaccounts = [] } = trpc.tenant.mySubaccounts.useQuery(undefined, {
-    enabled: !!user,
-  });
 
   // Auto-select first subaccount
   useEffect(() => {
@@ -152,14 +147,16 @@ export default function LiveSignals() {
                   {isFetching ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                   <span className="hidden sm:inline">Refresh</span>
                 </button>
-                <Link
-                  href="/connect-ghl"
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)]"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  <Zap className="w-4 h-4" />
-                  Connect GHL
-                </Link>
+                {!hasConnectedLocations && (
+                  <Link
+                    href="/connect-ghl"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)]"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    <Zap className="w-4 h-4" />
+                    Connect GHL
+                  </Link>
+                )}
               </div>
             </div>
           </AnimatedSection>
@@ -273,14 +270,14 @@ export default function LiveSignals() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Loading */}
-          {isLoading && (
+          {(isLoading || connectionsLoading) && (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-8 h-8 text-[#C9A227] animate-spin" />
             </div>
           )}
 
           {/* No tenant */}
-          {!tenantId && !isLoading && (
+          {!tenantId && !isLoading && !connectionsLoading && (
             <AnimatedSection>
               <div className="text-center py-20 glass-card rounded-2xl">
                 <Activity className="w-12 h-12 text-[#FFFFFF]/20 mx-auto mb-4" />
@@ -404,7 +401,7 @@ export default function LiveSignals() {
         </div>
       </section>
 
-      <Footer />
+      <Footer hideConnectionLinks={hasConnectedLocations} />
     </div>
   );
 }

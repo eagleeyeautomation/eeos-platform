@@ -14,6 +14,7 @@ import {
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
+import { useOwnerConnectionState } from "@/hooks/useOwnerConnectionState";
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie
@@ -124,6 +125,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 // ── COMPONENT ──────────────────────────────────────────────────────────────
 export default function BusinessHealth() {
   const [activeTab, setActiveTab] = useState<"revenue" | "pipeline" | "team" | "clients">("revenue");
+  const { hasConnectedLocations } = useOwnerConnectionState();
 
   return (
     <div className="min-h-screen bg-[#0B0B0B]">
@@ -156,18 +158,20 @@ export default function BusinessHealth() {
                   Business Health Overview
                 </h1>
                 <p className="text-sm text-[#FFFFFF]/50 mt-1 max-w-xl">
-                  EEOS transforms business data into accurate executive intelligence. {DATA_SOURCE.source === "ghl" ? "Showing live GoHighLevel data." : "Showing demonstration data — connect GoHighLevel to see your real business health score."}
+                  EEOS transforms business data into accurate executive intelligence. {hasConnectedLocations ? "Your persisted GoHighLevel connection is active while health metrics are calibrated." : "Showing demonstration data — connect GoHighLevel to see your real business health score."}
                 </p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                <Link
-                  href="/connect-ghl"
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)]"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  <Zap className="w-4 h-4" />
-                  Connect GoHighLevel
-                </Link>
+                {!hasConnectedLocations && (
+                  <Link
+                    href="/connect-ghl"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)]"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    <Zap className="w-4 h-4" />
+                    Connect GoHighLevel
+                  </Link>
+                )}
                 <button
                   className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -529,6 +533,7 @@ export default function BusinessHealth() {
       </section>
 
       {/* CTA */}
+      {!hasConnectedLocations && (
       <section className="py-16 bg-[#141414]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
@@ -564,8 +569,9 @@ export default function BusinessHealth() {
           </AnimatedSection>
         </div>
       </section>
+      )}
 
-      <Footer />
+      <Footer hideConnectionLinks={hasConnectedLocations} />
     </div>
   );
 }

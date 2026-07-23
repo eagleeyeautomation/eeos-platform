@@ -26,7 +26,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useOwnerConnectionState } from "@/hooks/useOwnerConnectionState";
 import { startLogin } from "@/const";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -375,15 +375,11 @@ function RecommendationCard({
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function AIRecommendations() {
-  const { user, isAuthenticated } = useAuth();
+  const ownerConnectionState = useOwnerConnectionState();
+  const { isAuthenticated, subaccounts, hasConnectedLocations, connectionsLoading, accessState } = ownerConnectionState;
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [feedbackCount, setFeedbackCount] = useState(0);
-
-  // Load subaccounts
-  const { data: subaccounts = [] } = trpc.tenant.mySubaccounts.useQuery(undefined, {
-    enabled: !!user,
-  });
 
   // Auto-select first subaccount
   useEffect(() => {
@@ -413,8 +409,7 @@ export default function AIRecommendations() {
   const highCount = recommendations.filter(r => r.riskLevel === "high").length;
   const categories = Array.from(new Set(recommendations.map(r => r.category)));
 
-  const noSubaccounts = isAuthenticated && subaccounts.length === 0;
-  const noTenant = isAuthenticated && subaccounts.length > 0 && !tenantId;
+  const noSubaccounts = isAuthenticated && !hasConnectedLocations;
 
   return (
     <div className="min-h-screen bg-[#0B0B0B]">
@@ -455,14 +450,16 @@ export default function AIRecommendations() {
                     Run IE
                   </button>
                 )}
-                <Link
-                  href="/connect-ghl"
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)]"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  <Zap className="w-4 h-4" />
-                  Connect GHL
-                </Link>
+                {!hasConnectedLocations && (
+                  <Link
+                    href="/connect-ghl"
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)]"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    <Zap className="w-4 h-4" />
+                    Connect GHL
+                  </Link>
+                )}
               </div>
             </div>
           </AnimatedSection>
@@ -575,7 +572,13 @@ export default function AIRecommendations() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Not authenticated */}
-          {!isAuthenticated && (
+          {accessState === "loading" && (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 text-[#C9A227] animate-spin" />
+            </div>
+          )}
+
+          {accessState === "signin" && (
             <AnimatedSection>
               <div className="text-center py-20 glass-card rounded-2xl">
                 <Brain className="w-12 h-12 text-[#FFFFFF]/20 mx-auto mb-4" />
@@ -598,7 +601,7 @@ export default function AIRecommendations() {
           )}
 
           {/* No subaccounts connected */}
-          {noSubaccounts && (
+          {noSubaccounts && !connectionsLoading && (
             <AnimatedSection>
               <div className="text-center py-20 glass-card rounded-2xl">
                 <Database className="w-12 h-12 text-[#FFFFFF]/20 mx-auto mb-4" />
@@ -682,7 +685,7 @@ export default function AIRecommendations() {
         </div>
       </section>
 
-      <Footer />
+      <Footer hideConnectionLinks={hasConnectedLocations} />
     </div>
   );
 }
