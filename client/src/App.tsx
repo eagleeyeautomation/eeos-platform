@@ -1,8 +1,11 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import type { ComponentType } from "react";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { OwnerRoute, PlatformAdminRoute } from "./components/RouteGuards";
+import { ProductSessionProvider } from "./contexts/ProductSessionContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import WhyEEOS from "./pages/WhyEEOS";
@@ -39,6 +42,42 @@ import ExecutiveTimeline from "./pages/ExecutiveTimeline";
 import KnowledgeGraphPreview from "./pages/KnowledgeGraphPreview";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import AdminBootstrap from "./pages/AdminBootstrap";
+import AccessDenied from "./pages/AccessDenied";
+import PlatformAdmin from "./pages/PlatformAdmin";
+
+function owner(component: ComponentType) {
+  const Component = component;
+  return function OwnerPage() {
+    return (
+      <OwnerRoute>
+        <Component />
+      </OwnerRoute>
+    );
+  };
+}
+
+function ownerOnboarding(component: ComponentType) {
+  const Component = component;
+  return function OwnerOnboardingPage() {
+    return (
+      <OwnerRoute allowOnboarding>
+        <Component />
+      </OwnerRoute>
+    );
+  };
+}
+
+function admin(component: ComponentType) {
+  const Component = component;
+  return function AdminPage() {
+    return (
+      <PlatformAdminRoute>
+        <Component />
+      </PlatformAdminRoute>
+    );
+  };
+}
+
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -54,30 +93,40 @@ function Router() {
       <Route path="/contact" component={Contact} />
       <Route path="/onboarding" component={Onboarding} />
       <Route path="/integrations" component={Integrations} />
-      <Route path="/integrations/gohighlevel" component={GoHighLevelIntegration} />
-      <Route path="/connect-ghl" component={ConnectGHL} />
-      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/integrations/gohighlevel" component={ownerOnboarding(GoHighLevelIntegration)} />
+      <Route path="/connect-ghl" component={ownerOnboarding(ConnectGHL)} />
+      <Route path="/dashboard" component={owner(Dashboard)} />
       {/* Sprint 11 — GHL Connection Journey */}
       <Route path="/oauth-success" component={OAuthSuccess} />
       <Route path="/oauth-failure" component={OAuthFailure} />
-      <Route path="/integration-health" component={IntegrationHealth} />
-      <Route path="/tenant-confirmation" component={TenantConfirmation} />
-      <Route path="/prn-onboarding" component={PRNOnboarding} />
+      <Route path="/integration-health" component={owner(IntegrationHealth)} />
+      <Route path="/tenant-confirmation" component={ownerOnboarding(TenantConfirmation)} />
+      <Route path="/prn-onboarding" component={ownerOnboarding(PRNOnboarding)} />
       {/* Sprint 12 — Executive Experience */}
-      <Route path="/executive-home" component={ExecutiveHome} />
-      <Route path="/live-status" component={LiveStatus} />
-      <Route path="/connected-apps" component={ConnectedApps} />
-      <Route path="/system-health" component={SystemHealth} />
-      <Route path="/notifications" component={Notifications} />
+      <Route path="/executive-home" component={owner(ExecutiveHome)} />
+      <Route path="/live-status" component={owner(LiveStatus)} />
+      <Route path="/connected-apps" component={owner(ConnectedApps)} />
+      <Route path="/system-health" component={owner(SystemHealth)} />
+      <Route path="/notifications" component={owner(Notifications)} />
       {/* Sprint 13 — Executive Intelligence Pages */}
-      <Route path="/business-health" component={BusinessHealth} />
-      <Route path="/ai-recommendations" component={AIRecommendations} />
-      <Route path="/live-signals" component={LiveSignals} />
-      <Route path="/integration-status" component={IntegrationStatus} />
-      <Route path="/executive-timeline" component={ExecutiveTimeline} />
-      <Route path="/knowledge-graph" component={KnowledgeGraphPreview} />
-      <Route path="/executive-dashboard" component={ExecutiveDashboard} />
+      <Route path="/business-health" component={owner(BusinessHealth)} />
+      <Route path="/ai-recommendations" component={owner(AIRecommendations)} />
+      <Route path="/live-signals" component={owner(LiveSignals)} />
+      <Route path="/integration-status" component={owner(IntegrationStatus)} />
+      <Route path="/executive-timeline" component={owner(ExecutiveTimeline)} />
+      <Route path="/knowledge-graph" component={owner(KnowledgeGraphPreview)} />
+      <Route path="/executive-dashboard" component={owner(ExecutiveDashboard)} />
       <Route path="/admin-bootstrap" component={AdminBootstrap} />
+      <Route path="/admin" component={admin(PlatformAdmin)} />
+      <Route path="/admin/organizations" component={admin(PlatformAdmin)} />
+      <Route path="/admin/organizations/:organizationId" component={admin(PlatformAdmin)} />
+      <Route path="/admin/onboarding" component={admin(PlatformAdmin)} />
+      <Route path="/admin/integrations" component={admin(PlatformAdmin)} />
+      <Route path="/admin/platform-health" component={admin(PlatformAdmin)} />
+      <Route path="/admin/audit" component={admin(PlatformAdmin)} />
+      <Route path="/admin/support" component={admin(PlatformAdmin)} />
+      <Route path="/admin/ai-operations" component={admin(PlatformAdmin)} />
+      <Route path="/access-denied" component={AccessDenied} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -89,8 +138,10 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
-          <Toaster richColors theme="dark" />
-          <Router />
+          <ProductSessionProvider>
+            <Toaster richColors theme="dark" />
+            <Router />
+          </ProductSessionProvider>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

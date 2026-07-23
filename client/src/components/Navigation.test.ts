@@ -1,29 +1,37 @@
 import { describe, expect, it } from "vitest";
-import { AVAILABLE_NAV_ROUTES, NAV_LINKS, buildDropdownRouteInventory } from "./Navigation";
+import { ADMIN_NAV_LINKS, AVAILABLE_NAV_ROUTES, NAV_LINKS, OWNER_NAV_LINKS, buildDropdownRouteInventory } from "./Navigation";
 
 describe("Navigation dropdown route inventory", () => {
   const inventory = buildDropdownRouteInventory();
 
-  it("includes the Dashboard dropdown and verifies its primary route exists", () => {
-    expect(inventory).toContainEqual(expect.objectContaining({
-      parent: "Dashboard",
-      label: "Executive Dashboard",
-      href: "/dashboard",
+  it("keeps public navigation focused on sales pages", () => {
+    expect(NAV_LINKS.map((item) => item.label)).toEqual([
+      "Why EEOS",
+      "Features",
+      "Industries",
+      "Pricing",
+      "Security",
+      "Company",
+    ]);
+    expect(NAV_LINKS.some((item) => item.href.startsWith("/admin"))).toBe(false);
+  });
+
+  it("keeps owner navigation out of public sales routes", () => {
+    expect(OWNER_NAV_LINKS.some((item) => item.href === "/pricing")).toBe(false);
+    expect(OWNER_NAV_LINKS.map((item) => item.href)).toContain("/executive-home");
+    expect(buildDropdownRouteInventory(OWNER_NAV_LINKS)).toContainEqual(expect.objectContaining({
+      parent: "System",
+      label: "Integration Status",
+      href: "/integration-status",
       routeExists: true,
-      disabled: false,
-      deadClickable: false,
     }));
   });
 
-  it("wires Connect GoHighLevel to the real connection route", () => {
-    expect(inventory).toContainEqual(expect.objectContaining({
-      parent: "Connect",
-      label: "Connect GoHighLevel",
-      href: "/connect-ghl",
-      routeExists: true,
-      disabled: false,
-      deadClickable: false,
-    }));
+  it("keeps admin navigation under the admin route prefix", () => {
+    const adminRoutes = ADMIN_NAV_LINKS.flatMap((item) => [item.href, ...(item.children ?? []).map((child) => child.href)]);
+
+    expect(adminRoutes.every((href) => href === "#" || href.startsWith("/admin"))).toBe(true);
+    expect(adminRoutes).toContain("/admin/organizations");
   });
 
   it("wires GoHighLevel integration when the route exists", () => {
@@ -51,7 +59,7 @@ describe("Navigation dropdown route inventory", () => {
   });
 
   it("keeps every current dropdown child pointed at an existing route", () => {
-    const dropdownChildren = NAV_LINKS.flatMap((item) => item.children ?? []);
+    const dropdownChildren = [...NAV_LINKS, ...OWNER_NAV_LINKS, ...ADMIN_NAV_LINKS].flatMap((item) => item.children ?? []);
 
     expect(dropdownChildren.every((child) => AVAILABLE_NAV_ROUTES.has(child.href))).toBe(true);
   });

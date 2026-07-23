@@ -1,9 +1,7 @@
 import { ExternalLink, Lock, PlugZap, ShieldCheck } from "lucide-react";
+import { Link } from "wouter";
 import Footer from "@/components/Footer";
-import { GoHighLevelSecureConnectButton } from "@/components/GoHighLevelSecureConnectButton";
 import Navigation from "@/components/Navigation";
-
-const prnSouthCarolinaLocationId = "rJH8XytyAfEQSoOTQeuZ";
 
 export default function GoHighLevelIntegration() {
   return (
@@ -32,7 +30,24 @@ export default function GoHighLevelIntegration() {
 
         <section className="bg-[#141414] py-10">
           <div className="mx-auto grid max-w-5xl gap-6 px-4 sm:px-6 lg:grid-cols-[1fr_0.78fr] lg:px-8">
-            <GoHighLevelSecureConnectButton locationId={prnSouthCarolinaLocationId} />
+            <div className="space-y-4 rounded-2xl border border-[rgba(201,162,39,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-[#C9A227]" aria-hidden="true" />
+                <h2 className="text-lg font-semibold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Secure connection manager
+                </h2>
+              </div>
+              <p className="text-sm leading-6 text-[#FFFFFF]/60">
+                GoHighLevel locations are loaded from your authenticated EEOS organization. The browser never owns customer location IDs or stored token values.
+              </p>
+              <Link
+                href="/connect-ghl"
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#C9A227] px-5 text-sm font-semibold text-[#0B0B0B] shadow-[0_0_20px_rgba(201,162,39,0.25)] transition hover:bg-[#D8B84A]"
+              >
+                Manage GoHighLevel Connections
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
 
             <aside className="space-y-4">
               <InfoCard

@@ -3,7 +3,9 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, ChevronDown, ArrowRight, Zap, Plug, Activity } from "lucide-react";
+import { Menu, X, ChevronDown, ArrowRight, Zap } from "lucide-react";
+import { startLogin } from "@/const";
+import { isCustomerRole, useProductSession } from "@/contexts/ProductSessionContext";
 
 export const AVAILABLE_NAV_ROUTES = new Set([
   "/",
@@ -38,6 +40,15 @@ export const AVAILABLE_NAV_ROUTES = new Set([
   "/knowledge-graph",
   "/executive-dashboard",
   "/admin-bootstrap",
+  "/admin",
+  "/admin/organizations",
+  "/admin/onboarding",
+  "/admin/integrations",
+  "/admin/platform-health",
+  "/admin/audit",
+  "/admin/support",
+  "/admin/ai-operations",
+  "/access-denied",
   "/404",
 ]);
 
@@ -65,31 +76,46 @@ export const NAV_LINKS: NavItem[] = [
       { label: "Contact", href: "/contact" },
     ],
   },
+];
+
+export const OWNER_NAV_LINKS: NavItem[] = [
+  { label: "Executive Home", href: "/executive-home" },
+  { label: "Business Health", href: "/business-health" },
+  { label: "AI Recommendations", href: "/ai-recommendations" },
+  { label: "Live Signals", href: "/live-signals" },
   {
-    label: "Connect",
+    label: "Intelligence",
     href: "#",
     children: [
-      { label: "Connect GoHighLevel", href: "/connect-ghl" },
-      { label: "Integration Health", href: "/integration-health" },
-      { label: "Live Signal Status", href: "/live-status" },
-      { label: "Connected Apps", href: "/connected-apps" },
-      { label: "PRN Staffers Setup", href: "/prn-onboarding" },
+      { label: "Executive Timeline", href: "/executive-timeline" },
+      { label: "Knowledge Graph", href: "/knowledge-graph" },
+      { label: "Notifications", href: "/notifications" },
     ],
   },
   {
-    label: "Dashboard",
-    href: "/dashboard",
+    label: "System",
+    href: "#",
     children: [
-      { label: "Executive Dashboard", href: "/dashboard" },
-      { label: "Executive Home", href: "/executive-home" },
-      { label: "Business Health", href: "/business-health" },
-      { label: "AI Recommendations", href: "/ai-recommendations" },
-      { label: "Live Signals", href: "/live-signals" },
       { label: "Integration Status", href: "/integration-status" },
-      { label: "Executive Timeline", href: "/executive-timeline" },
-      { label: "Knowledge Graph", href: "/knowledge-graph" },
       { label: "System Health", href: "/system-health" },
-      { label: "Notifications", href: "/notifications" },
+      { label: "Account", href: "/connect-ghl" },
+    ],
+  },
+];
+
+export const ADMIN_NAV_LINKS: NavItem[] = [
+  { label: "Platform Overview", href: "/admin" },
+  { label: "Organizations", href: "/admin/organizations" },
+  { label: "Customer Onboarding", href: "/admin/onboarding" },
+  { label: "Global Integrations", href: "/admin/integrations" },
+  { label: "Platform Health", href: "/admin/platform-health" },
+  {
+    label: "Operations",
+    href: "#",
+    children: [
+      { label: "Audit Activity", href: "/admin/audit" },
+      { label: "Support", href: "/admin/support" },
+      { label: "AI Operations", href: "/admin/ai-operations" },
     ],
   },
 ];
@@ -111,12 +137,26 @@ export function buildDropdownRouteInventory(
 }
 
 export default function Navigation() {
+  const session = useProductSession();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [location] = useLocation();
   const headerRef = useRef<HTMLElement | null>(null);
-  const dropdownInventory = useMemo(() => buildDropdownRouteInventory(), []);
+  const isAdminExperience = location.startsWith("/admin") || session.role === "PLATFORM_ADMIN";
+  const isOwnerExperience = !isAdminExperience && (location.startsWith("/executive")
+    || location.startsWith("/business-health")
+    || location.startsWith("/ai-recommendations")
+    || location.startsWith("/live-signals")
+    || location.startsWith("/integration-status")
+    || location.startsWith("/knowledge-graph")
+    || location.startsWith("/notifications")
+    || location.startsWith("/system-health")
+    || location.startsWith("/connect-ghl")
+    || location.startsWith("/dashboard")
+    || isCustomerRole(session.role));
+  const activeLinks = isAdminExperience ? ADMIN_NAV_LINKS : isOwnerExperience ? OWNER_NAV_LINKS : NAV_LINKS;
+  const dropdownInventory = useMemo(() => buildDropdownRouteInventory(activeLinks), [activeLinks]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -197,7 +237,7 @@ export default function Navigation() {
 
             {/* Desktop Nav */}
             <nav className="hidden lg:flex items-center gap-0.5">
-              {NAV_LINKS.map((link) =>
+              {activeLinks.map((link) =>
                 link.children ? (
                   <div
                     key={link.label}
@@ -278,21 +318,34 @@ export default function Navigation() {
 
             {/* Desktop CTA Buttons */}
             <div className="hidden lg:flex items-center gap-2">
-              <Link
-                href="/demo"
-                className="px-4 py-2 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-md hover:bg-[rgba(201,162,39,0.08)] hover:border-[rgba(201,162,39,0.6)] transition-all duration-200"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                Request Demo
-              </Link>
-              <Link
-                href="/connect-ghl"
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-md hover:bg-[#D8B84A] transition-all duration-200 shadow-[0_0_16px_rgba(201,162,39,0.35)]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                <Zap className="w-3.5 h-3.5" />
-                Start Private Beta
-              </Link>
+              {isOwnerExperience || isAdminExperience ? (
+                <Link
+                  href={isAdminExperience ? "/admin" : "/executive-home"}
+                  className="px-4 py-2 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-md hover:bg-[rgba(201,162,39,0.08)] hover:border-[rgba(201,162,39,0.6)] transition-all duration-200"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  {isAdminExperience ? "Admin Console" : session.organization?.name ?? "Command Center"}
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/demo"
+                    className="px-4 py-2 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-md hover:bg-[rgba(201,162,39,0.08)] hover:border-[rgba(201,162,39,0.6)] transition-all duration-200"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    Request Demo
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => startLogin()}
+                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-md hover:bg-[#D8B84A] transition-all duration-200 shadow-[0_0_16px_rgba(201,162,39,0.35)]"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                    Sign In
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Mobile menu toggle */}
@@ -318,7 +371,7 @@ export default function Navigation() {
         <div className="flex flex-col h-full pt-20 pb-8 px-6 overflow-y-auto">
           {/* Nav Links */}
           <nav className="flex-1 space-y-1">
-            {NAV_LINKS.map((link) =>
+            {activeLinks.map((link) =>
               link.children ? (
                 <div key={link.label} className="py-2">
                   {link.href !== "#" ? (
@@ -386,31 +439,35 @@ export default function Navigation() {
 
           {/* Mobile CTAs */}
           <div className="mt-8 space-y-3 border-t border-[rgba(201,162,39,0.1)] pt-6">
-            <Link
-              href="/connect-ghl"
-              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-xl hover:bg-[#D8B84A] transition-all shadow-[0_0_20px_rgba(201,162,39,0.4)]"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              <Plug className="w-4 h-4" />
-              Connect GoHighLevel
-            </Link>
-            <Link
-              href="/integration-health"
-              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-xl hover:bg-[rgba(201,162,39,0.08)] transition-all"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              <Activity className="w-4 h-4" />
-              View Integration Health
-            </Link>
-            <Link
-              href="/dashboard"
-              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#FFFFFF]/70 hover:text-[#FFFFFF] transition-all"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              aria-label="Open Executive Dashboard"
-            >
-              Open Executive Dashboard
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+            {isOwnerExperience || isAdminExperience ? (
+              <Link
+                href={isAdminExperience ? "/admin" : "/executive-home"}
+                className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-xl hover:bg-[#D8B84A] transition-all shadow-[0_0_20px_rgba(201,162,39,0.4)]"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                {isAdminExperience ? "Open Admin Console" : "Open Owner Command Center"}
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/demo"
+                  className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-xl hover:bg-[#D8B84A] transition-all shadow-[0_0_20px_rgba(201,162,39,0.4)]"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  Request Demo
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => startLogin()}
+                  className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-xl hover:bg-[rgba(201,162,39,0.08)] transition-all"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  <Zap className="w-4 h-4" />
+                  Sign In
+                </button>
+              </>
+            )}
           </div>
 
           {/* Trust badges */}

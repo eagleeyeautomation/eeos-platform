@@ -2,6 +2,7 @@ import { COOKIE_NAME, ONE_YEAR_MS, OAUTH_STATE_COOKIE, decodeOAuthState } from "
 import { parse as parseCookieHeader } from "cookie";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
+import { resolveAuthorizationContext } from "../authorization";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
@@ -47,6 +48,10 @@ export function registerOAuthRoutes(app: Express) {
         loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
         lastSignedIn: new Date(),
       });
+      const persistedUser = await db.getUserByOpenId(userInfo.openId);
+      const redirectTo = persistedUser
+        ? (await resolveAuthorizationContext(persistedUser)).role === "PLATFORM_ADMIN" ? "/admin" : "/executive-home"
+        : "/executive-home";
 
       const sessionToken = await sdk.createSessionToken(userInfo.openId, {
         name: userInfo.name || "",
@@ -56,7 +61,7 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      res.redirect(302, "/");
+      res.redirect(302, redirectTo);
     } catch (error) {
       console.error("[OAuth] Callback failed", error);
       res.status(500).json({ error: "OAuth callback failed" });

@@ -23,6 +23,8 @@
 import type { Express, Request, Response } from "express";
 import { randomUUID } from "crypto";
 import { getAllGhlTokens, getAllSubaccounts, upsertGhlToken, getGhlToken, upsertSubaccount } from "./db";
+import { listAuthorizedSubaccounts, requireAuthorizedLocation, requireWritableOrganizationRole } from "./authorization";
+import { sdk } from "./_core/sdk";
 
 const GHL_API_BASE = "https://services.leadconnectorhq.com";
 
@@ -58,12 +60,17 @@ interface PitConnectBody {
   privateToken: string;
   /** Human-readable name for this subaccount */
   subaccountName: string;
-  /** The EEOS membership ID this subaccount belongs to */
-  membershipId?: number;
 }
 
 function publicTokenType(tokenType?: string | null, scope?: string | null) {
   return scope === "private_integration" ? "private_integration" : tokenType ?? "Bearer";
+}
+
+function authzHttpStatus(error: unknown) {
+  const code = (error as { code?: string })?.code;
+  if (code === "UNAUTHORIZED") return 401;
+  if (code === "FORBIDDEN") return 403;
+  return null;
 }
 
 /**
@@ -119,15 +126,27 @@ export function registerGhlPitRoutes(app: Express) {
    * Returns safe connection metadata for every persisted GHL connection.
    * Never returns access tokens, refresh tokens, encrypted values, or PITs.
    */
-  app.get("/api/ghl/pit/connections", async (_req: Request, res: Response) => {
+  app.get("/api/ghl/pit/connections", async (req: Request, res: Response) => {
     try {
-      const [tokens, subaccounts] = await Promise.all([
+      let user: Awaited<ReturnType<typeof sdk.authenticateRequest>>;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        res.status(401).json({ success: false, error: "Authentication is required." });
+        return;
+      }
+      const authorizedSubaccounts = await listAuthorizedSubaccounts(user);
+      const authorizedLocationIds = new Set(authorizedSubaccounts.map((subaccount) => subaccount.ghlLocationId));
+
+      const [tokens, allSubaccounts] = await Promise.all([
         getAllGhlTokens(),
         getAllSubaccounts(),
       ]);
+      const subaccounts = allSubaccounts.filter((subaccount) => authorizedLocationIds.has(subaccount.ghlLocationId));
+      const authorizedTokens = tokens.filter((token) => authorizedLocationIds.has(token.locationId ?? token.tenantId));
 
       const tokenByLocation = new Map<string, (typeof tokens)[number]>();
-      tokens.forEach((token) => {
+      authorizedTokens.forEach((token) => {
         tokenByLocation.set(token.locationId ?? token.tenantId, token);
       });
 
@@ -154,7 +173,7 @@ export function registerGhlPitRoutes(app: Express) {
         });
       });
 
-      await Promise.all(tokens.map(async (token) => {
+      await Promise.all(authorizedTokens.map(async (token) => {
         const locationId = token.locationId ?? token.tenantId;
         const existing = locations.get(locationId);
         let locationName = existing?.subaccountName ?? locationId;
@@ -199,13 +218,13 @@ export function registerGhlPitRoutes(app: Express) {
    * POST /api/ghl/pit/connect
    * Validates a Private Integration Token and stores it for a subaccount.
    *
-   * Body: { locationId, privateToken, subaccountName, membershipId? }
+ * Body: { locationId, privateToken, subaccountName }
    *
    * This is the Mission Zero connection method. After OAuth Marketplace App
    * is published, this route remains available for admin/manual connections.
    */
   app.post("/api/ghl/pit/connect", async (req: Request, res: Response) => {
-    const { locationId, privateToken, subaccountName, membershipId } = req.body as PitConnectBody;
+    const { locationId, privateToken, subaccountName } = req.body as PitConnectBody;
 
     if (!locationId || !privateToken || !subaccountName) {
       res.status(400).json({
@@ -216,6 +235,14 @@ export function registerGhlPitRoutes(app: Express) {
     }
 
     try {
+      let user: Awaited<ReturnType<typeof sdk.authenticateRequest>>;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        res.status(401).json({ success: false, error: "Authentication is required." });
+        return;
+      }
+      const authorization = await requireWritableOrganizationRole(user);
       console.log(`[GHL PIT] Validating token for location ${locationId} (${subaccountName})`);
 
       // Validate the token against the GHL API
@@ -243,9 +270,10 @@ export function registerGhlPitRoutes(app: Express) {
       });
 
       // Upsert the subaccount record
-      if (membershipId) {
+      const effectiveMembershipId = authorization.membershipId ? Number(authorization.membershipId) : undefined;
+      if (effectiveMembershipId) {
         await upsertSubaccount({
-          membershipId,
+          membershipId: effectiveMembershipId,
           ghlLocationId: locationId,
           ghlCompanyId: locationData.companyId,
           name: subaccountName,
@@ -271,6 +299,11 @@ export function registerGhlPitRoutes(app: Express) {
         message: `Successfully connected ${subaccountName} using Private Integration Token`,
       });
     } catch (error) {
+      const authStatus = authzHttpStatus(error);
+      if (authStatus) {
+        res.status(authStatus).json({ success: false, error: authStatus === 401 ? "Authentication is required." : "Not authorized for this GoHighLevel connection." });
+        return;
+      }
       const requestId = randomUUID();
       const safeError = sanitizePitError(error);
       console.error("[GHL PIT] Connection failed", {
@@ -310,6 +343,14 @@ export function registerGhlPitRoutes(app: Express) {
     }
 
     try {
+      let user: Awaited<ReturnType<typeof sdk.authenticateRequest>>;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        res.status(401).json({ success: false, error: "Authentication is required." });
+        return;
+      }
+      await requireAuthorizedLocation(user, locationId);
       const token = await getGhlToken(locationId);
       if (!token || !token.isActive) {
         res.json({ success: false, valid: false, reason: "not_connected" });
@@ -329,6 +370,11 @@ export function registerGhlPitRoutes(app: Express) {
         tokenType: "private_integration",
       });
     } catch (error) {
+      const authStatus = authzHttpStatus(error);
+      if (authStatus) {
+        res.status(authStatus).json({ success: false, valid: false, error: authStatus === 401 ? "Authentication is required." : "Not authorized for this GoHighLevel location." });
+        return;
+      }
       const message = error instanceof Error ? error.message : "Unknown error";
       console.error(`[GHL PIT] Verify failed for ${locationId}:`, message);
       res.json({
@@ -354,6 +400,15 @@ export function registerGhlPitRoutes(app: Express) {
     }
 
     try {
+      let user: Awaited<ReturnType<typeof sdk.authenticateRequest>>;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        res.status(401).json({ success: false, error: "Authentication is required." });
+        return;
+      }
+      await requireWritableOrganizationRole(user);
+      await requireAuthorizedLocation(user, locationId);
       const token = await getGhlToken(locationId);
       if (!token) {
         res.json({ success: true, message: "No connection found to disconnect" });
@@ -377,6 +432,11 @@ export function registerGhlPitRoutes(app: Express) {
       console.log(`[GHL PIT] Disconnected: ${locationId}`);
       res.json({ success: true, locationId, message: "Subaccount disconnected" });
     } catch (error) {
+      const authStatus = authzHttpStatus(error);
+      if (authStatus) {
+        res.status(authStatus).json({ success: false, error: authStatus === 401 ? "Authentication is required." : "Not authorized for this GoHighLevel location." });
+        return;
+      }
       const message = error instanceof Error ? error.message : "Unknown error";
       console.error(`[GHL PIT] Disconnect failed for ${locationId}:`, message);
       res.status(500).json({ success: false, error: message });
@@ -391,6 +451,14 @@ export function registerGhlPitRoutes(app: Express) {
     const { locationId } = req.params;
 
     try {
+      let user: Awaited<ReturnType<typeof sdk.authenticateRequest>>;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        res.status(401).json({ connected: false, error: "Authentication is required." });
+        return;
+      }
+      await requireAuthorizedLocation(user, locationId);
       const token = await getGhlToken(locationId);
       if (!token || !token.isActive) {
         res.json({ connected: false, locationId });
@@ -406,7 +474,11 @@ export function registerGhlPitRoutes(app: Express) {
         webhookRegistered: token.webhookRegistered,
       });
     } catch (error) {
-      res.status(500).json({ connected: false, error: "Status check failed" });
+      const authStatus = authzHttpStatus(error);
+      res.status(authStatus ?? 500).json({
+        connected: false,
+        error: authStatus === 401 ? "Authentication is required." : authStatus === 403 ? "Not authorized for this GoHighLevel location." : "Status check failed",
+      });
     }
   });
 }
