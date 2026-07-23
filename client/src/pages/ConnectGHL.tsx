@@ -34,7 +34,7 @@ type ConnectionStatus = "idle" | "loading" | "connecting" | "verifying" | "conne
 interface SubaccountEntry {
   /** Unique key for this entry */
   key: string;
-  /** Human-readable name, e.g. "Delaware" */
+  /** Human-readable name */
   name: string;
   /** GHL Location ID */
   locationId: string;
@@ -48,20 +48,48 @@ interface SubaccountEntry {
   ghlLocationName?: string;
   /** When this subaccount was connected */
   connectedAt?: string;
+  /** Safe token mode label returned by the backend */
+  tokenType?: string | null;
+  /** Safe company identifier returned by the backend */
+  companyId?: string | null;
+  /** Whether the webhook is registered for this location */
+  webhookRegistered?: boolean;
   /** Whether the form is expanded */
   expanded: boolean;
 }
 
-type PitStatusResponse = {
-  connected?: boolean;
-  locationId?: string;
-  tokenType?: string;
-  expiresAt?: string | null;
+type PitConnectionResponse = {
+  locationId: string;
+  subaccountName: string;
+  connected: boolean;
+  tokenType?: string | null;
   connectedAt?: string | null;
+  companyId?: string | null;
+  webhookRegistered?: boolean;
   error?: string;
 };
 
-const SOUTH_CAROLINA_LOCATION_ID = "rJH8XytyAfEQSoOTQeuZ";
+function readPitError(payload: PitConnectionResponse[] | { error?: string; message?: string } | string) {
+  if (typeof payload === "string") return payload;
+  if (Array.isArray(payload)) return "Unable to load GoHighLevel connections";
+  return payload.error ?? payload.message ?? "Unable to load GoHighLevel connections";
+}
+
+export function mapPitConnectionsToSubaccounts(connections: PitConnectionResponse[]): SubaccountEntry[] {
+  return connections.map((connection, index) => ({
+    key: connection.locationId || `connection-${index}`,
+    name: connection.subaccountName || connection.locationId || "GoHighLevel Location",
+    locationId: connection.locationId,
+    token: "",
+    status: connection.connected ? "connected" : "idle",
+    ghlLocationName: connection.subaccountName,
+    connectedAt: connection.connectedAt ?? undefined,
+    tokenType: connection.tokenType,
+    companyId: connection.companyId,
+    webhookRegistered: connection.webhookRegistered,
+    expanded: index === 0,
+  }));
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // How to get a Private Integration Token
@@ -199,7 +227,7 @@ function SubaccountCard({
                 type="text"
                 value={entry.name}
                 onChange={(e) => onChange(entry.key, "name", e.target.value)}
-                placeholder="e.g. Delaware, South Carolina, Alabama, Florida"
+                placeholder="Location name"
                 disabled={isConnected}
                 className="w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(0,212,200,0.15)] text-[#E8EDF5] text-sm placeholder-[#E8EDF5]/25 focus:outline-none focus:border-[rgba(0,212,200,0.4)] transition-colors disabled:opacity-50"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -259,12 +287,22 @@ function SubaccountCard({
                 <CheckCircle2 className="w-4 h-4 text-[#10B981] shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs font-semibold text-[#10B981]">Connected to GoHighLevel</p>
-                  {entry.ghlLocationName && (
-                    <p className="text-[10px] text-[#10B981]/70 mt-0.5">Location: {entry.ghlLocationName}</p>
-                  )}
+	                  {entry.ghlLocationName && (
+	                    <p className="text-[10px] text-[#10B981]/70 mt-0.5">Location: {entry.ghlLocationName}</p>
+	                  )}
                   {entry.connectedAt && (
                     <p className="text-[10px] text-[#10B981]/50 mt-0.5">
                       Connected {new Date(entry.connectedAt).toLocaleString()}
+                    </p>
+                  )}
+                  {entry.tokenType && (
+                    <p className="text-[10px] text-[#10B981]/50 mt-0.5">
+                      Token type: {entry.tokenType}
+                    </p>
+                  )}
+                  {entry.webhookRegistered !== undefined && (
+                    <p className="text-[10px] text-[#10B981]/50 mt-0.5">
+                      Webhook: {entry.webhookRegistered ? "Registered" : "Not registered"}
                     </p>
                   )}
                 </div>
@@ -313,107 +351,59 @@ export default function ConnectGHL() {
   const { user, isAuthenticated } = useAuth();
   const [showInstructions, setShowInstructions] = useState(false);
 
-  // Subaccount entries — start with 4 for PRN Staffers' divisions
-  const [subaccounts, setSubaccounts] = useState<SubaccountEntry[]>([
-    { key: "delaware", name: "Delaware", locationId: "", token: "", status: "idle", expanded: true },
-    { key: "south-carolina", name: "South Carolina", locationId: SOUTH_CAROLINA_LOCATION_ID, token: "", status: "idle", expanded: false },
-    { key: "alabama", name: "Alabama", locationId: "", token: "", status: "idle", expanded: false },
-    { key: "florida", name: "Florida", locationId: "", token: "", status: "idle", expanded: false },
-  ]);
+  const [subaccounts, setSubaccounts] = useState<SubaccountEntry[]>([]);
+  const [connectionLoadStatus, setConnectionLoadStatus] = useState<ConnectionStatus>("loading");
+  const [connectionLoadError, setConnectionLoadError] = useState<string | undefined>();
 
   useEffect(() => {
     const controller = new AbortController();
 
-    const hydratePersistedStatuses = async () => {
-      const entriesWithLocationIds = subaccounts.filter(
-        (entry) => entry.locationId.trim().length > 0
-      );
+    const hydratePersistedConnections = async () => {
+      try {
+        setConnectionLoadStatus("loading");
+        setConnectionLoadError(undefined);
 
-      await Promise.all(
-        entriesWithLocationIds.map(async (entry) => {
-          try {
-            setSubaccounts((current) =>
-              current.map((item) =>
-                item.key === entry.key
-                  ? {
-                      ...item,
-                      status: "loading",
-                      error: undefined,
-                    }
-                  : item
-              )
-            );
+        const response = await fetch("/api/ghl/pit/connections", {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+          credentials: "same-origin",
+          signal: controller.signal,
+        });
 
-            const response = await fetch(
-              `/api/ghl/pit/status/${encodeURIComponent(entry.locationId.trim())}`,
-              {
-                method: "GET",
-                headers: {
-                  Accept: "application/json",
-                },
-                credentials: "same-origin",
-                signal: controller.signal,
-              }
-            );
+        const contentType = response.headers.get("content-type") ?? "";
+        const payload: PitConnectionResponse[] | { error?: string; message?: string } | string =
+          contentType.includes("application/json")
+            ? await response.json()
+            : await response.text();
 
-            const contentType = response.headers.get("content-type") ?? "";
-            const payload: PitStatusResponse | string = contentType.includes("application/json")
-              ? await response.json()
-              : await response.text();
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${readPitError(payload)}`);
+        }
 
-            if (!response.ok) {
-              const message = typeof payload === "string"
-                ? payload
-                : payload.error ?? "Unable to load connection status";
+        if (!Array.isArray(payload)) {
+          throw new Error("The connections endpoint returned an invalid response.");
+        }
 
-              throw new Error(`HTTP ${response.status}: ${message}`);
-            }
+        setSubaccounts(mapPitConnectionsToSubaccounts(payload));
+        setConnectionLoadStatus("idle");
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
 
-            if (typeof payload === "string") {
-              throw new Error("The status endpoint returned an invalid response.");
-            }
+        const message = error instanceof Error
+          ? error.message
+          : "Unable to load GoHighLevel connections";
 
-            setSubaccounts((current) =>
-              current.map((item) =>
-                item.key === entry.key
-                  ? {
-                      ...item,
-                      locationId: payload.locationId ?? item.locationId,
-                      status: payload.connected ? "connected" : "idle",
-                      token: "",
-                      connectedAt: payload.connectedAt ?? item.connectedAt,
-                      error: undefined,
-                    }
-                  : item
-              )
-            );
-          } catch (error) {
-            if (error instanceof DOMException && error.name === "AbortError") {
-              return;
-            }
-
-            const message = error instanceof Error
-              ? error.message
-              : "Unable to load connection status";
-
-            setSubaccounts((current) =>
-              current.map((item) =>
-                item.key === entry.key
-                  ? {
-                      ...item,
-                      status: "error",
-                      token: "",
-                      error: message,
-                    }
-                  : item
-              )
-            );
-          }
-        })
-      );
+        setConnectionLoadStatus("error");
+        setConnectionLoadError(message);
+        setSubaccounts([]);
+      }
     };
 
-    void hydratePersistedStatuses();
+    void hydratePersistedConnections();
 
     return () => {
       controller.abort();
@@ -444,14 +434,16 @@ export default function ConnectGHL() {
         }),
       });
 
-      const contentType = response.headers.get("content-type") ?? "";
+	      const contentType = response.headers.get("content-type") ?? "";
       const payload = contentType.includes("application/json")
         ? await response.json() as {
           success?: boolean;
           error?: string;
           message?: string;
           locationName?: string;
+          companyId?: string | null;
           connectedAt?: string;
+          tokenType?: string | null;
         }
         : await response.text();
 
@@ -470,7 +462,9 @@ export default function ConnectGHL() {
         success: boolean;
         error?: string;
         locationName?: string;
+        companyId?: string | null;
         connectedAt?: string;
+        tokenType?: string | null;
       };
 
       if (!data.success) {
@@ -482,11 +476,14 @@ export default function ConnectGHL() {
 
       setSubaccounts(prev => prev.map(s =>
         s.key === key ? {
-          ...s,
-          status: "connected",
+	          ...s,
+	          status: "connected",
           token: "",
           ghlLocationName: data.locationName,
+          companyId: data.companyId,
           connectedAt: data.connectedAt,
+          tokenType: data.tokenType,
+          webhookRegistered: false,
           error: undefined,
         } : s
       ));
@@ -532,13 +529,24 @@ export default function ConnectGHL() {
         success: boolean;
         valid: boolean;
         locationName?: string;
+        companyId?: string | null;
         connectedAt?: string;
+        tokenType?: string | null;
         error?: string;
       };
 
       if (data.valid) {
         setSubaccounts(prev => prev.map(s =>
-          s.key === key ? { ...s, status: "connected", ghlLocationName: data.locationName, error: undefined } : s
+          s.key === key ? {
+            ...s,
+            status: "connected",
+            token: "",
+            ghlLocationName: data.locationName,
+            companyId: data.companyId,
+            connectedAt: data.connectedAt ?? s.connectedAt,
+            tokenType: data.tokenType ?? s.tokenType,
+            error: undefined,
+          } : s
         ));
       } else {
         setSubaccounts(prev => prev.map(s =>
@@ -709,6 +717,39 @@ export default function ConnectGHL() {
           </div>
 
           <div className="space-y-4">
+            {connectionLoadStatus === "loading" && (
+              <div className="glass-card rounded-2xl p-5 flex items-center gap-3">
+                <Loader2 className="w-4 h-4 animate-spin text-[#00D4C8]" />
+                <span className="text-sm text-[#E8EDF5]/60" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Loading persisted GoHighLevel connections...
+                </span>
+              </div>
+            )}
+
+            {connectionLoadStatus === "error" && (
+              <div className="glass-card rounded-2xl p-5 flex items-start gap-3 border-[rgba(239,68,68,0.2)]">
+                <AlertCircle className="w-4 h-4 text-[#EF4444] shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-[#EF4444]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Unable to load GoHighLevel connections
+                  </p>
+                  <p className="text-xs text-[#EF4444]/70 mt-1">{connectionLoadError}</p>
+                </div>
+              </div>
+            )}
+
+            {connectionLoadStatus !== "loading" && subaccounts.length === 0 && (
+              <div className="glass-card rounded-2xl p-5 text-center">
+                <Plug className="w-8 h-8 text-[#E8EDF5]/20 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-[#E8EDF5]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  No persisted GoHighLevel connections yet
+                </p>
+                <p className="text-xs text-[#E8EDF5]/45 mt-1">
+                  Add a subaccount to connect a GoHighLevel location.
+                </p>
+              </div>
+            )}
+
             {subaccounts.map((entry) => (
               <SubaccountCard
                 key={entry.key}

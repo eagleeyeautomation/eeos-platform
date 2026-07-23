@@ -22,7 +22,7 @@
 
 import type { Express, Request, Response } from "express";
 import { randomUUID } from "crypto";
-import { upsertGhlToken, getGhlToken, upsertSubaccount } from "./db";
+import { getAllGhlTokens, getAllSubaccounts, upsertGhlToken, getGhlToken, upsertSubaccount } from "./db";
 
 const GHL_API_BASE = "https://services.leadconnectorhq.com";
 
@@ -56,10 +56,14 @@ interface PitConnectBody {
   locationId: string;
   /** The Private Integration Token from the GHL location settings */
   privateToken: string;
-  /** Human-readable name for this subaccount, e.g. "Delaware" */
+  /** Human-readable name for this subaccount */
   subaccountName: string;
   /** The EEOS membership ID this subaccount belongs to */
   membershipId?: number;
+}
+
+function publicTokenType(tokenType?: string | null, scope?: string | null) {
+  return scope === "private_integration" ? "private_integration" : tokenType ?? "Bearer";
 }
 
 /**
@@ -110,6 +114,87 @@ async function validatePitToken(locationId: string, token: string): Promise<{
 
 /** Register Private Integration Token routes on the Express app */
 export function registerGhlPitRoutes(app: Express) {
+  /**
+   * GET /api/ghl/pit/connections
+   * Returns safe connection metadata for every persisted GHL connection.
+   * Never returns access tokens, refresh tokens, encrypted values, or PITs.
+   */
+  app.get("/api/ghl/pit/connections", async (_req: Request, res: Response) => {
+    try {
+      const [tokens, subaccounts] = await Promise.all([
+        getAllGhlTokens(),
+        getAllSubaccounts(),
+      ]);
+
+      const tokenByLocation = new Map<string, (typeof tokens)[number]>();
+      tokens.forEach((token) => {
+        tokenByLocation.set(token.locationId ?? token.tenantId, token);
+      });
+
+      const locations = new Map<string, {
+        locationId: string;
+        subaccountName: string;
+        companyId?: string | null;
+        connected: boolean;
+        tokenType?: string | null;
+        connectedAt?: Date | null;
+        webhookRegistered?: boolean | null;
+      }>();
+
+      subaccounts.forEach((subaccount) => {
+        const token = tokenByLocation.get(subaccount.ghlLocationId);
+        locations.set(subaccount.ghlLocationId, {
+          locationId: subaccount.ghlLocationId,
+          subaccountName: subaccount.name,
+          companyId: token?.companyId ?? subaccount.ghlCompanyId,
+          connected: Boolean(token?.isActive),
+          tokenType: token ? publicTokenType(token.tokenType, token.scope) : null,
+          connectedAt: token?.connectedAt ?? subaccount.connectedAt,
+          webhookRegistered: token?.webhookRegistered ?? false,
+        });
+      });
+
+      await Promise.all(tokens.map(async (token) => {
+        const locationId = token.locationId ?? token.tenantId;
+        const existing = locations.get(locationId);
+        let locationName = existing?.subaccountName ?? locationId;
+        let companyId = existing?.companyId ?? token.companyId ?? null;
+
+        if (token.isActive) {
+          try {
+            const location = await validatePitToken(locationId, token.accessToken);
+            locationName = location.name || locationName;
+            companyId = companyId ?? location.companyId ?? null;
+          } catch {
+            // Keep the persisted metadata if the upstream read-only lookup fails.
+          }
+        }
+
+        locations.set(locationId, {
+          locationId,
+          subaccountName: locationName,
+          companyId,
+          connected: Boolean(token.isActive),
+          tokenType: publicTokenType(token.tokenType, token.scope),
+          connectedAt: token.connectedAt,
+          webhookRegistered: token.webhookRegistered,
+        });
+      }));
+
+      res.json(Array.from(locations.values()).map((connection) => ({
+        locationId: connection.locationId,
+        subaccountName: connection.subaccountName,
+        connected: connection.connected,
+        tokenType: connection.tokenType,
+        connectedAt: connection.connectedAt,
+        companyId: connection.companyId,
+        webhookRegistered: Boolean(connection.webhookRegistered),
+      })));
+    } catch (error) {
+      res.status(500).json({ success: false, error: "Unable to load GoHighLevel connections" });
+    }
+  });
+
   /**
    * POST /api/ghl/pit/connect
    * Validates a Private Integration Token and stores it for a subaccount.

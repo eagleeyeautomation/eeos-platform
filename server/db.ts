@@ -161,6 +161,12 @@ export async function getActiveGhlTokens(): Promise<GhlToken[]> {
   return db.select().from(ghlTokens).where(eq(ghlTokens.isActive, true));
 }
 
+export async function getAllGhlTokens(): Promise<GhlToken[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(ghlTokens);
+}
+
 export async function getTokensNeedingRefresh(): Promise<GhlToken[]> {
   const db = await getDb();
   if (!db) return [];
@@ -555,6 +561,12 @@ export async function getSubaccountsByMembership(membershipId: number): Promise<
   if (!db) return [];
   return db.select().from(subaccounts)
     .where(and(eq(subaccounts.membershipId, membershipId), eq(subaccounts.isActive, true)));
+}
+
+export async function getAllSubaccounts(): Promise<Subaccount[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(subaccounts);
 }
 
 export async function getSubaccountByGhlLocationId(ghlLocationId: string): Promise<Subaccount | undefined> {
