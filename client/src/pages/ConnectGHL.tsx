@@ -324,7 +324,29 @@ export default function ConnectGHL() {
         }),
       });
 
-      const data = await response.json() as {
+      const contentType = response.headers.get("content-type") ?? "";
+      const payload = contentType.includes("application/json")
+        ? await response.json() as {
+          success?: boolean;
+          error?: string;
+          message?: string;
+          locationName?: string;
+          connectedAt?: string;
+        }
+        : await response.text();
+
+      if (!response.ok) {
+        const message = typeof payload === "string"
+          ? payload
+          : payload.error ?? payload.message ?? "Connection failed";
+        throw new Error(`HTTP ${response.status}: ${message}`);
+      }
+
+      if (typeof payload === "string") {
+        throw new Error(`HTTP ${response.status}: ${payload}`);
+      }
+
+      const data = payload as {
         success: boolean;
         error?: string;
         locationName?: string;
