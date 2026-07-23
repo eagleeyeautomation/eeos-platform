@@ -21,9 +21,35 @@
  */
 
 import type { Express, Request, Response } from "express";
+import { randomUUID } from "crypto";
 import { upsertGhlToken, getGhlToken, upsertSubaccount } from "./db";
 
 const GHL_API_BASE = "https://services.leadconnectorhq.com";
+
+function sanitizePitError(error: unknown) {
+  const err = error as Error & {
+    code?: string;
+    errno?: number;
+    sqlState?: string;
+    sqlMessage?: string;
+    cause?: Error & { code?: string; errno?: number; sqlState?: string; sqlMessage?: string };
+  };
+  const rawMessage = err.message ?? "Unknown error";
+  const constraint = rawMessage.match(/constraint [`"']?([^`"'\s]+)[`"']?/i)?.[1] ?? null;
+  const sensitiveDatabaseFailure = /Failed query:|params:|accessToken|refreshToken|privateToken|pit-/i.test(rawMessage);
+  const message = sensitiveDatabaseFailure
+    ? "Database persistence failed while connecting GoHighLevel."
+    : rawMessage.replace(/pit-[a-z0-9-]+/gi, "[redacted]");
+
+  return {
+    message,
+    code: err.code ?? err.cause?.code ?? null,
+    errno: err.errno ?? err.cause?.errno ?? null,
+    sqlState: err.sqlState ?? err.cause?.sqlState ?? null,
+    sqlMessage: err.sqlMessage ?? err.cause?.sqlMessage ?? null,
+    constraint,
+  };
+}
 
 interface PitConnectBody {
   /** The GHL location ID for this subaccount */
@@ -160,11 +186,25 @@ export function registerGhlPitRoutes(app: Express) {
         message: `Successfully connected ${subaccountName} using Private Integration Token`,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      console.error(`[GHL PIT] Connection failed for ${locationId}:`, message);
+      const requestId = randomUUID();
+      const safeError = sanitizePitError(error);
+      console.error("[GHL PIT] Connection failed", {
+        requestId,
+        operation: "pit.connect",
+        tenantId: locationId,
+        locationId,
+        code: safeError.code,
+        errno: safeError.errno,
+        sqlState: safeError.sqlState,
+        constraint: safeError.constraint,
+        message: safeError.message,
+      });
       res.status(400).json({
         success: false,
-        error: message,
+        error: safeError.message,
+        requestId,
+        code: safeError.code,
+        constraint: safeError.constraint,
         locationId,
         subaccountName,
       });
