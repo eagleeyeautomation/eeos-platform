@@ -753,3 +753,415 @@ export async function getUserSubaccounts(userId: number): Promise<Array<Subaccou
     getActiveSubaccountsByMembershipId: getSubaccountsByMembership,
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PLATFORM ADMINISTRATION: Safe read-only operational views
+// ─────────────────────────────────────────────────────────────────────────────
+
+function toIso(value: Date | string | null | undefined): string | null {
+  if (!value) return null;
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function latestIso(values: Array<Date | string | null | undefined>): string | null {
+  const timestamps = values
+    .map((value) => (value ? new Date(value).getTime() : 0))
+    .filter((value) => Number.isFinite(value) && value > 0);
+  if (timestamps.length === 0) return null;
+  return new Date(Math.max(...timestamps)).toISOString();
+}
+
+export async function getPlatformAdminData() {
+  const db = await getDb();
+  if (!db) {
+    return {
+      database: { connected: false as const, checkedAt: new Date().toISOString() },
+      organizations: [],
+      memberships: [],
+      subaccounts: [],
+      ghlConnections: [],
+      users: [],
+      sessions: [],
+      invitations: [],
+      passwordResets: [],
+      authAuditEvents: [],
+      signals: [],
+      timelineEvents: [],
+      recommendations: [],
+      feedback: [],
+      ieMetrics: [],
+      knowledgeNodes: [],
+      knowledgeEdges: [],
+      businessMemory: [],
+    };
+  }
+
+  const [
+    organizationRows,
+    membershipRows,
+    subaccountRows,
+    ghlTokenRows,
+    userRows,
+    sessionRows,
+    invitationRows,
+    passwordResetRows,
+    authAuditRows,
+    signalRows,
+    timelineRows,
+    recommendationRows,
+    feedbackRows,
+    ieMetricRows,
+    nodeRows,
+    edgeRows,
+    memoryRows,
+  ] = await Promise.all([
+    db.select().from(organizations),
+    db.select().from(memberships),
+    db.select().from(subaccounts),
+    db.select().from(ghlTokens),
+    db.select().from(users),
+    db.select().from(authSessions).orderBy(desc(authSessions.createdAt)).limit(50),
+    db.select().from(authInvitations).orderBy(desc(authInvitations.createdAt)).limit(50),
+    db.select().from(passwordResetTokens).orderBy(desc(passwordResetTokens.createdAt)).limit(50),
+    db.select().from(authAuditEvents).orderBy(desc(authAuditEvents.createdAt)).limit(100),
+    db.select().from(ghlSignals).orderBy(desc(ghlSignals.receivedAt)).limit(500),
+    db.select().from(timelineEvents).orderBy(desc(timelineEvents.occurredAt)).limit(100),
+    db.select().from(recommendations).orderBy(desc(recommendations.createdAt)).limit(100),
+    db.select().from(recommendationFeedback).orderBy(desc(recommendationFeedback.createdAt)).limit(100),
+    db.select().from(ieMetrics).orderBy(desc(ieMetrics.computedAt)).limit(100),
+    db.select().from(kgNodes).limit(500),
+    db.select().from(kgEdges).limit(500),
+    db.select().from(businessMemory),
+  ]);
+
+  return {
+    database: { connected: true as const, checkedAt: new Date().toISOString() },
+    organizations: organizationRows,
+    memberships: membershipRows,
+    subaccounts: subaccountRows,
+    ghlConnections: ghlTokenRows.map((token) => ({
+      id: token.id,
+      tenantId: token.tenantId,
+      locationId: token.locationId,
+      companyId: token.companyId,
+      tokenType: token.scope === "private_integration" ? "private_integration" : (token.tokenType ?? "unknown"),
+      scope: token.scope,
+      isActive: Boolean(token.isActive),
+      webhookRegistered: Boolean(token.webhookRegistered),
+      connectedAt: toIso(token.connectedAt),
+      updatedAt: toIso(token.updatedAt),
+      expiresAt: toIso(token.expiresAt),
+      refreshFailCount: token.refreshFailCount ?? 0,
+    })),
+    users: userRows.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      createdAt: toIso(user.createdAt),
+      lastSignedIn: toIso(user.lastSignedIn),
+    })),
+    sessions: sessionRows.map((session) => ({
+      id: session.id,
+      userId: session.userId,
+      createdAt: toIso(session.createdAt),
+      lastSeenAt: toIso(session.lastSeenAt),
+      expiresAt: toIso(session.expiresAt),
+      revokedAt: toIso(session.revokedAt),
+    })),
+    invitations: invitationRows.map((invite) => ({
+      id: invite.id,
+      email: invite.email,
+      organizationId: invite.organizationId,
+      membershipId: invite.membershipId,
+      role: invite.role,
+      createdAt: toIso(invite.createdAt),
+      expiresAt: toIso(invite.expiresAt),
+      acceptedAt: toIso(invite.acceptedAt),
+    })),
+    passwordResets: passwordResetRows.map((reset) => ({
+      id: reset.id,
+      userId: reset.userId,
+      createdAt: toIso(reset.createdAt),
+      expiresAt: toIso(reset.expiresAt),
+      usedAt: toIso(reset.usedAt),
+    })),
+    authAuditEvents: authAuditRows.map((event) => ({
+      id: event.id,
+      actorUserId: event.actorUserId,
+      organizationId: event.organizationId,
+      action: event.action,
+      targetType: event.targetType,
+      targetId: event.targetId,
+      createdAt: toIso(event.createdAt),
+    })),
+    signals: signalRows.map((signal) => ({
+      id: signal.id,
+      tenantId: signal.tenantId,
+      signalType: signal.signalType,
+      processed: signal.processed,
+      processingError: signal.processingError ? "present" : null,
+      receivedAt: toIso(signal.receivedAt),
+    })),
+    timelineEvents: timelineRows.map((event) => ({
+      id: event.id,
+      tenantId: event.tenantId,
+      eventType: event.eventType,
+      title: event.title,
+      significance: event.significance,
+      occurredAt: toIso(event.occurredAt),
+    })),
+    recommendations: recommendationRows.map((recommendation) => ({
+      id: recommendation.id,
+      tenantId: recommendation.tenantId,
+      title: recommendation.title,
+      category: recommendation.category,
+      priority: recommendation.priority,
+      status: recommendation.status,
+      confidenceScore: recommendation.confidenceScore,
+      createdAt: toIso(recommendation.createdAt),
+    })),
+    feedback: feedbackRows.map((item) => ({
+      id: item.id,
+      tenantId: item.tenantId,
+      recommendationId: item.recommendationId,
+      decision: item.decision,
+      outcomeRecorded: item.outcomeRecorded,
+      decidedAt: toIso(item.decidedAt),
+    })),
+    ieMetrics: ieMetricRows.map((metrics) => ({
+      id: metrics.id,
+      tenantId: metrics.tenantId,
+      totalRecommendations: metrics.totalRecommendations ?? 0,
+      accepted: metrics.accepted ?? 0,
+      rejected: metrics.rejected ?? 0,
+      deferred: metrics.deferred ?? 0,
+      acceptanceRate: metrics.acceptanceRate ?? 0,
+      precision: metrics.precision ?? 0,
+      recall: metrics.recall ?? 0,
+      f1Score: metrics.f1Score ?? 0,
+      computedAt: toIso(metrics.computedAt),
+    })),
+    knowledgeNodes: nodeRows.map((node) => ({
+      id: node.id,
+      tenantId: node.tenantId,
+      nodeType: node.nodeType,
+      signalCount: node.signalCount ?? 0,
+      lastSeenAt: toIso(node.lastSeenAt),
+    })),
+    knowledgeEdges: edgeRows.map((edge) => ({
+      id: edge.id,
+      tenantId: edge.tenantId,
+      relationshipType: edge.relationshipType,
+      createdAt: toIso(edge.createdAt),
+    })),
+    businessMemory: memoryRows.map((memory) => ({
+      tenantId: memory.tenantId,
+      healthScore: memory.healthScore ?? null,
+      totalPipelineValue: memory.totalPipelineValue ?? null,
+      activeOpportunities: memory.activeOpportunities ?? null,
+      totalContacts: memory.totalContacts ?? null,
+      lastSignalAt: toIso(memory.lastSignalAt),
+      lastUpdatedAt: toIso(memory.lastUpdatedAt),
+    })),
+  };
+}
+
+export async function getPlatformAdminOverview() {
+  const data = await getPlatformAdminData();
+  const activeOrganizations = data.organizations.filter((org) => org.isActive).length;
+  const activeSubaccounts = data.subaccounts.filter((subaccount) => subaccount.isActive).length;
+  const connectedLocations = data.ghlConnections.filter((connection) => connection.isActive).length;
+  const activeUsers = data.users.filter((user) => user.isActive).length;
+  const activeSessions = data.sessions.filter((session) => !session.revokedAt && (!session.expiresAt || new Date(session.expiresAt) > new Date())).length;
+
+  return {
+    database: data.database,
+    counts: {
+      organizations: data.organizations.length,
+      activeOrganizations,
+      memberships: data.memberships.length,
+      subaccounts: data.subaccounts.length,
+      activeSubaccounts,
+      connectedLocations,
+      users: data.users.length,
+      activeUsers,
+      activeSessions,
+      pendingInvitations: data.invitations.filter((invite) => !invite.acceptedAt && new Date(invite.expiresAt ?? 0) > new Date()).length,
+      auditEvents: data.authAuditEvents.length,
+      signals: data.signals.length,
+      recommendations: data.recommendations.length,
+      ieMetrics: data.ieMetrics.length,
+    },
+    latest: {
+      organizationCreatedAt: latestIso(data.organizations.map((org) => org.createdAt)),
+      subaccountConnectedAt: latestIso(data.subaccounts.map((subaccount) => subaccount.connectedAt)),
+      ghlConnectedAt: latestIso(data.ghlConnections.map((connection) => connection.connectedAt)),
+      auditEventAt: latestIso(data.authAuditEvents.map((event) => event.createdAt)),
+      signalAt: latestIso(data.signals.map((signal) => signal.receivedAt)),
+      ieMetricAt: latestIso(data.ieMetrics.map((metrics) => metrics.computedAt)),
+    },
+  };
+}
+
+export async function getPlatformOrganizationDetails() {
+  const data = await getPlatformAdminData();
+  return data.organizations.map((org) => {
+    const orgMemberships = data.memberships.filter((membership) => membership.organizationId === org.id);
+    const membershipIds = new Set(orgMemberships.map((membership) => membership.id));
+    const orgSubaccounts = data.subaccounts.filter((subaccount) => membershipIds.has(subaccount.membershipId));
+    const subaccountIds = new Set(orgSubaccounts.map((subaccount) => subaccount.ghlLocationId));
+    const connectedLocations = data.ghlConnections.filter((connection) => connection.isActive && subaccountIds.has(connection.tenantId));
+    const ownerInvites = data.invitations.filter((invite) => invite.organizationId === org.id);
+
+    return {
+      id: org.id,
+      slug: org.slug,
+      name: org.name,
+      type: org.type,
+      industry: org.industry,
+      website: org.website,
+      isActive: org.isActive,
+      createdAt: toIso(org.createdAt),
+      memberships: orgMemberships.map((membership) => ({
+        id: membership.id,
+        plan: membership.plan,
+        status: membership.status,
+        ieEnabled: membership.ieEnabled,
+        maxSubaccounts: membership.maxSubaccounts,
+        createdAt: toIso(membership.createdAt),
+      })),
+      subaccountCount: orgSubaccounts.length,
+      activeSubaccountCount: orgSubaccounts.filter((subaccount) => subaccount.isActive).length,
+      connectedLocationCount: connectedLocations.length,
+      pendingInvitationCount: ownerInvites.filter((invite) => !invite.acceptedAt).length,
+    };
+  });
+}
+
+export async function getPlatformOnboardingSummary() {
+  const organizationsWithDetails = await getPlatformOrganizationDetails();
+
+  return organizationsWithDetails
+    .filter((organization) => organization.type === "customer")
+    .map((organization) => {
+      const activeMembership = organization.memberships.find((membership) => membership.status === "active" || membership.status === "trial");
+      let status = "No active membership";
+      if (activeMembership && organization.connectedLocationCount > 0) {
+        status = "Connected";
+      } else if (activeMembership && organization.subaccountCount > 0) {
+        status = "Awaiting GoHighLevel connection";
+      } else if (activeMembership) {
+        status = "Awaiting business system setup";
+      }
+
+      return {
+        organizationId: organization.id,
+        organizationName: organization.name,
+        plan: activeMembership?.plan ?? null,
+        membershipStatus: activeMembership?.status ?? null,
+        subaccounts: organization.subaccountCount,
+        connectedLocations: organization.connectedLocationCount,
+        pendingInvitations: organization.pendingInvitationCount,
+        status,
+      };
+    });
+}
+
+export async function getPlatformIntegrationSummary() {
+  const data = await getPlatformAdminData();
+  return {
+    providers: [
+      {
+        provider: "GoHighLevel",
+        activeConnections: data.ghlConnections.filter((connection) => connection.isActive).length,
+        totalConnections: data.ghlConnections.length,
+        latestConnectedAt: latestIso(data.ghlConnections.map((connection) => connection.connectedAt)),
+      },
+    ],
+    connections: data.ghlConnections.map((connection) => {
+      const subaccount = data.subaccounts.find((item) => item.ghlLocationId === connection.tenantId || item.ghlLocationId === connection.locationId);
+      const membership = subaccount ? data.memberships.find((item) => item.id === subaccount.membershipId) : undefined;
+      const organization = membership ? data.organizations.find((item) => item.id === membership.organizationId) : undefined;
+      return {
+        provider: "GoHighLevel",
+        subaccountName: subaccount?.name ?? "Unknown location",
+        organizationName: organization?.name ?? null,
+        tenantId: connection.tenantId,
+        locationId: connection.locationId,
+        companyId: connection.companyId,
+        connected: connection.isActive,
+        tokenType: connection.tokenType,
+        connectedAt: connection.connectedAt,
+        updatedAt: connection.updatedAt,
+        webhookRegistered: connection.webhookRegistered,
+        refreshFailCount: connection.refreshFailCount,
+      };
+    }),
+  };
+}
+
+export async function getPlatformHealthSummary() {
+  const data = await getPlatformAdminData();
+  const now = new Date().toISOString();
+  return {
+    checkedAt: now,
+    database: data.database,
+    services: [
+      { name: "First-party authentication", status: data.database.connected ? "online" : "unavailable", detail: `${data.users.length} user record(s)` },
+      { name: "Tenant registry", status: data.database.connected ? "online" : "unavailable", detail: `${data.organizations.length} organization record(s)` },
+      { name: "GoHighLevel PIT storage", status: data.database.connected ? "online" : "unavailable", detail: `${data.ghlConnections.filter((connection) => connection.isActive).length} active connection(s)` },
+      { name: "Intelligence Engine records", status: data.database.connected ? "online" : "unavailable", detail: `${data.ieMetrics.length} metric record(s)` },
+    ],
+    latestActivityAt: latestIso([
+      ...data.authAuditEvents.map((event) => event.createdAt),
+      ...data.signals.map((signal) => signal.receivedAt),
+      ...data.timelineEvents.map((event) => event.occurredAt),
+    ]),
+  };
+}
+
+export async function getPlatformAuditActivity() {
+  const data = await getPlatformAdminData();
+  return {
+    events: data.authAuditEvents,
+    totalReturned: data.authAuditEvents.length,
+  };
+}
+
+export async function getPlatformSupportSummary() {
+  const data = await getPlatformAdminData();
+  const activeSessionUserIds = new Set(
+    data.sessions
+      .filter((session) => !session.revokedAt && (!session.expiresAt || new Date(session.expiresAt) > new Date()))
+      .map((session) => session.userId)
+  );
+
+  return {
+    pendingInvitations: data.invitations.filter((invite) => !invite.acceptedAt),
+    recentPasswordResets: data.passwordResets,
+    activeSessionCount: activeSessionUserIds.size,
+    supportRequests: [] as Array<never>,
+    emptyState: "No dedicated support requests have been recorded yet.",
+  };
+}
+
+export async function getPlatformAiOperationsSummary() {
+  const data = await getPlatformAdminData();
+  return {
+    counts: {
+      businessMemoryRecords: data.businessMemory.length,
+      knowledgeNodes: data.knowledgeNodes.length,
+      knowledgeEdges: data.knowledgeEdges.length,
+      timelineEvents: data.timelineEvents.length,
+      recommendations: data.recommendations.length,
+      feedback: data.feedback.length,
+      ieMetrics: data.ieMetrics.length,
+      signals: data.signals.length,
+    },
+    latestMetricAt: latestIso(data.ieMetrics.map((metric) => metric.computedAt)),
+    latestSignalAt: latestIso(data.signals.map((signal) => signal.receivedAt)),
+    recentRecommendations: data.recommendations.slice(0, 10),
+  };
+}

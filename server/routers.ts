@@ -22,6 +22,14 @@ import {
   // Multi-tenant hierarchy
   getUserSubaccounts, getSubaccountsByMembership, getMembershipByOrg,
   getAllOrganizations, getSubaccountByGhlLocationId,
+  getPlatformAdminOverview,
+  getPlatformOrganizationDetails,
+  getPlatformOnboardingSummary,
+  getPlatformIntegrationSummary,
+  getPlatformHealthSummary,
+  getPlatformAuditActivity,
+  getPlatformSupportSummary,
+  getPlatformAiOperationsSummary,
 } from "./db";
 import { runIntelligenceEngine } from "./intelligence-engine";
 import {
@@ -374,9 +382,37 @@ export const appRouter = router({
   }),
 
   admin: router({
+    overview: publicProcedure.query(async ({ ctx }) => {
+      await requirePlatformAdmin(ctx.user);
+      return getPlatformAdminOverview();
+    }),
     organizations: publicProcedure.query(async ({ ctx }) => {
       await requirePlatformAdmin(ctx.user);
-      return listPlatformOrganizations(ctx.user);
+      return getPlatformOrganizationDetails();
+    }),
+    onboarding: publicProcedure.query(async ({ ctx }) => {
+      await requirePlatformAdmin(ctx.user);
+      return getPlatformOnboardingSummary();
+    }),
+    integrations: publicProcedure.query(async ({ ctx }) => {
+      await requirePlatformAdmin(ctx.user);
+      return getPlatformIntegrationSummary();
+    }),
+    platformHealth: publicProcedure.query(async ({ ctx }) => {
+      await requirePlatformAdmin(ctx.user);
+      return getPlatformHealthSummary();
+    }),
+    auditActivity: publicProcedure.query(async ({ ctx }) => {
+      await requirePlatformAdmin(ctx.user);
+      return getPlatformAuditActivity();
+    }),
+    support: publicProcedure.query(async ({ ctx }) => {
+      await requirePlatformAdmin(ctx.user);
+      return getPlatformSupportSummary();
+    }),
+    aiOperations: publicProcedure.query(async ({ ctx }) => {
+      await requirePlatformAdmin(ctx.user);
+      return getPlatformAiOperationsSummary();
     }),
   }),
 });
