@@ -16,6 +16,7 @@ import {
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
+import EeosVisual, { EEOS_APP_IMAGES } from "@/components/EeosVisual";
 import { trpc } from "@/lib/trpc";
 import { useOwnerConnectionState } from "@/hooks/useOwnerConnectionState";
 
@@ -246,8 +247,13 @@ export default function KnowledgeGraphPreview() {
 
                 {/* No tenant */}
                 {!tenantId && !isLoading && !connectionsLoading && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-                    <Network className="w-12 h-12 text-[#FFFFFF]/15" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
+                    <EeosVisual
+                      src={EEOS_APP_IMAGES.executiveIntelligence}
+                      alt="EEOS executive intelligence eagle representing connected business relationships"
+                      className="h-32 w-full max-w-sm"
+                      imageClassName="object-[42%_center]"
+                    />
                     <p className="text-sm text-[#FFFFFF]/40">Connect GoHighLevel to build your Knowledge Graph</p>
                     <Link
                       href="/connect-ghl"

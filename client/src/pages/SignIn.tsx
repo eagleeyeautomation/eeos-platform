@@ -1,5 +1,6 @@
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
+import EeosVisual, { EEOS_APP_IMAGES } from "@/components/EeosVisual";
 import { ArrowRight, Lock, Loader2 } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { Link } from "wouter";
@@ -48,9 +49,25 @@ export default function SignIn() {
   return (
     <div className="min-h-screen bg-[#0B0B0B] text-[#FFFFFF]">
       <Navigation />
-      <main className="flex min-h-screen items-center justify-center px-4 py-28">
+      <main className="grid min-h-screen items-center gap-8 px-4 py-28 sm:px-6 lg:grid-cols-[1.08fr_0.92fr] lg:px-10">
+        <section className="hidden min-h-[560px] overflow-hidden rounded-3xl border border-[rgba(201,162,39,0.18)] bg-[#050505] p-4 lg:block">
+          <EeosVisual
+            src={EEOS_APP_IMAGES.brainCloseup}
+            alt="EEOS eagle with a visible illuminated AI brain on a black command-center background"
+            loading="eager"
+            className="h-full min-h-[528px]"
+            imageClassName="object-[58%_center]"
+          />
+        </section>
         <section className="w-full max-w-md rounded-2xl border border-[rgba(201,162,39,0.18)] bg-[rgba(255,255,255,0.04)] p-8 shadow-2xl">
           <div className="mb-8 text-center">
+            <img
+              src="/eeos-assets/eeos-logo-official.png"
+              alt="EEOS Eagle Eye Operating System"
+              className="mx-auto mb-5 h-auto w-44"
+              loading="eager"
+              decoding="async"
+            />
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-[rgba(201,162,39,0.25)] bg-[rgba(201,162,39,0.08)]">
               <Lock className="h-5 w-5 text-[#C9A227]" />
             </div>

@@ -1,6 +1,7 @@
 import { Activity, Brain, Building2, ClipboardList, FileClock, LifeBuoy, ShieldCheck } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import EeosVisual, { EEOS_APP_IMAGES } from "@/components/EeosVisual";
 import { trpc } from "@/lib/trpc";
 import { Link, useLocation } from "wouter";
 
@@ -404,14 +405,22 @@ export default function PlatformAdmin() {
     <div className="min-h-screen bg-[#0B0B0B] text-[#FFFFFF]">
       <Navigation />
       <main className="mx-auto max-w-7xl px-4 pt-24 pb-16 sm:px-6 lg:px-8">
-        <section className="rounded-3xl border border-[rgba(201,162,39,0.16)] bg-[#141414] p-6 sm:p-8">
-          <div className="section-label mb-3">{screen.eyebrow}</div>
-          <h1 className="text-4xl font-bold tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            {screen.title}
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm text-[#FFFFFF]/55">
-            {screen.description}
-          </p>
+        <section className="grid gap-6 rounded-3xl border border-[rgba(201,162,39,0.16)] bg-[#141414] p-6 sm:p-8 lg:grid-cols-[1fr_320px] lg:items-center">
+          <div>
+            <div className="section-label mb-3">{screen.eyebrow}</div>
+            <h1 className="text-4xl font-bold tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              {screen.title}
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm text-[#FFFFFF]/55">
+              {screen.description}
+            </p>
+          </div>
+          <EeosVisual
+            src={location === "/admin/ai-operations" ? EEOS_APP_IMAGES.brainCloseup : EEOS_APP_IMAGES.officialLogoWide}
+            alt={location === "/admin/ai-operations" ? "EEOS Brain visual for platform AI operations" : "Official EEOS Eagle Eye Operating System logo"}
+            className="hidden h-44 lg:block"
+            imageClassName={location === "/admin/ai-operations" ? "object-[58%_center]" : "object-contain p-6"}
+          />
         </section>
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

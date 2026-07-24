@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import EeosVisual, { EEOS_APP_IMAGES } from "@/components/EeosVisual";
 import { trpc } from "@/lib/trpc";
 import { useOwnerConnectionState } from "@/hooks/useOwnerConnectionState";
 import {
@@ -616,6 +617,32 @@ export default function ExecutiveHome() {
 
         {accessState === "ready" && tenantId && (
           <>
+            <section className="grid gap-6 overflow-hidden rounded-3xl border border-[rgba(201,162,39,0.18)] bg-[#141414] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] lg:grid-cols-[1.2fr_0.8fr] lg:p-6">
+              <div className="flex flex-col justify-center">
+                <div className="section-label mb-3">Owner Command Center</div>
+                <h1 className="text-3xl font-bold tracking-tight text-[#FFFFFF] sm:text-4xl" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Executive briefing, live signals, and business intelligence in one operating view.
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-[#FFFFFF]/55">
+                  EEOS uses approved business connections to surface truthful
+                  operational context for the selected location. Metrics and
+                  recommendations remain driven by live services and honest
+                  empty states.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.14em] text-[#FFFFFF]/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <span className="rounded-full border border-[rgba(201,162,39,0.25)] px-3 py-1 text-[#C9A227]">Executive Intelligence</span>
+                  <span className="rounded-full border border-[rgba(0,168,255,0.22)] px-3 py-1 text-[#C0C7D1]">Connected Signals</span>
+                  <span className="rounded-full border border-[rgba(255,255,255,0.1)] px-3 py-1">Secure Owner Access</span>
+                </div>
+              </div>
+              <EeosVisual
+                src={EEOS_APP_IMAGES.executiveIntelligence}
+                alt="EEOS executive intelligence eagle with visible illuminated brain and business signal icons"
+                className="min-h-[220px] lg:min-h-[260px]"
+                imageClassName="object-[42%_center]"
+              />
+            </section>
+
             {/* ── ROW 1: Business Score + KPIs ── */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 

@@ -25,6 +25,7 @@ import {
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
+import EeosVisual, { EEOS_APP_IMAGES } from "@/components/EeosVisual";
 import { trpc } from "@/lib/trpc";
 import { useOwnerConnectionState } from "@/hooks/useOwnerConnectionState";
 import { startLogin } from "@/const";
@@ -419,7 +420,7 @@ export default function AIRecommendations() {
       <section className="pt-24 pb-6 bg-[#0B0B0B] scan-grid">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="grid gap-6 lg:grid-cols-[1fr_300px] lg:items-center">
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <div className="section-label">Intelligence Engine</div>
@@ -438,28 +439,36 @@ export default function AIRecommendations() {
                   <span className="text-[#C9A227]">What if I ignore it?</span>
                 </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {tenantId && (
-                  <button
-                    onClick={() => generateMutation.mutate({ tenantId })}
-                    disabled={generateMutation.isPending}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.2)] rounded-lg hover:bg-[rgba(201,162,39,0.06)] active:scale-[0.97] transition-all duration-200 disabled:opacity-50"
-                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                  >
-                    {generateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                    Run IE
-                  </button>
-                )}
-                {!hasConnectedLocations && (
-                  <Link
-                    href="/connect-ghl"
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)]"
-                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                  >
-                    <Zap className="w-4 h-4" />
-                    Connect GHL
-                  </Link>
-                )}
+              <div className="space-y-3">
+                <EeosVisual
+                  src={EEOS_APP_IMAGES.brainCloseup}
+                  alt="EEOS Brain eagle visual representing AI reasoning and executive recommendations"
+                  className="h-44"
+                  imageClassName="object-[58%_center]"
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  {tenantId && (
+                    <button
+                      onClick={() => generateMutation.mutate({ tenantId })}
+                      disabled={generateMutation.isPending}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.2)] rounded-lg hover:bg-[rgba(201,162,39,0.06)] active:scale-[0.97] transition-all duration-200 disabled:opacity-50"
+                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      {generateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                      Run IE
+                    </button>
+                  )}
+                  {!hasConnectedLocations && (
+                    <Link
+                      href="/connect-ghl"
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_14px_rgba(201,162,39,0.3)]"
+                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      <Zap className="w-4 h-4" />
+                      Connect GHL
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
           </AnimatedSection>
