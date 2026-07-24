@@ -206,9 +206,9 @@ export default function Pricing() {
           <AnimatedSection>
             <div className="grid items-center gap-10 lg:grid-cols-[0.85fr_1fr]">
               <img
-                src="/eeos-assets/eeos-eagle-brain.svg"
+                src="/eeos-assets/approved/eeos-eagle-brain-closeup.jpg"
                 alt="EEOS Brain intelligence visual"
-                className="aspect-[4/3] w-full rounded-3xl border border-[#00B2FF]/20 object-cover"
+                className="aspect-[4/3] w-full rounded-3xl border border-[#00B2FF]/20 object-cover object-[58%_center]"
                 loading="lazy"
               />
               <div>

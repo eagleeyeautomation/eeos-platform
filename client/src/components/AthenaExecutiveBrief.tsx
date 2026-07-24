@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, Brain, CheckCircle2, Clock, RefreshCw, ShieldCheck, Target, TrendingUp } from "lucide-react";
+import EeosVisual, { EEOS_APP_IMAGES } from "@/components/EeosVisual";
 
 type AthenaPriority = {
   id: string;
@@ -87,7 +88,7 @@ export default function AthenaExecutiveBrief() {
 
   return (
     <section data-testid="athena-executive-brief" className="rounded-lg border border-[#C9A227]/35 bg-[#FFFFFF] p-5 shadow-[0_28px_90px_rgba(201,162,39,0.10)]">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[1fr_260px] lg:items-start">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#8C6F12]">
             <Brain className="h-3.5 w-3.5" />
@@ -98,15 +99,23 @@ export default function AthenaExecutiveBrief() {
             {brief?.executiveSummary || "Athena answers what the CEO should do next using verified production data and Business Memory."}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void loadBrief()}
-          disabled={loading}
-          className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[#D9C579] bg-[#F8F4E8] px-3 text-xs font-semibold text-[#0B0B0B] transition hover:border-[#C9A227] hover:bg-[#F1E7C5] disabled:opacity-60"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          Refresh Athena
-        </button>
+        <div className="flex flex-col gap-3">
+          <EeosVisual
+            src={EEOS_APP_IMAGES.brainCloseup}
+            alt="EEOS Brain eagle visual for executive briefing intelligence"
+            className="hidden h-32 lg:block"
+            imageClassName="object-[58%_center]"
+          />
+          <button
+            type="button"
+            onClick={() => void loadBrief()}
+            disabled={loading}
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[#D9C579] bg-[#F8F4E8] px-3 text-xs font-semibold text-[#0B0B0B] transition hover:border-[#C9A227] hover:bg-[#F1E7C5] disabled:opacity-60"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            Refresh Athena
+          </button>
+        </div>
       </div>
 
       {loading ? (

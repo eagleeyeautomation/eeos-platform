@@ -1,8 +1,11 @@
+import type { CSSProperties } from "react";
+
 type EeosVisualProps = {
   alt: string;
   src: string;
   className?: string;
   imageClassName?: string;
+  imageStyle?: CSSProperties;
   loading?: "eager" | "lazy";
 };
 
@@ -17,6 +20,7 @@ export default function EeosVisual({
   src,
   className = "",
   imageClassName = "",
+  imageStyle,
   loading = "lazy",
 }: EeosVisualProps) {
   return (
@@ -30,6 +34,7 @@ export default function EeosVisual({
         loading={loading}
         decoding="async"
         className={`relative h-full w-full object-cover ${imageClassName}`}
+        style={imageStyle}
       />
     </div>
   );

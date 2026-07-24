@@ -57,6 +57,7 @@ export default function SignIn() {
             loading="eager"
             className="h-full min-h-[528px]"
             imageClassName="object-[58%_center]"
+            imageStyle={{ objectFit: "contain", objectPosition: "center" }}
           />
         </section>
         <section className="w-full max-w-md rounded-2xl border border-[rgba(201,162,39,0.18)] bg-[rgba(255,255,255,0.04)] p-8 shadow-2xl">
