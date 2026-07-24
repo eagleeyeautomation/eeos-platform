@@ -1,0 +1,65 @@
+<svg width="960" height="720" viewBox="0 0 960 720" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Futuristic eagle intelligence visual</title>
+  <desc id="desc">An eagle profile with illuminated AI brain, circuitry, data signals, and growth lines.</desc>
+  <style>
+    .signal { animation: pulse 3.6s ease-in-out infinite; }
+    .stream { stroke-dasharray: 10 18; animation: dash 9s linear infinite; }
+    .brain { animation: glow 4s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: .28; } 50% { opacity: .9; } }
+    @keyframes dash { to { stroke-dashoffset: -180; } }
+    @keyframes glow { 0%,100% { filter: drop-shadow(0 0 10px rgba(0,178,255,.35)); } 50% { filter: drop-shadow(0 0 24px rgba(201,162,39,.55)); } }
+    @media (prefers-reduced-motion: reduce) {
+      .signal, .stream, .brain { animation: none; }
+    }
+  </style>
+  <rect width="960" height="720" rx="36" fill="#080808"/>
+  <rect x="1" y="1" width="958" height="718" rx="35" stroke="#C9A227" stroke-opacity=".2" stroke-width="2"/>
+  <path d="M110 540C236 392 377 315 535 309C666 303 767 345 850 435" stroke="#C9A227" stroke-opacity=".22" stroke-width="2"/>
+  <path class="stream" d="M88 222C205 178 321 171 436 202C536 229 623 288 696 378" stroke="#00B2FF" stroke-opacity=".34" stroke-width="3"/>
+  <path class="stream" d="M126 600C263 491 401 441 541 451C656 459 750 503 823 582" stroke="#C0C7D1" stroke-opacity=".25" stroke-width="3"/>
+  <g opacity=".45">
+    <path d="M168 156H302L344 198H431" stroke="#C9A227" stroke-opacity=".5" stroke-width="2"/>
+    <path d="M122 302H261L310 351H392" stroke="#00B2FF" stroke-opacity=".45" stroke-width="2"/>
+    <path d="M616 140H744L790 186H866" stroke="#C0C7D1" stroke-opacity=".38" stroke-width="2"/>
+    <circle class="signal" cx="302" cy="156" r="7" fill="#C9A227"/>
+    <circle class="signal" cx="744" cy="140" r="6" fill="#00B2FF"/>
+    <circle class="signal" cx="261" cy="302" r="6" fill="#C0C7D1"/>
+  </g>
+  <path d="M278 468C300 361 360 268 457 190C526 134 617 105 735 102C688 143 652 185 627 228C711 227 772 251 810 300C727 295 655 309 593 342C538 371 483 420 428 489C378 488 328 481 278 468Z" fill="url(#wing)" stroke="#C9A227" stroke-opacity=".5" stroke-width="2"/>
+  <path d="M427 489C480 407 550 356 637 336C705 320 771 326 837 354C754 380 696 420 662 474C636 516 615 570 598 636C561 592 515 554 461 523C450 517 439 505 427 489Z" fill="url(#body)" stroke="#C0C7D1" stroke-opacity=".3" stroke-width="2"/>
+  <path d="M565 242C614 188 684 157 776 149C743 186 721 224 710 263C751 263 784 277 810 304C751 304 700 315 658 338C617 360 583 392 556 433C526 394 508 357 503 322C497 284 518 258 565 242Z" fill="#FFFFFF" fill-opacity=".88"/>
+  <path d="M710 264L854 250L756 307L710 264Z" fill="#C9A227"/>
+  <path d="M741 219C766 219 786 235 796 264C761 252 732 251 710 263C713 239 723 224 741 219Z" fill="#0B0B0B"/>
+  <circle cx="747" cy="234" r="8" fill="#00B2FF"/>
+  <g class="brain">
+    <path d="M593 248C607 225 635 216 657 230C674 219 700 223 714 242C730 263 724 291 704 305C684 319 655 316 640 299C620 308 593 299 584 278C580 267 583 256 593 248Z" fill="#071E35" stroke="#00B2FF" stroke-width="3"/>
+    <path d="M608 260C626 248 643 247 660 258C674 249 689 252 701 267" stroke="#C9A227" stroke-width="3" stroke-linecap="round"/>
+    <path d="M604 279C622 288 641 286 659 273C673 286 688 288 704 279" stroke="#00B2FF" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="624" cy="256" r="4" fill="#C9A227"/>
+    <circle cx="658" cy="273" r="4" fill="#00B2FF"/>
+    <circle cx="690" cy="268" r="4" fill="#C0C7D1"/>
+  </g>
+  <g opacity=".7">
+    <path d="M395 532L452 475L506 508L564 438" stroke="#00B2FF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M564 438H521" stroke="#00B2FF" stroke-width="4" stroke-linecap="round"/>
+    <path d="M564 438V481" stroke="#00B2FF" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <g class="signal">
+    <circle cx="190" cy="452" r="4" fill="#00B2FF"/>
+    <circle cx="230" cy="420" r="5" fill="#C9A227"/>
+    <circle cx="780" cy="510" r="5" fill="#C0C7D1"/>
+    <circle cx="824" cy="544" r="4" fill="#00B2FF"/>
+  </g>
+  <defs>
+    <linearGradient id="wing" x1="278" y1="102" x2="810" y2="489" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity=".98"/>
+      <stop offset=".45" stop-color="#C0C7D1" stop-opacity=".78"/>
+      <stop offset="1" stop-color="#0F2747" stop-opacity=".94"/>
+    </linearGradient>
+    <linearGradient id="body" x1="427" y1="336" x2="837" y2="636" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F2747"/>
+      <stop offset=".55" stop-color="#111827"/>
+      <stop offset="1" stop-color="#C9A227" stop-opacity=".34"/>
+    </linearGradient>
+  </defs>
+</svg>

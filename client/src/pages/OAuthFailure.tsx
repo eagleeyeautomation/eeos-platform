@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import { PUBLIC_CONTACT } from "@/lib/public-site";
 
 const FAILURE_REASONS = [
   {
@@ -152,12 +153,12 @@ export default function OAuthFailure() {
           <div className="mt-8 text-center">
             <p className="text-sm text-[#FFFFFF]/45 mb-3">Still having trouble?</p>
             <a
-              href="mailto:intelligence@eagleeyeautomation.com"
+              href={PUBLIC_CONTACT.mailto}
               className="inline-flex items-center gap-2 text-sm font-semibold text-[#C9A227] hover:text-[#D8B84A] transition-colors duration-200"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               <Mail className="w-4 h-4" />
-              intelligence@eagleeyeautomation.com
+              {PUBLIC_CONTACT.email}
             </a>
           </div>
         </div>

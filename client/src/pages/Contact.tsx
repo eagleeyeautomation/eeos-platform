@@ -1,11 +1,12 @@
 // EEOS Contact Page — Sovereign Night Design System
 
 import { useState } from "react";
-import { Mail, Phone, MapPin, Clock, Send } from "lucide-react";
+import { Mail, Phone, Clock, Send } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
 import { toast } from "sonner";
+import { PUBLIC_CONTACT } from "@/lib/public-site";
 
 const CONTACT_TYPES = [
   { id: "demo", label: "Request a Demo" },
@@ -14,13 +15,6 @@ const CONTACT_TYPES = [
   { id: "partnership", label: "Partnership" },
   { id: "press", label: "Press & Media" },
   { id: "support", label: "Customer Support" },
-];
-
-const OFFICES = [
-  { city: "Washington D.C.", role: "Headquarters", address: "1700 Pennsylvania Ave NW, Suite 400", timezone: "ET" },
-  { city: "New York", role: "Financial Services Hub", address: "One World Trade Center, Suite 8500", timezone: "ET" },
-  { city: "London", role: "EMEA Headquarters", address: "22 Bishopsgate, Level 30", timezone: "GMT" },
-  { city: "Singapore", role: "APAC Headquarters", address: "Marina Bay Financial Centre, Tower 3", timezone: "SGT" },
 ];
 
 export default function Contact() {
@@ -150,7 +144,7 @@ export default function Contact() {
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className="w-full px-4 py-3 rounded-lg text-sm eeos-input"
-                        placeholder="a.chen@meridianglobal.com"
+                        placeholder="owner@yourcompany.com"
                       />
                     </div>
 
@@ -166,7 +160,7 @@ export default function Contact() {
                           value={formData.company}
                           onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                           className="w-full px-4 py-3 rounded-lg text-sm eeos-input"
-                          placeholder="Meridian Global Corp"
+                          placeholder="Your Company"
                         />
                       </div>
                       <div>
@@ -195,10 +189,11 @@ export default function Contact() {
                         className="w-full px-4 py-3 rounded-lg text-sm eeos-input eeos-select"
                       >
                         <option value="" disabled>Select employee count</option>
-                        <option value="1000-5000">1,000 – 5,000</option>
-                        <option value="5000-15000">5,000 – 15,000</option>
-                        <option value="15000-50000">15,000 – 50,000</option>
-                        <option value="50000+">50,000+</option>
+                        <option value="1-10">1 – 10</option>
+                        <option value="11-25">11 – 25</option>
+                        <option value="26-75">26 – 75</option>
+                        <option value="76-150">76 – 150</option>
+                        <option value="150+">150+</option>
                       </select>
                     </div>
 
@@ -212,7 +207,7 @@ export default function Contact() {
                         value={formData.message}
                         onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                         className="w-full px-4 py-3 rounded-lg text-sm eeos-input resize-none"
-                        placeholder="Tell us about your organization and what you're looking to achieve with EEOS..."
+                        placeholder="Tell us what you want EEOS to help your business see, automate, or manage..."
                       />
                     </div>
 
@@ -245,19 +240,11 @@ export default function Contact() {
                       <div>
                         <div className="text-xs text-[#FFFFFF]/40 mb-0.5"
                           style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                          General
+                          Email
                         </div>
-                        <div className="text-sm text-[#FFFFFF]/80">intelligence@eagleeyeautomation.com</div>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Mail className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
-                      <div>
-                        <div className="text-xs text-[#FFFFFF]/40 mb-0.5"
-                          style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                          Security
-                        </div>
-                        <div className="text-sm text-[#FFFFFF]/80">security@eagleeyeautomation.com</div>
+                        <a href={PUBLIC_CONTACT.mailto} className="text-sm text-[#FFFFFF]/80 hover:text-[#C9A227]">
+                          {PUBLIC_CONTACT.email}
+                        </a>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -265,9 +252,11 @@ export default function Contact() {
                       <div>
                         <div className="text-xs text-[#FFFFFF]/40 mb-0.5"
                           style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                          Sales
+                          Phone
                         </div>
-                        <div className="text-sm text-[#FFFFFF]/80">+1 (888) EEOS-NOW</div>
+                        <a href={PUBLIC_CONTACT.tel} className="text-sm text-[#FFFFFF]/80 hover:text-[#C9A227]">
+                          {PUBLIC_CONTACT.phoneDisplay}
+                        </a>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -290,23 +279,14 @@ export default function Contact() {
                     className="text-base font-semibold text-[#FFFFFF] mb-4"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
-                    Global Offices
+                    What to expect
                   </h3>
-                  <div className="space-y-4">
-                    {OFFICES.map((office) => (
-                      <div key={office.city} className="flex items-start gap-3">
-                        <MapPin className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
-                        <div>
-                          <div className="text-sm font-medium text-[#FFFFFF]/90"
-                            style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                            {office.city}
-                          </div>
-                          <div className="text-xs text-[#C9A227]/70 mb-0.5">{office.role}</div>
-                          <div className="text-xs text-[#FFFFFF]/45">{office.address}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <ul className="space-y-3 text-sm leading-6 text-[#FFFFFF]/58">
+                    <li>We will review your business goals and GoHighLevel setup.</li>
+                    <li>We will recommend the most practical EEOS starting plan.</li>
+                    <li>We will not promise unavailable features or fabricated outcomes.</li>
+                    <li>AI support can be planned for 24/7 workflows once your systems are ready.</li>
+                  </ul>
                 </div>
               </AnimatedSection>
             </div>

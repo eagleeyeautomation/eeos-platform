@@ -3,6 +3,7 @@
 
 import { Link } from "wouter";
 import { Shield, Mail, Phone, MapPin, Zap } from "lucide-react";
+import { PUBLIC_CONTACT } from "@/lib/public-site";
 
 export default function Footer({ hideConnectionLinks = false }: { hideConnectionLinks?: boolean }) {
   return (
@@ -74,7 +75,7 @@ export default function Footer({ hideConnectionLinks = false }: { hideConnection
               style={{ fontFamily: "'JetBrains Mono', monospace" }}
             >
               <Shield className="w-3.5 h-3.5 text-[#C9A227]" />
-              <span>SOC 2 Type II · ISO 27001 · FedRAMP Ready</span>
+              <span>Tenant-isolated · Role-protected · GoHighLevel-first</span>
             </div>
           </div>
 
@@ -146,15 +147,19 @@ export default function Footer({ hideConnectionLinks = false }: { hideConnection
             <ul className="space-y-3">
               <li className="flex items-start gap-2.5">
                 <Mail className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
-                <span className="text-sm text-[#FFFFFF]/50 break-all">intelligence@eagleeyeautomation.com</span>
+                <a href={PUBLIC_CONTACT.mailto} className="text-sm text-[#FFFFFF]/50 break-all hover:text-[#C9A227]">
+                  {PUBLIC_CONTACT.email}
+                </a>
               </li>
               <li className="flex items-start gap-2.5">
                 <Phone className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
-                <span className="text-sm text-[#FFFFFF]/50">+1 (888) EEOS-NOW</span>
+                <a href={PUBLIC_CONTACT.tel} className="text-sm text-[#FFFFFF]/50 hover:text-[#C9A227]">
+                  {PUBLIC_CONTACT.phoneDisplay}
+                </a>
               </li>
               <li className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
-                <span className="text-sm text-[#FFFFFF]/50">Washington D.C. · New York · London · Singapore</span>
+                <span className="text-sm text-[#FFFFFF]/50">United States · Remote-first implementation support</span>
               </li>
             </ul>
           </div>

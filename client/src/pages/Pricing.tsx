@@ -1,257 +1,261 @@
-// EEOS Pricing Page — Sovereign Night Design System
-
 import { Link } from "wouter";
-import { ArrowRight, CheckCircle2, HelpCircle, Zap } from "lucide-react";
+import { ArrowRight, Brain, CheckCircle2, HelpCircle, Mail, Phone, Sparkles } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
-import { PRICING_TIERS } from "@/lib/demo-data";
+import {
+  EEOS_BRAIN_QUESTIONS,
+  FOUNDING_CUSTOMER_PLANS,
+  FOUNDING_CUSTOMER_PROMO_ENABLED,
+  PUBLIC_CONTACT,
+  SETUP_FEE,
+} from "@/lib/public-site";
 
 const FAQS = [
   {
-    q: "How long does implementation take?",
-    a: "EEOS is typically live in 6 weeks. Our onboarding team helps configure GoHighLevel, map approved signals, and train owners on the Command Center.",
+    q: "Who is Founding Customer Pricing for?",
+    a: "It is for a limited group of early small-business customers that want EEOS configured around GoHighLevel and executive visibility while the product continues maturing.",
   },
   {
-    q: "Does EEOS store our data?",
-    a: "No. EEOS operates on a read-only connector model. We read signals from your systems in real time but never store, copy, or replicate your underlying data. Your data stays in your systems.",
+    q: "Is the setup fee a deposit?",
+    a: "No. It is a one-time setup and onboarding fee due when onboarding begins and is separate from the monthly subscription.",
   },
   {
-    q: "What integrations are included?",
-    a: "Version 1 focuses on GoHighLevel. Future connectors will expand EEOS after the GoHighLevel experience is complete and production-ready.",
+    q: "What integration is supported first?",
+    a: "Version 1 focuses on GoHighLevel. Future integrations will be planned after the GoHighLevel experience is complete and production-ready.",
   },
   {
-    q: "Can we start with a pilot?",
-    a: "Yes. We offer focused pilots for qualified small businesses that want to evaluate executive intelligence, business health monitoring, and workflow automation.",
-  },
-  {
-    q: "Is EEOS available for government agencies?",
-    a: "Yes. EEOS is FedRAMP Ready and has been deployed in defense and intelligence-adjacent environments. Contact us for government-specific deployment options.",
-  },
-  {
-    q: "What does 'Contact Sales' mean for pricing?",
-    a: "EEOS is priced based on business complexity, number of locations, integration needs, and onboarding support. Starting price points are listed as guidance.",
+    q: "Will every section show data immediately?",
+    a: "No. EEOS shows truthful empty states until connected systems have synchronized enough verified activity to populate each section.",
   },
 ];
+
+function PricingVisual() {
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-[rgba(201,162,39,0.18)] bg-[#080808] shadow-[0_24px_90px_rgba(0,0,0,0.45)]">
+      <img
+        src="/eeos-assets/eeos-eagle-brain.svg"
+        alt="Futuristic eagle with illuminated AI brain and data signals"
+        className="aspect-[4/3] w-full object-cover"
+        loading="eager"
+      />
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#080808] to-transparent p-5">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#00B2FF]/30 bg-[#00B2FF]/10 px-3 py-1 text-xs font-semibold text-[#A8E7FF]">
+          <Brain className="h-3.5 w-3.5" />
+          AI intelligence for small business operators
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Pricing() {
   return (
     <div className="min-h-screen bg-[#0B0B0B]">
       <Navigation />
 
-      {/* Hero */}
       <section className="pt-32 pb-20 bg-[#0B0B0B] scan-grid">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row items-start gap-12 lg:gap-24">
-            <AnimatedSection className="flex-1">
-              <div className="section-label mb-4">Pricing</div>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid items-center gap-12 lg:grid-cols-[1fr_0.92fr]">
+            <AnimatedSection>
+              <div className="mb-5 flex items-center gap-3">
+                <img src="/eeos-assets/eeos-logo-mark.svg" alt="EEOS logo" className="h-10 w-10 object-contain" />
+                <div className="section-label">Founding Customer Pricing</div>
+              </div>
               <h1
-                className="text-5xl sm:text-6xl font-bold text-[#FFFFFF] tracking-tight mb-6 leading-tight"
+                className="max-w-3xl text-5xl font-bold leading-tight tracking-tight text-[#FFFFFF] sm:text-6xl"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                Enterprise-level power
-                <br />
-                <span className="gradient-text">for small businesses</span>
+                The AI Operating System that gives small businesses the power of Fortune 500 companies.
               </h1>
-              <p className="text-xl text-[#FFFFFF]/60 leading-relaxed max-w-xl">
-                EEOS gives owners AI executive intelligence, workflow automation, business health monitoring, and secure operations without enterprise software sprawl. Pricing scales with your business complexity, not your headcount.
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-[#FFFFFF]/62">
+                Start with affordable EEOS pricing while we work with an early group of qualified businesses to refine executive intelligence, GoHighLevel visibility, and automation workflows.
               </p>
-            </AnimatedSection>
-            <AnimatedSection delay={200} className="shrink-0 lg:w-72">
-              <div className="glass-card rounded-xl p-6">
-                <div className="section-label mb-3">Average Client Outcomes</div>
-                <div className="space-y-4">
-                  {[
-                    { label: "ROI Year 1", value: "340%", color: "#10B981" },
-                    { label: "Decision Latency", value: "−73%", color: "#C9A227" },
-                    { label: "Time to Value", value: "6 wks", color: "#C9A227" },
-                    { label: "Retention Rate", value: "98%", color: "#10B981" },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center justify-between">
-                      <span className="text-xs text-[#FFFFFF]/50">{item.label}</span>
-                      <span className="text-lg font-bold" style={{ color: item.color, fontFamily: "'Space Grotesk', sans-serif" }}>
-                        {item.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 pt-4 border-t border-[rgba(201,162,39,0.1)]">
-                  <div className="text-[10px] text-[#FFFFFF]/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    Based on small business operating system deployments · 2023–2025
-                  </div>
-                </div>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/contact"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#C9A227] px-6 py-3.5 text-sm font-bold text-[#0B0B0B] transition hover:bg-[#D8B84A]"
+                >
+                  Request a Demo
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <a
+                  href={PUBLIC_CONTACT.mailto}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#C9A227]/35 px-6 py-3.5 text-sm font-semibold text-[#C9A227] transition hover:bg-[#C9A227]/10"
+                >
+                  Email Eagle Eye
+                </a>
               </div>
+            </AnimatedSection>
+            <AnimatedSection delay={160}>
+              <PricingVisual />
             </AnimatedSection>
           </div>
         </div>
       </section>
 
-      {/* Pricing Tiers */}
-      <section className="bg-[#141414] py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {PRICING_TIERS.map((tier, i) => (
-              <AnimatedSection key={tier.id} delay={i * 120}>
-                <div
-                  className={`rounded-2xl p-8 h-full flex flex-col relative overflow-hidden ${
-                    tier.highlight
-                      ? "border-2 border-[#C9A227] bg-[#1A1A1A] shadow-[0_0_40px_rgba(201,162,39,0.15)]"
-                      : "glass-card"
+      <section className="bg-[#141414] py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {FOUNDING_CUSTOMER_PROMO_ENABLED ? (
+            <AnimatedSection className="mb-8">
+              <div className="rounded-2xl border border-[#00B2FF]/30 bg-[#00B2FF]/10 px-5 py-4 text-center text-sm font-semibold text-[#A8E7FF]">
+                Founding Customer Special: Setup fee waived for the first 10 qualified businesses.
+              </div>
+            </AnimatedSection>
+          ) : null}
+
+          <AnimatedSection className="mb-10 text-center">
+            <div className="section-label mb-3">Founding Customer Pricing</div>
+            <h2 className="text-3xl font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              Simple monthly plans for early EEOS customers
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[#FFFFFF]/55">
+              This pricing is available for a limited group of early customers. Plan capabilities are limited to features currently available or actively supported during onboarding.
+            </p>
+          </AnimatedSection>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            {FOUNDING_CUSTOMER_PLANS.map((plan, index) => (
+              <AnimatedSection key={plan.id} delay={index * 100}>
+                <article
+                  className={`flex h-full flex-col rounded-3xl border p-6 ${
+                    plan.featured
+                      ? "border-[#C9A227] bg-[#1A1A1A] shadow-[0_0_40px_rgba(201,162,39,0.14)]"
+                      : "border-[rgba(201,162,39,0.15)] bg-[#0B0B0B]"
                   }`}
                 >
-                  {tier.highlight && (
-                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#C9A227] to-transparent" />
-                  )}
-                  {tier.highlight && (
-                    <div className="absolute top-4 right-4">
-                      <span className="tag-teal text-[10px]">Most Popular</span>
+                  {plan.featured ? (
+                    <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-[#00B2FF]/30 bg-[#00B2FF]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#A8E7FF]">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Popular starting point
                     </div>
-                  )}
-
-                  <div className="mb-6">
-                    <div
-                      className="text-xs text-[#FFFFFF]/40 uppercase tracking-wider mb-2"
-                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                    >
-                      {tier.tagline}
-                    </div>
-                    <h3
-                      className="text-3xl font-bold text-[#FFFFFF] mb-1"
-                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                    >
-                      {tier.name}
-                    </h3>
-                    <div
-                      className={`text-lg font-semibold ${tier.highlight ? "text-[#C9A227]" : "text-[#FFFFFF]/80"}`}
-                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                    >
-                      {tier.price}
-                    </div>
-                    <div className="text-sm text-[#FFFFFF]/45 mt-1"
-                      style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                      {tier.priceNote}
-                    </div>
+                  ) : null}
+                  <div className="text-xs uppercase tracking-[0.16em] text-[#C0C7D1]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    Founding Customer Pricing
                   </div>
-
-                  <ul className="space-y-3 flex-1 mb-8">
-                    {tier.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2.5">
-                        <CheckCircle2
-                          className={`w-4 h-4 mt-0.5 shrink-0 ${
-                            tier.highlight ? "text-[#C9A227]" : "text-[#10B981]"
-                          }`}
-                        />
-                        <span className="text-sm text-[#FFFFFF]/70">{feature}</span>
+                  <h3 className="mt-3 text-3xl font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    {plan.name}
+                  </h3>
+                  <div className="mt-4 flex items-end gap-1">
+                    <span className="text-5xl font-bold text-[#C9A227]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{plan.price}</span>
+                    <span className="pb-2 text-sm text-[#FFFFFF]/50">{plan.cadence}</span>
+                  </div>
+                  <p className="mt-4 text-sm leading-6 text-[#FFFFFF]/58">{plan.customerType}</p>
+                  <div className="mt-4 rounded-2xl border border-[#C0C7D1]/18 bg-[#C0C7D1]/6 px-4 py-3 text-sm text-[#FFFFFF]/70">
+                    {plan.locationLimit}
+                  </div>
+                  <ul className="mt-6 flex-1 space-y-3">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-3 text-sm text-[#FFFFFF]/68">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A227]" />
+                        {feature}
                       </li>
                     ))}
                   </ul>
-
+                  <div className="mt-6 rounded-2xl border border-[#C9A227]/24 bg-[#C9A227]/8 p-4">
+                    <div className="text-sm font-semibold text-[#FFFFFF]">{SETUP_FEE.label}: {SETUP_FEE.price}</div>
+                    <p className="mt-2 text-xs leading-5 text-[#FFFFFF]/55">{SETUP_FEE.disclosure}</p>
+                  </div>
                   <Link
-                    href={tier.highlight ? "/connect-ghl" : "/contact"}
-                    className={`w-full text-center flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg text-sm font-semibold active:scale-[0.97] transition-all duration-200 ${
-                      tier.highlight
-                        ? "bg-[#C9A227] text-[#0B0B0B] hover:bg-[#D8B84A] shadow-[0_0_20px_rgba(201,162,39,0.35)]"
-                        : "border border-[rgba(201,162,39,0.35)] text-[#C9A227] hover:bg-[rgba(201,162,39,0.08)]"
+                    href="/contact"
+                    className={`mt-6 inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition ${
+                      plan.featured
+                        ? "bg-[#C9A227] text-[#0B0B0B] hover:bg-[#D8B84A]"
+                        : "border border-[#C9A227]/35 text-[#C9A227] hover:bg-[#C9A227]/10"
                     }`}
-                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
-                    {tier.highlight && <Zap className="w-3.5 h-3.5" />}
-                    {tier.highlight ? "Start Private Beta" : tier.cta}
+                    {plan.cta}
+                    <ArrowRight className="h-4 w-4" />
                   </Link>
-                </div>
+                </article>
               </AnimatedSection>
             ))}
           </div>
-
-          <AnimatedSection delay={400} className="mt-10 text-center">
-            <p className="text-sm text-[#FFFFFF]/40"
-              style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-              All plans include a 90-day satisfaction guarantee · No setup fees · Annual contracts
-            </p>
-          </AnimatedSection>
         </div>
       </section>
 
-      {/* ROI Calculator teaser */}
       <section className="bg-[#0B0B0B] py-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
-            <div className="glass-card rounded-2xl p-10 text-center">
-              <div className="section-label mb-4">ROI Estimate</div>
-              <h2
-                className="text-3xl font-bold text-[#FFFFFF] tracking-tight mb-4"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                EEOS pays for itself — fast
-              </h2>
-              <p className="text-[#FFFFFF]/60 mb-8 max-w-2xl mx-auto">
-                EEOS is designed to help owners prevent missed opportunities, reduce decision delays, improve follow-up, and understand business health sooner. One avoided breakdown or recovered opportunity can justify the platform.
-              </p>
-              <div className="grid grid-cols-3 gap-6 mb-8">
-                {[
-                  { label: "Average Year 1 ROI", value: "340%" },
-                  { label: "Avg. Decision Speed Improvement", value: "12×" },
-                  { label: "Executive Hours Saved / Week", value: "15 hrs" },
-                ].map((stat) => (
-                  <div key={stat.label}>
-                    <div
-                      className="text-3xl font-bold text-[#C9A227] mb-1"
-                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                    >
-                      {stat.value}
-                    </div>
-                    <div className="text-xs text-[#FFFFFF]/50">{stat.label}</div>
+            <div className="grid gap-8 rounded-3xl border border-[rgba(201,162,39,0.16)] bg-[#141414] p-6 sm:p-8 lg:grid-cols-[0.8fr_1fr]">
+              <div>
+                <div className="section-label mb-3">{SETUP_FEE.label}</div>
+                <h2 className="text-3xl font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  {SETUP_FEE.price} to prepare your business for launch
+                </h2>
+                <p className="mt-4 text-sm leading-6 text-[#FFFFFF]/58">{SETUP_FEE.disclosure}</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {SETUP_FEE.covers.map((item) => (
+                  <div key={item} className="rounded-2xl border border-[#C0C7D1]/12 bg-[#FFFFFF]/[0.03] px-4 py-3 text-sm text-[#FFFFFF]/70">
+                    {item}
                   </div>
                 ))}
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link
-                  href="/connect-ghl"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-3.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(201,162,39,0.35)]"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  <Zap className="w-4 h-4" />
-                  Start Private Beta
-                </Link>
-                <Link
-                  href="/demo"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-3.5 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  Request Demo
-                </Link>
               </div>
             </div>
           </AnimatedSection>
         </div>
       </section>
 
-      {/* FAQs */}
-      <section className="bg-[#141414] py-24">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <AnimatedSection className="text-center mb-16">
-            <h2
-              className="text-3xl font-bold text-[#FFFFFF] tracking-tight"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
+      <section className="bg-[#141414] py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <AnimatedSection>
+            <div className="grid items-center gap-10 lg:grid-cols-[0.85fr_1fr]">
+              <img
+                src="/eeos-assets/eeos-eagle-brain.svg"
+                alt="EEOS Brain intelligence visual"
+                className="aspect-[4/3] w-full rounded-3xl border border-[#00B2FF]/20 object-cover"
+                loading="lazy"
+              />
+              <div>
+                <div className="section-label mb-3">Speak to EEOS Brain</div>
+                <h2 className="text-4xl font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Learn how EEOS can help your business manage smarter.
+                </h2>
+                <p className="mt-4 text-sm leading-6 text-[#FFFFFF]/58">
+                  The live public AI conversation is not connected yet. For now, send your questions directly to Eagle Eye Automation or schedule a strategy call, and we will help you understand which EEOS path fits your business.
+                </p>
+                <div className="mt-6 grid gap-2">
+                  {EEOS_BRAIN_QUESTIONS.map((question) => (
+                    <div key={question} className="rounded-2xl border border-[#C0C7D1]/12 bg-[#FFFFFF]/[0.03] px-4 py-3 text-sm text-[#FFFFFF]/70">
+                      {question}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                  <a href={PUBLIC_CONTACT.mailto} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#C9A227] px-5 py-3 text-sm font-bold text-[#0B0B0B] hover:bg-[#D8B84A]">
+                    <Mail className="h-4 w-4" />
+                    Begin a Conversation
+                  </a>
+                  <a href={PUBLIC_CONTACT.tel} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#00B2FF]/35 px-5 py-3 text-sm font-semibold text-[#A8E7FF] hover:bg-[#00B2FF]/10">
+                    <Phone className="h-4 w-4" />
+                    Schedule a Strategy Call
+                  </a>
+                </div>
+              </div>
+            </div>
+          </AnimatedSection>
+        </div>
+      </section>
+
+      <section className="bg-[#0B0B0B] py-20">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+          <AnimatedSection className="mb-12 text-center">
+            <h2 className="text-3xl font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Frequently asked questions
             </h2>
           </AnimatedSection>
-
           <div className="space-y-4">
-            {FAQS.map((faq, i) => (
-              <AnimatedSection key={i} delay={i * 60}>
-                <div className="glass-card rounded-xl p-6">
-                  <div className="flex items-start gap-3 mb-3">
-                    <HelpCircle className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
-                    <h3
-                      className="text-base font-semibold text-[#FFFFFF]"
-                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                    >
+            {FAQS.map((faq) => (
+              <AnimatedSection key={faq.q}>
+                <div className="rounded-2xl border border-[rgba(201,162,39,0.12)] bg-[#141414] p-6">
+                  <div className="mb-3 flex items-start gap-3">
+                    <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A227]" />
+                    <h3 className="text-base font-semibold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                       {faq.q}
                     </h3>
                   </div>
-                  <p className="text-sm text-[#FFFFFF]/60 leading-relaxed pl-7">{faq.a}</p>
+                  <p className="pl-7 text-sm leading-6 text-[#FFFFFF]/60">{faq.a}</p>
                 </div>
               </AnimatedSection>
             ))}

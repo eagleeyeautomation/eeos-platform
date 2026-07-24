@@ -493,7 +493,7 @@ export default function Navigation() {
 
           {/* Trust badges */}
           <div className="mt-6 flex flex-wrap gap-3 justify-center">
-            {["SOC 2 Type II", "ISO 27001", "FedRAMP Ready"].map((badge) => (
+            {["Secure owner access", "Tenant isolation", "GoHighLevel-first"].map((badge) => (
               <span
                 key={badge}
                 className="text-[10px] text-[#FFFFFF]/30 tracking-wide"
