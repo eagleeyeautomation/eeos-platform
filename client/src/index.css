@@ -5,7 +5,7 @@
 
 /* ============================================================
    EEOS OFFICIAL DESIGN SYSTEM
-   Eagle Eye Automation — Primary Black, Old Gold, White
+   Eagle Eye Automation — Black, Old Gold, White, Electric Blue, Silver
    ============================================================ */
 
 @theme inline {
@@ -50,6 +50,9 @@
   --color-eeos-gold: #C9A227;
   --color-eeos-gold-dim: rgba(201, 162, 39, 0.6);
   --color-eeos-gold-ghost: rgba(201, 162, 39, 0.15);
+  --color-eeos-blue: #00A8FF;
+  --color-eeos-blue-ghost: rgba(0, 168, 255, 0.16);
+  --color-eeos-silver: #C0C7D1;
   --color-eeos-black: #0B0B0B;
   --color-eeos-navy: #0F2747;
   --color-eeos-surface: #141414;
@@ -82,9 +85,9 @@
   --input: rgba(201, 162, 39, 0.3);
   --ring: #C9A227;
   --chart-1: #C9A227;
-  --chart-2: #0F2747;
+  --chart-2: #00A8FF;
   --chart-3: #8C6F12;
-  --chart-4: #FFFFFF;
+  --chart-4: #C0C7D1;
   --chart-5: #1A1A1A;
   --sidebar: #0B0B0B;
   --sidebar-foreground: #FFFFFF;
@@ -99,6 +102,13 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --eeos-blue: #00A8FF;
+  --eeos-blue-soft: rgba(0, 168, 255, 0.14);
+  --eeos-silver: #C0C7D1;
+  --eeos-silver-soft: rgba(192, 199, 209, 0.14);
+  --eeos-shell-gradient:
+    linear-gradient(90deg, rgba(201, 162, 39, 0.08), transparent 32%, rgba(0, 168, 255, 0.06)),
+    linear-gradient(135deg, #0B0B0B 0%, #111111 48%, #0F2747 100%);
 }
 
 @layer base {
@@ -110,7 +120,9 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-color: #0B0B0B;
+    background:
+      var(--eeos-shell-gradient),
+      #0B0B0B;
     color: #FFFFFF;
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -168,17 +180,21 @@
   .scan-grid {
     background-image:
       linear-gradient(rgba(201, 162, 39, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(201, 162, 39, 0.03) 1px, transparent 1px);
+      linear-gradient(90deg, rgba(0, 168, 255, 0.035) 1px, transparent 1px);
     background-size: 40px 40px;
   }
 
   /* EEOS Glass card */
   .glass-card {
-    background: rgba(11, 11, 11, 0.92);
+    background:
+      linear-gradient(180deg, rgba(20, 20, 20, 0.96), rgba(11, 11, 11, 0.94));
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(201, 162, 39, 0.15);
-    box-shadow: 0 0 24px rgba(201, 162, 39, 0.06), 0 4px 24px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(201, 162, 39, 0.18);
+    box-shadow:
+      0 0 24px rgba(201, 162, 39, 0.08),
+      0 0 30px rgba(0, 168, 255, 0.035),
+      0 4px 24px rgba(0, 0, 0, 0.42);
   }
 
   /* EEOS Old Gold button */
@@ -239,10 +255,13 @@
 
   /* Metric card */
   .metric-card {
-    background: rgba(11, 11, 11, 0.92);
-    border: 1px solid rgba(201, 162, 39, 0.2);
+    background:
+      linear-gradient(180deg, rgba(26, 26, 26, 0.96), rgba(11, 11, 11, 0.94));
+    border: 1px solid rgba(201, 162, 39, 0.22);
     border-top: 2px solid #C9A227;
-    box-shadow: 0 0 20px rgba(201, 162, 39, 0.08);
+    box-shadow:
+      0 0 20px rgba(201, 162, 39, 0.08),
+      0 18px 54px rgba(0, 0, 0, 0.22);
     transition: all 250ms var(--ease-out);
   }
   .metric-card:hover {
@@ -253,10 +272,26 @@
 
   /* Nav glass */
   .nav-glass {
-    background: rgba(11, 11, 11, 0.94);
+    background:
+      linear-gradient(90deg, rgba(11, 11, 11, 0.98), rgba(15, 39, 71, 0.94));
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(201, 162, 39, 0.1);
+    border-bottom: 1px solid rgba(201, 162, 39, 0.22);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24);
+  }
+
+  .eeos-brand-panel {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.035));
+    border: 1px solid rgba(201, 162, 39, 0.16);
+    box-shadow:
+      0 24px 80px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .eeos-tech-accent {
+    color: var(--eeos-blue);
+    text-shadow: 0 0 20px rgba(0, 168, 255, 0.36);
   }
 
   /* Compatibility guard for legacy card components after the brand color migration. */
@@ -402,14 +437,16 @@
   /* Input styles */
   .eeos-input {
     background: rgba(20, 20, 20, 0.8);
-    border: 1px solid rgba(201, 162, 39, 0.2);
+    border: 1px solid rgba(192, 199, 209, 0.18);
     color: #FFFFFF;
     transition: border-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
   }
   .eeos-input:focus {
     outline: none;
-    border-color: rgba(201, 162, 39, 0.6);
-    box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.1);
+    border-color: rgba(201, 162, 39, 0.65);
+    box-shadow:
+      0 0 0 3px rgba(201, 162, 39, 0.12),
+      0 0 18px rgba(0, 168, 255, 0.08);
   }
   .eeos-input::placeholder {
     color: rgba(232, 237, 245, 0.35);
@@ -457,10 +494,12 @@
     background-color: #0B0B0B;
   }
   .section-surface {
-    background-color: #141414;
+    background:
+      linear-gradient(180deg, #141414, #101010);
   }
   .section-elevated {
-    background-color: #1A1A1A;
+    background:
+      linear-gradient(180deg, #1A1A1A, #121212);
   }
 
   @media (prefers-reduced-motion: reduce) {
