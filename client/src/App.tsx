@@ -34,6 +34,7 @@ import ResetPassword from "./pages/ResetPassword";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import AccessDenied from "./pages/AccessDenied";
 import PlatformAdmin from "./pages/PlatformAdmin";
+import OwnerCommandCenter, { type OwnerCommandCenterProps } from "./pages/OwnerCommandCenter";
 
 function owner(component: ComponentType) {
   const Component = component;
@@ -78,6 +79,16 @@ function ownerReview(config: OwnerReviewPageProps) {
   };
 }
 
+function ownerCommandCenter(config: OwnerCommandCenterProps) {
+  return function OwnerCommandCenterPage() {
+    return (
+      <OwnerRoute>
+        <OwnerCommandCenter {...config} />
+      </OwnerRoute>
+    );
+  };
+}
+
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -109,13 +120,7 @@ function Router() {
       <Route path="/prn-onboarding" component={ownerOnboarding(PRNOnboarding)} />
       <Route
         path="/executive-home"
-        component={ownerReview({
-          eyebrow: "Owner Command Center",
-          title: "Executive Home",
-          description: "Your daily owner workspace is stable and ready for verified business activity.",
-          emptyTitle: "No executive activity available yet",
-          emptyMessage: "This section will populate after your connected business begins generating verified GoHighLevel activity.",
-        })}
+        component={ownerCommandCenter({ mode: "overview" })}
       />
       <Route
         path="/live-status"
@@ -159,23 +164,11 @@ function Router() {
       />
       <Route
         path="/business-health"
-        component={ownerReview({
-          eyebrow: "Business Health",
-          title: "Business Health",
-          description: "Business health will be calculated from verified live activity, not demonstration numbers.",
-          emptyTitle: "Business health is not available yet",
-          emptyMessage: "This section will populate after enough verified business activity is available to calculate a reliable health view.",
-        })}
+        component={ownerCommandCenter({ mode: "business-health" })}
       />
       <Route
         path="/ai-recommendations"
-        component={ownerReview({
-          eyebrow: "AI Recommendations",
-          title: "AI Recommendations",
-          description: "Recommendations will appear only after EEOS has verified business activity to analyze.",
-          emptyTitle: "No recommendations generated yet",
-          emptyMessage: "This section will populate after verified trends, risks, and opportunities are available.",
-        })}
+        component={ownerCommandCenter({ mode: "recommendations" })}
       />
       <Route
         path="/live-signals"
@@ -199,23 +192,11 @@ function Router() {
       />
       <Route
         path="/executive-timeline"
-        component={ownerReview({
-          eyebrow: "Timeline",
-          title: "Executive Timeline",
-          description: "The executive timeline will contain verified business events only.",
-          emptyTitle: "No timeline events available yet",
-          emptyMessage: "This section will populate after verified business activity is available.",
-        })}
+        component={ownerCommandCenter({ mode: "timeline" })}
       />
       <Route
         path="/knowledge-graph"
-        component={ownerReview({
-          eyebrow: "Knowledge Graph",
-          title: "Knowledge Graph",
-          description: "The knowledge graph will reflect verified business entities and relationships.",
-          emptyTitle: "No knowledge graph available yet",
-          emptyMessage: "This section will populate after connected business data is available to build verified relationships.",
-        })}
+        component={ownerCommandCenter({ mode: "knowledge-graph" })}
       />
       <Route
         path="/executive-dashboard"
