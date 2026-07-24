@@ -43,26 +43,13 @@ export default function Footer({ hideConnectionLinks = false }: { hideConnection
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-10">
           {/* Brand */}
           <div className="col-span-2 md:col-span-3 lg:col-span-2">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="mb-4">
               <img
-                src="/eeos-assets/eeos-logo-mark.svg"
-                alt="Eagle Eye Automation"
-                className="w-8 h-8 object-contain"
+                src="/eeos-assets/eeos-logo-official.png"
+                alt="EEOS Eagle Eye Operating System"
+                className="h-auto w-full max-w-[320px] object-contain"
+                loading="lazy"
               />
-              <div>
-                <div
-                  className="text-[#FFFFFF] font-bold text-base tracking-tight leading-none"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  Eagle Eye Automation
-                </div>
-                <div
-                  className="text-[#C9A227] text-[9px] tracking-[0.15em] uppercase mt-0.5"
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                >
-                  EEOS · Don't Build More. Build Accurate.
-                </div>
-              </div>
             </div>
             <p className="text-[#FFFFFF]/55 text-sm leading-relaxed max-w-xs mb-3">
               Eagle Eye Automation builds EEOS, the AI Operating System that gives small businesses the power of Fortune 500 companies through AI, automation, and executive intelligence.

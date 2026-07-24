@@ -225,27 +225,37 @@ export default function Navigation() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3 group shrink-0">
-              <div className="w-8 h-8 relative">
+              {isOwnerExperience || isAdminExperience ? (
+                <>
+                  <div className="w-8 h-8 relative">
+                    <img
+                      src="/eeos-assets/eeos-logo-mark.svg"
+                      alt="EEOS"
+                      className="w-8 h-8 object-contain"
+                    />
+                  </div>
+                  <div className="flex flex-col leading-none">
+                    <span
+                      className="text-[#FFFFFF] font-bold text-base tracking-tight leading-none"
+                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      Eagle Eye Automation
+                    </span>
+                    <span
+                      className="text-[#C9A227] text-[9px] tracking-[0.15em] uppercase font-medium hidden sm:block mt-0.5"
+                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                    >
+                      EEOS · Don't Build More. Build Accurate.
+                    </span>
+                  </div>
+                </>
+              ) : (
                 <img
-                  src="/eeos-assets/eeos-logo-mark.svg"
-                  alt="EEOS"
-                  className="w-8 h-8 object-contain"
+                  src="/eeos-assets/eeos-logo-official.png"
+                  alt="EEOS Eagle Eye Operating System"
+                  className="h-11 w-auto max-w-[220px] object-contain sm:max-w-[280px]"
                 />
-              </div>
-              <div className="flex flex-col leading-none">
-                <span
-                  className="text-[#FFFFFF] font-bold text-base tracking-tight leading-none"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  Eagle Eye Automation
-                </span>
-                <span
-                  className="text-[#C9A227] text-[9px] tracking-[0.15em] uppercase font-medium hidden sm:block mt-0.5"
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                >
-                  EEOS · Don't Build More. Build Accurate.
-                </span>
-              </div>
+              )}
             </Link>
 
             {/* Desktop Nav */}

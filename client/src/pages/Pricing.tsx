@@ -58,8 +58,12 @@ export default function Pricing() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_0.92fr]">
             <AnimatedSection>
-              <div className="mb-5 flex items-center gap-3">
-                <img src="/eeos-assets/eeos-logo-mark.svg" alt="EEOS logo" className="h-10 w-10 object-contain" />
+              <div className="mb-5 flex flex-col items-start gap-4">
+                <img
+                  src="/eeos-assets/eeos-logo-official.png"
+                  alt="EEOS Eagle Eye Operating System"
+                  className="h-auto w-full max-w-[360px] object-contain"
+                />
                 <div className="section-label">Founding Customer Pricing</div>
               </div>
               <h1

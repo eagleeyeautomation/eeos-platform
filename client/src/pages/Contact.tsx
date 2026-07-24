@@ -45,6 +45,11 @@ export default function Contact() {
       <section className="pt-32 pb-16 bg-[#0B0B0B] scan-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center max-w-2xl mx-auto">
+            <img
+              src="/eeos-assets/eeos-logo-official.png"
+              alt="EEOS Eagle Eye Operating System"
+              className="mx-auto mb-6 h-auto w-full max-w-[360px] object-contain"
+            />
             <div className="section-label mb-4">Contact</div>
             <h1
               className="text-5xl font-bold text-[#FFFFFF] tracking-tight mb-4"
