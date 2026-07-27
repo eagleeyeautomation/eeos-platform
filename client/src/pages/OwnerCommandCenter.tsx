@@ -17,6 +17,7 @@ import {
 import { Link } from "wouter";
 import Footer from "@/components/Footer";
 import Navigation from "@/components/Navigation";
+import AuthenticatedPageBranding from "@/components/AuthenticatedPageBranding";
 import { trpc } from "@/lib/trpc";
 import { useOwnerConnectionState } from "@/hooks/useOwnerConnectionState";
 import { useEffect, useMemo, useState } from "react";
@@ -232,6 +233,14 @@ export default function OwnerCommandCenter({ mode = "overview" }: OwnerCommandCe
             </div>
           </div>
         </section>
+
+        <AuthenticatedPageBranding
+          src="/eeos-assets/approved/eeos-eagle-brain-closeup.jpg"
+          title={`${copy.title} Intelligence`}
+          subtitle="Executive context remains secondary to verified operational signals, recommendations, and actions."
+          alt={`EEOS branded intelligence artwork for ${copy.title}`}
+          className="mt-6"
+        />
 
         {connectionsError ? (
           <section className="mt-6">

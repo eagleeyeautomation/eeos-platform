@@ -14,6 +14,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
+import AuthenticatedPageBranding from "@/components/AuthenticatedPageBranding";
 import Footer from "@/components/Footer";
 
 export type GhlConnection = {
@@ -158,6 +159,14 @@ export default function Dashboard() {
             </div>
           </div>
         </section>
+
+        <AuthenticatedPageBranding
+          src="/eeos-assets/approved/eeos-executive-intelligence.jpg"
+          title="Executive Integration Intelligence"
+          subtitle="A branded operating context for verified connection health and source-of-truth status."
+          alt="EEOS executive intelligence artwork for the integration dashboard"
+          className="mt-6"
+        />
 
         <section className="mt-6 grid gap-4 md:grid-cols-3">
           <SummaryCard icon={Plug} label="Connected Locations" value={`${summary.connected}`} detail={`${summary.total} locations returned by backend`} />

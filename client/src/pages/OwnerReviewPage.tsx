@@ -2,6 +2,7 @@ import { AlertCircle, CheckCircle2, Clock, Database, ExternalLink, Loader2, Shie
 import { Link } from "wouter";
 import Footer from "@/components/Footer";
 import Navigation from "@/components/Navigation";
+import AuthenticatedPageBranding from "@/components/AuthenticatedPageBranding";
 import { useOwnerConnectionState, type OwnerConnection } from "@/hooks/useOwnerConnectionState";
 
 export type OwnerReviewPageProps = {
@@ -106,6 +107,14 @@ export default function OwnerReviewPage({
             <p className="mt-4 text-sm leading-6 text-[#D8D8D8] sm:text-base">{description}</p>
           </div>
         </section>
+
+        <AuthenticatedPageBranding
+          src="/eeos-assets/approved/eeos-eagle-brain-closeup.png"
+          title={`${title} Workspace`}
+          subtitle="A focused executive surface for verified organization data and operational review."
+          alt={`EEOS branded artwork for ${title}`}
+          className="mt-6"
+        />
 
         <section className="mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-[rgba(201,162,39,0.12)] bg-[rgba(7,20,38,0.78)] p-5">
