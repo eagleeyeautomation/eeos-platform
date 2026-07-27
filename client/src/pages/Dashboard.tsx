@@ -161,10 +161,9 @@ export default function Dashboard() {
         </section>
 
         <AuthenticatedPageBranding
-          src="/eeos-assets/approved/eeos-executive-intelligence.jpg"
+          imageSrc="/eeos-assets/approved/modules/integrations-connect-everything.png"
           title="Executive Integration Intelligence"
           subtitle="A branded operating context for verified connection health and source-of-truth status."
-          alt="EEOS executive intelligence artwork for the integration dashboard"
           className="mt-6"
         />
 

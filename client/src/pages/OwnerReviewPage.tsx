@@ -108,13 +108,14 @@ export default function OwnerReviewPage({
           </div>
         </section>
 
-        <AuthenticatedPageBranding
-          src="/eeos-assets/approved/eeos-eagle-brain-closeup.png"
-          title={`${title} Workspace`}
-          subtitle="A focused executive surface for verified organization data and operational review."
-          alt={`EEOS branded artwork for ${title}`}
-          className="mt-6"
-        />
+        {title === "Executive Dashboard" ? (
+          <AuthenticatedPageBranding
+            imageSrc="/eeos-assets/approved/modules/why-choose-eeos.png"
+            title="Executive Dashboard Intelligence"
+            subtitle="A focused executive surface for verified organization data and operational review."
+            className="mt-6"
+          />
+        ) : null}
 
         <section className="mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-[rgba(201,162,39,0.12)] bg-[rgba(7,20,38,0.78)] p-5">

@@ -28,6 +28,21 @@ export type OwnerCommandCenterProps = {
   mode?: OwnerCommandCenterMode;
 };
 
+const COMMAND_CENTER_BRANDING = {
+  overview: {
+    imageSrc: "/eeos-assets/approved/modules/eeos-operating-system.png",
+    title: "Connected Executive Operations",
+  },
+  recommendations: {
+    imageSrc: "/eeos-assets/approved/modules/speak-to-eeos-brain.png",
+    title: "EEOS Brain Recommendations",
+  },
+  "knowledge-graph": {
+    imageSrc: "/eeos-assets/approved/modules/automations-that-work.png",
+    title: "Connected Intelligence",
+  },
+} satisfies Partial<Record<OwnerCommandCenterMode, { imageSrc: string; title: string }>>;
+
 function formatDate(value?: string | Date | null) {
   if (!value) return "Not available";
   const date = new Date(value);
@@ -167,6 +182,7 @@ export default function OwnerCommandCenter({ mode = "overview" }: OwnerCommandCe
   const graphNodes = graphQuery.data?.nodes ?? [];
   const graphEdges = graphQuery.data?.edges ?? [];
   const copy = pageCopy(mode);
+  const branding = COMMAND_CENTER_BRANDING[mode as keyof typeof COMMAND_CENTER_BRANDING];
 
   const briefingLines = useMemo(() => {
     if (connectionsLoading) return ["EEOS is checking authenticated owner access and persisted GoHighLevel connections."];
@@ -234,13 +250,14 @@ export default function OwnerCommandCenter({ mode = "overview" }: OwnerCommandCe
           </div>
         </section>
 
-        <AuthenticatedPageBranding
-          src="/eeos-assets/approved/eeos-eagle-brain-closeup.jpg"
-          title={`${copy.title} Intelligence`}
-          subtitle="Executive context remains secondary to verified operational signals, recommendations, and actions."
-          alt={`EEOS branded intelligence artwork for ${copy.title}`}
-          className="mt-6"
-        />
+        {branding ? (
+          <AuthenticatedPageBranding
+            imageSrc={branding.imageSrc}
+            title={branding.title}
+            subtitle="Executive context remains secondary to verified operational signals, recommendations, and actions."
+            className="mt-6"
+          />
+        ) : null}
 
         {connectionsError ? (
           <section className="mt-6">

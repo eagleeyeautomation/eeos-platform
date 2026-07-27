@@ -15,6 +15,24 @@ const ADMIN_MODULES = [
   { label: "AI Operations", href: "/admin/ai-operations", icon: Brain },
 ];
 
+const ADMIN_BRANDING: Partial<Record<string, { imageSrc: string; title: string; subtitle: string }>> = {
+  "/admin": {
+    imageSrc: "/eeos-assets/approved/modules/why-choose-eea.png",
+    title: "Eagle Eye Platform Operations",
+    subtitle: "Protected administration context for organizations, platform health, governance, and support.",
+  },
+  "/admin/organizations": {
+    imageSrc: "/eeos-assets/approved/modules/industries-we-serve.png",
+    title: "Service Business Organizations",
+    subtitle: "A protected view of the organizations and industries operating through EEOS.",
+  },
+  "/admin/platform-health": {
+    imageSrc: "/eeos-assets/approved/modules/security-you-can-trust.png",
+    title: "Platform Security and Health",
+    subtitle: "Operational context for platform safeguards, service readiness, and governance.",
+  },
+};
+
 const ADMIN_SCREENS = {
   "/admin": {
     eyebrow: "Eagle Eye Internal Platform",
@@ -400,6 +418,7 @@ function AdminRouteContent({ location }: { location: string }) {
 export default function PlatformAdmin() {
   const [location] = useLocation();
   const screen = getAdminScreen(location);
+  const branding = ADMIN_BRANDING[location];
 
   return (
     <div className="min-h-screen bg-[#0B0B0B] text-[#FFFFFF]">
@@ -417,13 +436,14 @@ export default function PlatformAdmin() {
           </div>
         </section>
 
-        <AuthenticatedPageBranding
-          src="/eeos-assets/approved/eeos-executive-intelligence.png"
-          title={`${screen.title} Operations`}
-          subtitle="Protected administration context for organizations, platform health, governance, and support."
-          alt={`EEOS branded platform operations artwork for ${screen.title}`}
-          className="mt-6"
-        />
+        {branding ? (
+          <AuthenticatedPageBranding
+            imageSrc={branding.imageSrc}
+            title={branding.title}
+            subtitle={branding.subtitle}
+            className="mt-6"
+          />
+        ) : null}
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {ADMIN_MODULES.map((module) => (

@@ -1,16 +1,14 @@
 type AuthenticatedPageBrandingProps = {
-  src: string;
+  imageSrc: string;
   title: string;
   subtitle?: string;
-  alt?: string;
   className?: string;
 };
 
 export default function AuthenticatedPageBranding({
-  src,
+  imageSrc,
   title,
   subtitle,
-  alt = "",
   className = "",
 }: AuthenticatedPageBrandingProps) {
   return (
@@ -36,8 +34,8 @@ export default function AuthenticatedPageBranding({
         </figcaption>
         <div className="order-1 flex h-36 items-center justify-center sm:order-2 sm:h-40">
           <img
-            src={src}
-            alt={alt || title}
+            src={imageSrc}
+            alt={`${title} EEOS module artwork`}
             loading="lazy"
             decoding="async"
             className="h-full w-full object-contain"
