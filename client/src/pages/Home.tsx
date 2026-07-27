@@ -84,6 +84,18 @@ const HOW_IT_WORKS = [
   },
 ];
 
+const PUBLIC_EEOS_ARTWORK = [
+  { src: "/eeos-assets/approved/modules/eeos-operating-system.png", alt: "EEOS AI operating system for service businesses" },
+  { src: "/eeos-assets/approved/modules/why-choose-eeos.png", alt: "Why service businesses choose EEOS" },
+  { src: "/eeos-assets/approved/modules/speak-to-eeos-brain.png", alt: "Speak to the EEOS Brain" },
+  { src: "/eeos-assets/approved/modules/automations-that-work.png", alt: "EEOS automations that work for your business" },
+  { src: "/eeos-assets/approved/modules/integrations-connect-everything.png", alt: "EEOS integrations that connect everything" },
+  { src: "/eeos-assets/approved/modules/security-you-can-trust.png", alt: "EEOS security you can trust" },
+  { src: "/eeos-assets/approved/modules/industries-we-serve.png", alt: "Industries served by Eagle Eye Automation" },
+  { src: "/eeos-assets/approved/modules/why-choose-eea.png", alt: "Why choose Eagle Eye Automation" },
+  { src: "/eeos-assets/approved/modules/pricing-that-makes-sense.png", alt: "EEOS pricing that makes sense" },
+];
+
 // The transformation narrative — what business owners move from and to
 const TRANSFORMATION = [
   {
@@ -262,6 +274,39 @@ export default function Home() {
                 >
                   {stat.label}
                 </div>
+              </AnimatedSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── APPROVED EEOS ARTWORK ── */}
+      <section className="bg-[#0B0B0B] py-20 sm:py-28">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <AnimatedSection className="mb-12">
+            <div className="section-label mb-3">Explore EEOS</div>
+            <h2
+              className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              Executive intelligence for
+              <br />
+              <span className="gradient-text">service businesses.</span>
+            </h2>
+          </AnimatedSection>
+
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {PUBLIC_EEOS_ARTWORK.map((artwork, index) => (
+              <AnimatedSection key={artwork.src} delay={(index % 3) * 80}>
+                <figure className="h-full overflow-hidden rounded-2xl border border-[rgba(201,162,39,0.18)] bg-[#050505] shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
+                  <img
+                    src={artwork.src}
+                    alt={artwork.alt}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-contain"
+                  />
+                </figure>
               </AnimatedSection>
             ))}
           </div>
