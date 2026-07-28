@@ -7,7 +7,7 @@
  * Every token stored here feeds the IE pipeline with accurate, fresh data.
  */
 
-import { createCipheriv, createHash, randomBytes, timingSafeEqual } from "crypto";
+import { createCipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
 import type { Express, Request, Response } from "express";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./_core/env";
@@ -762,7 +762,7 @@ function sendOAuthStartError(res: Response, error: unknown) {
 
 function ensureCsrfCookie(req: Request, res: Response) {
   const secure = isSecureRequest(req);
-  const csrfToken = randomBytes(32).toString("base64url");
+  const csrfToken = deriveSessionCsrfToken(req);
   res.cookie(EEOS_CSRF_COOKIE, csrfToken, {
     httpOnly: false,
     path: "/",
@@ -775,19 +775,23 @@ function ensureCsrfCookie(req: Request, res: Response) {
 
 function validateCsrf(req: Request) {
   const headerToken = req.header("x-eeos-csrf-token");
-  const cookieTokens = readCookieValues(req.headers.cookie || "", EEOS_CSRF_COOKIE);
+  const expectedToken = deriveSessionCsrfToken(req);
 
-  if (!headerToken || !cookieTokens.some((cookieToken) => safeEqual(cookieToken, headerToken))) {
+  if (!headerToken || !safeEqual(expectedToken, headerToken)) {
     throw new GhlOAuthRequestError(403, "A valid EEOS CSRF token is required before connecting GoHighLevel.");
   }
 }
 
-function readCookieValues(cookieHeader: string, name: string) {
-  return cookieHeader
-    .split(";")
-    .map((part) => part.trim())
-    .filter((part) => part.startsWith(`${name}=`))
-    .map((part) => part.slice(name.length + 1));
+function deriveSessionCsrfToken(req: Request) {
+  const sessionToken = sdk.readSessionToken(req);
+  const signingSecret = process.env.JWT_SECRET;
+  if (!sessionToken || !signingSecret) {
+    throw new GhlOAuthRequestError(403, "A valid EEOS CSRF token is required before connecting GoHighLevel.");
+  }
+  return createHmac("sha256", signingSecret)
+    .update("eeos:gohighlevel:oauth:csrf:")
+    .update(sessionToken)
+    .digest("base64url");
 }
 
 function safeEqual(left: string, right: string) {

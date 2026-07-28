@@ -1,3 +1,4 @@
+import { createHmac } from "crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerGhlOAuthRoutes } from "./ghl-oauth";
 import { sdk } from "./_core/sdk";
@@ -12,7 +13,7 @@ vi.mock("./_core/env", () => ({
   },
 }));
 
-vi.mock("./_core/sdk", () => ({ sdk: { authenticateRequest: vi.fn() } }));
+vi.mock("./_core/sdk", () => ({ sdk: { authenticateRequest: vi.fn(), readSessionToken: vi.fn() } }));
 vi.mock("./db", () => ({
   getGhlToken: vi.fn(),
   getMembershipById: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock("./db/runtimePersistence", () => ({
 }));
 
 const authenticateRequestMock = vi.mocked(sdk.authenticateRequest);
+const readSessionTokenMock = vi.mocked(sdk.readSessionToken);
 const getGhlTokenMock = vi.mocked(getGhlToken);
 const getUserSubaccountsMock = vi.mocked(getUserSubaccounts);
 const getMembershipByIdMock = vi.mocked(getMembershipById);
@@ -90,9 +92,15 @@ async function invoke(method: "GET" | "POST", path: string, options: {
   return { status: res.statusCode, body: res.body, headers: res.headers };
 }
 
+const testSessionToken = "opaque-test-session-token-with-enough-entropy";
+const testJwtSecret = "test-jwt-secret-for-csrf-derivation";
+const csrfToken = createHmac("sha256", testJwtSecret)
+  .update("eeos:gohighlevel:oauth:csrf:")
+  .update(testSessionToken)
+  .digest("base64url");
 const csrf = {
-  cookie: "eeos_csrf=csrf-token-with-enough-length-123456",
-  csrfHeader: "csrf-token-with-enough-length-123456",
+  cookie: `app_session_id=${testSessionToken}`,
+  csrfHeader: csrfToken,
 };
 
 function authenticatedUser(role: "user" | "admin" = "user") {
@@ -131,6 +139,8 @@ describe("GoHighLevel production OAuth security", () => {
     vi.clearAllMocks();
     process.env.GHL_CLIENT_ID = "test-client-id";
     process.env.GHL_REDIRECT_URI = "https://app.geteeos.com/api/integrations/eea/oauth/callback";
+    process.env.JWT_SECRET = testJwtSecret;
+    readSessionTokenMock.mockReturnValue(testSessionToken);
     getGhlTokenMock.mockResolvedValue(undefined);
     authenticatedUser();
     organization();
@@ -139,6 +149,7 @@ describe("GoHighLevel production OAuth security", () => {
   afterEach(() => {
     delete process.env.GHL_CLIENT_ID;
     delete process.env.GHL_REDIRECT_URI;
+    delete process.env.JWT_SECRET;
     vi.unstubAllGlobals();
   });
 
@@ -159,7 +170,7 @@ describe("GoHighLevel production OAuth security", () => {
   it("rotates the browser-readable CSRF cookie when authenticated session context loads", async () => {
     const result = await invoke("GET", "/api/integrations/gohighlevel/session-context", {
       query: { locationId: "loc_sc" },
-      cookie: "eeos_csrf=stale-server-visible-cookie-that-the-browser-cannot-read",
+      cookie: `app_session_id=${testSessionToken}`,
     });
     expect(result.status).toBe(200);
     expect(result.headers.get("set-cookie")).toMatch(/^eeos_csrf=.+/);
@@ -170,11 +181,11 @@ describe("GoHighLevel production OAuth security", () => {
     expect(result.headers.get("set-cookie")).toContain(result.body.csrfToken);
   });
 
-  it("accepts the issued CSRF value when a legacy same-name cookie is also present", async () => {
+  it("accepts the session-bound CSRF value when a legacy same-name cookie is also present", async () => {
     const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
       query: { locationId: "loc_sc", organizationId: "100" },
-      cookie: "eeos_csrf=legacy-cookie-value-that-does-not-match; eeos_csrf=csrf-token-with-enough-length-123456",
-      csrfHeader: "csrf-token-with-enough-length-123456",
+      cookie: `app_session_id=${testSessionToken}; eeos_csrf=legacy-cookie-value-that-does-not-match`,
+      csrfHeader: csrfToken,
     });
     expect(result.status).toBe(200);
     expect(persistOAuthStateMock).toHaveBeenCalledOnce();
