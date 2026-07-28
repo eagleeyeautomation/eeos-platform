@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerGhlOAuthRoutes } from "./ghl-oauth";
 import { sdk } from "./_core/sdk";
-import { getGhlToken, getMembershipById, getMembershipUser, getUserSubaccounts } from "./db";
+import { getGhlToken, getMembershipById, getMembershipUser, getOrganizationById, getUserSubaccounts } from "./db";
 import { consumeOAuthState, persistAuditEvent, persistOAuthState } from "./db/runtimePersistence";
 
 vi.mock("./_core/env", () => ({
@@ -17,6 +17,7 @@ vi.mock("./db", () => ({
   getGhlToken: vi.fn(),
   getMembershipById: vi.fn(),
   getMembershipUser: vi.fn(),
+  getOrganizationById: vi.fn(),
   getUserSubaccounts: vi.fn(),
   upsertGhlToken: vi.fn(),
 }));
@@ -32,6 +33,7 @@ const getGhlTokenMock = vi.mocked(getGhlToken);
 const getUserSubaccountsMock = vi.mocked(getUserSubaccounts);
 const getMembershipByIdMock = vi.mocked(getMembershipById);
 const getMembershipUserMock = vi.mocked(getMembershipUser);
+const getOrganizationByIdMock = vi.mocked(getOrganizationById);
 const consumeOAuthStateMock = vi.mocked(consumeOAuthState);
 const persistAuditEventMock = vi.mocked(persistAuditEvent);
 const persistOAuthStateMock = vi.mocked(persistOAuthState);
@@ -113,8 +115,9 @@ function organization(role: "owner" | "executive" | "analyst" | "viewer" | "unkn
     ghlLocationId: "loc_sc",
     name: "South Carolina",
   } as never]);
-  getMembershipByIdMock.mockResolvedValue({ organizationId: 100 } as never);
+  getMembershipByIdMock.mockResolvedValue({ id: 7, organizationId: 100, status: "active" } as never);
   getMembershipUserMock.mockResolvedValue({ role, isActive: true } as never);
+  getOrganizationByIdMock.mockResolvedValue({ id: 100, name: "PRN Staffers", isActive: true } as never);
 }
 
 function encodedState(tenantId = "100", locationId = "loc_sc") {
@@ -147,9 +150,49 @@ describe("GoHighLevel production OAuth security", () => {
     expect(persistAuditEventMock).toHaveBeenCalledWith(expect.objectContaining({ eventType: "oauth.start.allowed" }));
   });
 
-  it("requires an approved audited support context for platform administrators", async () => {
+  it("allows a dual-role platform admin with an active selected owner membership", async () => {
     authenticatedUser("admin");
+    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
+      query: { locationId: "loc_sc", organizationId: "100" },
+      ...csrf,
+    });
+    expect(result.status).toBe(200);
+    expect(persistOAuthStateMock).toHaveBeenCalledOnce();
+  });
+
+  it("requires an approved audited support context for platform administrators without an owner membership", async () => {
+    authenticatedUser("admin");
+    getUserSubaccountsMock.mockResolvedValue([]);
     const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", { query: { locationId: "loc_sc" }, ...csrf });
+    expect(result.status).toBe(403);
+    expect(persistOAuthStateMock).not.toHaveBeenCalled();
+  });
+
+  it("denies a dual-role platform admin whose owner membership belongs to another organization", async () => {
+    authenticatedUser("admin");
+    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
+      query: { locationId: "loc_sc", organizationId: "999" },
+      ...csrf,
+    });
+    expect(result.status).toBe(403);
+    expect(persistOAuthStateMock).not.toHaveBeenCalled();
+  });
+
+  it("denies an inactive owner membership", async () => {
+    getMembershipByIdMock.mockResolvedValue({ id: 7, organizationId: 100, status: "suspended" } as never);
+    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
+      query: { locationId: "loc_sc", organizationId: "100" },
+      ...csrf,
+    });
+    expect(result.status).toBe(403);
+    expect(persistOAuthStateMock).not.toHaveBeenCalled();
+  });
+
+  it("denies a location outside the owner's active membership scope", async () => {
+    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
+      query: { locationId: "loc_other", organizationId: "100" },
+      ...csrf,
+    });
     expect(result.status).toBe(403);
     expect(persistOAuthStateMock).not.toHaveBeenCalled();
   });

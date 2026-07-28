@@ -30,6 +30,16 @@ function AuthenticationBlocked({ message }: { message: string }) {
   );
 }
 
+export function canAccessOwnerRoute(
+  platformRole: ReturnType<typeof useProductSession>["role"],
+  organizationRole: ReturnType<typeof useProductSession>["organizationRole"],
+) {
+  if (platformRole === "PLATFORM_ADMIN") {
+    return organizationRole === "ORGANIZATION_OWNER";
+  }
+  return isCustomerRole(organizationRole ?? platformRole);
+}
+
 export function OwnerRoute({ children, allowOnboarding = false }: { children: ReactNode; allowOnboarding?: boolean }) {
   const session = useProductSession();
   const [authError, setAuthError] = useState<string | null>(null);
@@ -46,8 +56,7 @@ export function OwnerRoute({ children, allowOnboarding = false }: { children: Re
   if (session.loading) return <LoadingGate />;
   if (!session.authenticated && authError) return <AuthenticationBlocked message={authError} />;
   if (!session.authenticated) return <LoadingGate label="Redirecting to sign in" />;
-  if (session.role === "PLATFORM_ADMIN") return <Redirect to="/access-denied" />;
-  if (!isCustomerRole(session.role)) return <Redirect to="/access-denied" />;
+  if (!canAccessOwnerRoute(session.role, session.organizationRole)) return <Redirect to="/access-denied" />;
   if (!allowOnboarding && (!session.organization || !session.ghlConnected)) return <Redirect to="/connect-ghl" />;
 
   return <>{children}</>;

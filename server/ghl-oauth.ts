@@ -12,7 +12,8 @@ import type { Express, Request, Response } from "express";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./_core/env";
 import { sdk } from "./_core/sdk";
-import { upsertGhlToken, getGhlToken, getMembershipById, getMembershipUser, getUserSubaccounts } from "./db";
+import { resolveOrganizationAuthorizationContext } from "./authorization";
+import { upsertGhlToken, getGhlToken } from "./db";
 import { consumeOAuthState, persistAuditEvent, persistOAuthState, upsertGhlTokenRecord } from "./db/runtimePersistence";
 
 const GHL_AUTH_URL = "https://marketplace.gohighlevel.com/oauth/chooselocation";
@@ -32,8 +33,6 @@ type GhlConnectSessionContext = {
   locationId: string;
   locationName: string;
 };
-
-const allowedOAuthMembershipRole = "owner";
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -657,48 +656,34 @@ async function resolveGhlConnectSessionContext(
     throw new GhlOAuthRequestError(401, "Authentication is required before connecting GoHighLevel.");
   }
 
-  if (user.role === "admin") {
+  const organizationContext = await resolveOrganizationAuthorizationContext(user, locationId);
+
+  if (
+    user.role === "admin"
+    && (!organizationContext || organizationContext.role !== "ORGANIZATION_OWNER")
+  ) {
     logGhlOAuth("start.denied", { userId: user.id, role: "PLATFORM_ADMIN", reason: "support_context_required" });
     throw new GhlOAuthRequestError(403, "Platform administrators require an approved audited support context.");
   }
 
-  const subaccounts = await getUserSubaccounts(user.id);
-
-  if (subaccounts.length === 0) {
-    throw new GhlOAuthRequestError(403, "No active EEOS organization is available for this user.");
+  if (!organizationContext) {
+    throw new GhlOAuthRequestError(403, "No active EEOS organization and location are available for this user.");
   }
 
-  const selected = locationId
-    ? subaccounts.find((subaccount) => subaccount.ghlLocationId === locationId)
-    : subaccounts[0];
-
-  if (!selected) {
-    throw new GhlOAuthRequestError(403, "The selected GoHighLevel location is not available to this EEOS user.");
-  }
-
-  const membership = await getMembershipById(selected.membershipId);
-  const membershipUser = await getMembershipUser(selected.membershipId, user.id);
-
-  if (!membership || !membershipUser?.isActive) {
-    throw new GhlOAuthRequestError(403, "The selected EEOS organization could not be verified.");
-  }
-
-  if (requireOwner && membershipUser.role !== allowedOAuthMembershipRole) {
-    const role = membershipUser.role === "executive"
-      ? "LOCATION_MANAGER"
-      : membershipUser.role === "analyst" ? "STAFF" : membershipUser.role === "viewer" ? "READ_ONLY" : "UNKNOWN";
+  if (requireOwner && organizationContext.role !== "ORGANIZATION_OWNER") {
+    const role = organizationContext.role;
     logGhlOAuth("start.denied", {
       userId: user.id,
-      organizationId: String(membership.organizationId),
-      locationId: selected.ghlLocationId,
+      organizationId: organizationContext.organizationId,
+      locationId: organizationContext.selectedLocationId,
       role,
       reason: "role_not_allowed",
     });
     await persistAuditEvent({
-      organizationId: String(membership.organizationId),
+      organizationId: organizationContext.organizationId!,
       source: "gohighlevel",
       eventType: "oauth.start.denied",
-      locationId: selected.ghlLocationId,
+      locationId: organizationContext.selectedLocationId,
       metadata: { userId: String(user.id), role, reason: "role_not_allowed" },
     });
     throw new GhlOAuthRequestError(403, "Organization owner access is required to connect GoHighLevel.");
@@ -708,14 +693,12 @@ async function resolveGhlConnectSessionContext(
     userId: user.id,
     userName: user.name || "EEOS user",
     userEmail: user.email || "Email unavailable",
-    userRole: membershipUser.role === "owner"
-      ? "ORGANIZATION_OWNER"
-      : membershipUser.role === "executive" ? "LOCATION_MANAGER" : membershipUser.role === "analyst" ? "STAFF" : "READ_ONLY",
-    organizationId: String(membership.organizationId),
-    organizationName: selected.orgName,
-    membershipId: selected.membershipId,
-    locationId: selected.ghlLocationId,
-    locationName: selected.name,
+    userRole: organizationContext.role,
+    organizationId: organizationContext.organizationId!,
+    organizationName: organizationContext.organizationName!,
+    membershipId: Number(organizationContext.membershipId),
+    locationId: organizationContext.selectedLocationId,
+    locationName: organizationContext.selectedLocationName,
   };
 }
 

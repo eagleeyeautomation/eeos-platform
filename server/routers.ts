@@ -39,6 +39,7 @@ import {
   requirePlatformAdmin,
   requireWritableOrganizationRole,
   resolveAuthorizationContext,
+  resolveOrganizationAuthorizationContext,
 } from "./authorization";
 
 export const appRouter = router({
@@ -56,6 +57,7 @@ export const appRouter = router({
           authenticated: false,
           user: null,
           role: null,
+          organizationRole: null,
           organization: null,
           authorizedLocations: [],
           ghlConnected: false,
@@ -63,9 +65,10 @@ export const appRouter = router({
       }
 
       const authorization = await resolveAuthorizationContext(ctx.user);
-      const authorizedLocations = await listAuthorizedLocationsForMembership(authorization.membershipId);
+      const organizationAuthorization = await resolveOrganizationAuthorizationContext(ctx.user);
+      const authorizedLocations = await listAuthorizedLocationsForMembership(organizationAuthorization?.membershipId ?? null);
       const connectedTokens = await Promise.all(
-        authorization.authorizedLocationIds.map((locationId) => getGhlToken(locationId))
+        (organizationAuthorization?.authorizedLocationIds ?? []).map((locationId) => getGhlToken(locationId))
       );
 
       return {
@@ -77,9 +80,10 @@ export const appRouter = router({
           email: ctx.user.email ?? undefined,
         },
         role: authorization.role,
-        organization: authorization.organizationId ? {
-          id: authorization.organizationId,
-          name: authorization.organizationName ?? "Organization",
+        organizationRole: organizationAuthorization?.role ?? null,
+        organization: organizationAuthorization?.organizationId ? {
+          id: organizationAuthorization.organizationId,
+          name: organizationAuthorization.organizationName ?? "Organization",
         } : null,
         authorizedLocations,
         ghlConnected: connectedTokens.some((token) => token?.isActive && token.scope === "private_integration"),

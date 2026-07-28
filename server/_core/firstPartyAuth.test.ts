@@ -32,6 +32,7 @@ const authorizationMocks = vi.hoisted(() => ({
   listAuthorizedLocationsForMembership: vi.fn(),
   requirePlatformAdmin: vi.fn(),
   resolveAuthorizationContext: vi.fn(),
+  resolveOrganizationAuthorizationContext: vi.fn(),
 }));
 
 const passwordResetEmailMocks = vi.hoisted(() => ({
@@ -73,6 +74,7 @@ async function withServer<T>(callback: (baseUrl: string) => Promise<T>) {
   try {
     return await callback(`http://127.0.0.1:${address.port}`);
   } finally {
+    server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 }
@@ -119,6 +121,20 @@ describe("EEOS first-party authentication", () => {
             organizationName: "PRN Staffers",
             membershipId: "100",
             authorizedLocationIds: ["loc-sc"],
+          }
+    ));
+    authorizationMocks.resolveOrganizationAuthorizationContext.mockImplementation(async (account: User) => (
+      account.role === "admin"
+        ? null
+        : {
+            userId: String(account.id),
+            role: "ORGANIZATION_OWNER",
+            organizationId: "10",
+            organizationName: "PRN Staffers",
+            membershipId: "100",
+            authorizedLocationIds: ["loc-sc"],
+            selectedLocationId: "loc-sc",
+            selectedLocationName: "South Carolina",
           }
     ));
     authorizationMocks.requirePlatformAdmin.mockImplementation(async (account: User | null | undefined) => {
@@ -342,6 +358,48 @@ describe("EEOS first-party authentication", () => {
         ghlConnected: true,
       });
       expect(dbMocks.touchAuthSession).toHaveBeenCalledWith(20);
+    });
+  });
+
+  it("keeps the platform role while exposing an independently validated owner context", async () => {
+    const account = user({ role: "admin" });
+    const token = "opaque-session-token-for-dual-role-owner";
+    dbMocks.getAuthSessionByTokenHash.mockResolvedValue({
+      id: 21,
+      userId: account.id,
+      tokenHash: hashOpaqueToken(token),
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null,
+      createdAt: now,
+      lastSeenAt: now,
+      ipAddress: null,
+      userAgent: null,
+    });
+    dbMocks.getUserById.mockResolvedValue(account);
+    authorizationMocks.resolveOrganizationAuthorizationContext.mockResolvedValue({
+      userId: String(account.id),
+      role: "ORGANIZATION_OWNER",
+      organizationId: "10",
+      organizationName: "PRN Staffers",
+      membershipId: "100",
+      authorizedLocationIds: ["loc-sc"],
+      selectedLocationId: "loc-sc",
+      selectedLocationName: "South Carolina",
+    });
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/session`, {
+        headers: { Cookie: `${COOKIE_NAME}=${token}` },
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        authenticated: true,
+        role: "PLATFORM_ADMIN",
+        organizationRole: "ORGANIZATION_OWNER",
+        organization: { id: "10", name: "PRN Staffers" },
+        authorizedLocations: [{ id: "loc-sc", name: "South Carolina" }],
+      });
     });
   });
 

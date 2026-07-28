@@ -16,6 +16,7 @@ export type SessionContextValue = {
     email?: string;
   } | null;
   role: ProductRole | null;
+  organizationRole: ProductRole | null;
   organization: {
     id: string;
     name: string;
@@ -32,6 +33,7 @@ const anonymousSession: SessionContextValue = {
   authenticated: false,
   user: null,
   role: null,
+  organizationRole: null,
   organization: null,
   authorizedLocations: [],
   ghlConnected: false,

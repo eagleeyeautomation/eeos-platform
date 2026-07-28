@@ -18,7 +18,12 @@ import {
   upsertMembershipUser,
   upsertUser,
 } from "../db";
-import { listAuthorizedLocationsForMembership, requirePlatformAdmin, resolveAuthorizationContext } from "../authorization";
+import {
+  listAuthorizedLocationsForMembership,
+  requirePlatformAdmin,
+  resolveAuthorizationContext,
+  resolveOrganizationAuthorizationContext,
+} from "../authorization";
 import { getSessionCookieOptions } from "./cookies";
 import { hashPassword, validatePasswordPolicy, verifyPassword } from "./passwordAuth";
 import { buildPasswordResetUrl, sendPasswordResetEmail } from "./passwordResetEmail";
@@ -129,6 +134,7 @@ async function buildSessionSummary(req: Request) {
       authenticated: false,
       user: null,
       role: null,
+      organizationRole: null,
       organization: null,
       authorizedLocations: [],
       ghlConnected: false,
@@ -136,9 +142,10 @@ async function buildSessionSummary(req: Request) {
   }
 
   const authorization = await resolveAuthorizationContext(user);
-  const authorizedLocations = await listAuthorizedLocationsForMembership(authorization.membershipId);
+  const organizationAuthorization = await resolveOrganizationAuthorizationContext(user);
+  const authorizedLocations = await listAuthorizedLocationsForMembership(organizationAuthorization?.membershipId ?? null);
   const connectedTokens = await Promise.all(
-    authorization.authorizedLocationIds.map((locationId) => getGhlToken(locationId)),
+    (organizationAuthorization?.authorizedLocationIds ?? []).map((locationId) => getGhlToken(locationId)),
   );
 
   return {
@@ -150,9 +157,10 @@ async function buildSessionSummary(req: Request) {
       email: user.email ?? undefined,
     },
     role: authorization.role,
-    organization: authorization.organizationId ? {
-      id: authorization.organizationId,
-      name: authorization.organizationName ?? "Organization",
+    organizationRole: organizationAuthorization?.role ?? null,
+    organization: organizationAuthorization?.organizationId ? {
+      id: organizationAuthorization.organizationId,
+      name: organizationAuthorization.organizationName ?? "Organization",
     } : null,
     authorizedLocations,
     ghlConnected: connectedTokens.some((token) => token?.isActive && token.scope === "private_integration"),

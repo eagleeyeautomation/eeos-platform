@@ -630,6 +630,13 @@ export async function getOrganizationBySlug(slug: string): Promise<Organization 
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getOrganizationById(id: number): Promise<Organization | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(organizations).where(eq(organizations.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function getAllOrganizations(): Promise<Organization[]> {
   const db = await getDb();
   if (!db) return [];
@@ -745,11 +752,7 @@ export async function getUserSubaccounts(userId: number): Promise<Array<Subaccou
     getActiveMembershipLinks: async (requestedUserId) => db.select().from(membershipUsers)
       .where(and(eq(membershipUsers.userId, requestedUserId), eq(membershipUsers.isActive, true))),
     getMembershipById,
-    getOrganizationById: async (organizationId) => {
-      const result = await db.select().from(organizations)
-        .where(eq(organizations.id, organizationId)).limit(1);
-      return result[0];
-    },
+    getOrganizationById,
     getActiveSubaccountsByMembershipId: getSubaccountsByMembership,
   });
 }

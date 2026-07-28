@@ -5,6 +5,7 @@ const dbMocks = vi.hoisted(() => ({
   getAllOrganizations: vi.fn(),
   getMembershipById: vi.fn(),
   getMembershipUser: vi.fn(),
+  getOrganizationById: vi.fn(),
   getSubaccountsByMembership: vi.fn(),
   getUserSubaccounts: vi.fn(),
 }));
@@ -17,6 +18,7 @@ const {
   requirePlatformAdmin,
   requireWritableOrganizationRole,
   resolveAuthorizationContext,
+  resolveOrganizationAuthorizationContext,
 } = await import("./authorization");
 
 function user(role: "user" | "admin" = "user"): User {
@@ -37,8 +39,9 @@ function user(role: "user" | "admin" = "user"): User {
 describe("EEOS authorization helpers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    dbMocks.getMembershipById.mockResolvedValue({ id: 100, organizationId: 10 });
+    dbMocks.getMembershipById.mockResolvedValue({ id: 100, organizationId: 10, status: "active" });
     dbMocks.getMembershipUser.mockResolvedValue({ role: "owner", isActive: true });
+    dbMocks.getOrganizationById.mockResolvedValue({ id: 10, name: "PRN Staffers", isActive: true });
     dbMocks.getSubaccountsByMembership.mockResolvedValue([
       { ghlLocationId: "loc-a", name: "A" },
       { ghlLocationId: "loc-b", name: "B" },
@@ -64,6 +67,25 @@ describe("EEOS authorization helpers", () => {
       organizationName: "PRN Staffers",
       authorizedLocationIds: ["loc-a", "loc-b"],
     });
+  });
+
+  it("resolves a dual-role platform admin as an owner only in an active organization context", async () => {
+    await expect(resolveOrganizationAuthorizationContext(user("admin"), "loc-a")).resolves.toMatchObject({
+      role: "ORGANIZATION_OWNER",
+      organizationId: "10",
+      selectedLocationId: "loc-a",
+      authorizedLocationIds: ["loc-a", "loc-b"],
+    });
+    await expect(resolveAuthorizationContext(user("admin"))).resolves.toMatchObject({
+      role: "PLATFORM_ADMIN",
+      organizationId: null,
+    });
+  });
+
+  it("does not resolve inactive memberships or out-of-scope locations", async () => {
+    dbMocks.getMembershipById.mockResolvedValueOnce({ id: 100, organizationId: 10, status: "suspended" });
+    await expect(resolveOrganizationAuthorizationContext(user("admin"), "loc-a")).resolves.toBeNull();
+    await expect(resolveOrganizationAuthorizationContext(user("admin"), "loc-other")).resolves.toBeNull();
   });
 
   it("blocks a customer from retrieving another organization's location", async () => {

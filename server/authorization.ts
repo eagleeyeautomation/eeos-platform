@@ -4,6 +4,7 @@ import {
   getAllOrganizations,
   getMembershipById,
   getMembershipUser,
+  getOrganizationById,
   getSubaccountsByMembership,
   getUserSubaccounts,
 } from "./db";
@@ -24,6 +25,11 @@ export type AuthorizationContext = {
   authorizedLocationIds: string[];
 };
 
+export type OrganizationAuthorizationContext = AuthorizationContext & {
+  selectedLocationId: string;
+  selectedLocationName: string;
+};
+
 function mapMembershipRole(role?: string | null): EeosRole {
   if (role === "owner") return "ORGANIZATION_OWNER";
   if (role === "executive") return "LOCATION_MANAGER";
@@ -38,6 +44,44 @@ export function requireAuthenticatedUser(user: User | null | undefined): User {
   return user;
 }
 
+export async function resolveOrganizationAuthorizationContext(
+  user: User,
+  requestedLocationId?: string,
+): Promise<OrganizationAuthorizationContext | null> {
+  const subaccounts = await getUserSubaccounts(user.id);
+  const selected = requestedLocationId
+    ? subaccounts.find((subaccount) => subaccount.ghlLocationId === requestedLocationId)
+    : subaccounts[0];
+
+  if (!selected) return null;
+
+  const [membership, membershipUser] = await Promise.all([
+    getMembershipById(selected.membershipId),
+    getMembershipUser(selected.membershipId, user.id),
+  ]);
+  if (!membership || membership.status !== "active" || !membershipUser?.isActive) return null;
+
+  const organization = await getOrganizationById(membership.organizationId);
+  if (!organization?.isActive) return null;
+
+  const membershipSubaccounts = subaccounts.filter(
+    (subaccount) => subaccount.membershipId === selected.membershipId,
+  );
+
+  return {
+    userId: String(user.id),
+    role: mapMembershipRole(membershipUser.role),
+    organizationId: String(membership.organizationId),
+    organizationName: organization.name,
+    membershipId: String(selected.membershipId),
+    authorizedLocationIds: Array.from(new Set(
+      membershipSubaccounts.map((subaccount) => subaccount.ghlLocationId),
+    )),
+    selectedLocationId: selected.ghlLocationId,
+    selectedLocationName: selected.name,
+  };
+}
+
 export async function resolveAuthorizationContext(user: User): Promise<AuthorizationContext> {
   if (user.role === "admin") {
     return {
@@ -50,9 +94,8 @@ export async function resolveAuthorizationContext(user: User): Promise<Authoriza
     };
   }
 
-  const subaccounts = await getUserSubaccounts(user.id);
-  const firstSubaccount = subaccounts[0];
-  if (!firstSubaccount) {
+  const organizationContext = await resolveOrganizationAuthorizationContext(user);
+  if (!organizationContext) {
     return {
       userId: String(user.id),
       role: "STAFF",
@@ -63,17 +106,7 @@ export async function resolveAuthorizationContext(user: User): Promise<Authoriza
     };
   }
 
-  const membership = await getMembershipById(firstSubaccount.membershipId);
-  const membershipUser = await getMembershipUser(firstSubaccount.membershipId, user.id);
-
-  return {
-    userId: String(user.id),
-    role: mapMembershipRole(membershipUser?.role),
-    organizationId: membership ? String(membership.organizationId) : null,
-    organizationName: firstSubaccount.orgName,
-    membershipId: String(firstSubaccount.membershipId),
-    authorizedLocationIds: Array.from(new Set(subaccounts.map((subaccount) => subaccount.ghlLocationId))),
-  };
+  return organizationContext;
 }
 
 export async function requireOrganizationMembership(user: User | null | undefined): Promise<AuthorizationContext> {
