@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CheckCircle2, ExternalLink, Loader2, Lock, PlugZap, ShieldCheck } from "lucide-react";
 import { Link } from "wouter";
 import Footer from "@/components/Footer";
+import { GoHighLevelSecureConnectButton } from "@/components/GoHighLevelSecureConnectButton";
 import Navigation from "@/components/Navigation";
 
 export default function GoHighLevelIntegration() {
@@ -103,6 +104,7 @@ type PreflightStatus = {
   organization: string;
   role: string;
   location: string;
+  locationId: string;
 };
 
 function SafeOAuthPreflight() {
@@ -164,6 +166,7 @@ function SafeOAuthPreflight() {
         organization: session.organization.name ?? "Organization verified",
         role: session.user?.role ?? "ORGANIZATION_OWNER",
         location: session.location.name ?? "Authorized location verified",
+        locationId: session.location.id,
       });
     } catch (preflightError) {
       setError(preflightError instanceof Error ? preflightError.message : "OAuth preflight verification failed.");
@@ -188,16 +191,21 @@ function SafeOAuthPreflight() {
         {running ? "Verifying…" : "Verify OAuth Preflight"}
       </button>
       {result ? (
-        <div className="mt-3 space-y-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-300">
-          <p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-4 w-4" />Preflight verified — HTTP 200</p>
-          <p>Organization: {result.organization}</p>
-          <p>Effective role: {result.role}</p>
-          <p>Location: {result.location}</p>
-          <p>Provider: {result.provider}</p>
-          <p>Authorization destination: {result.destination}</p>
-          <p>OAuth state: created and {result.stateStatus}</p>
-          <p>Original expiry: {result.expiresAt}</p>
-        </div>
+        <>
+          <div className="mt-3 space-y-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+            <p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-4 w-4" />Preflight verified — HTTP 200</p>
+            <p>Organization: {result.organization}</p>
+            <p>Effective role: {result.role}</p>
+            <p>Location: {result.location}</p>
+            <p>Provider: {result.provider}</p>
+            <p>Authorization destination: {result.destination}</p>
+            <p>OAuth state: created and {result.stateStatus}</p>
+            <p>Original expiry: {result.expiresAt}</p>
+          </div>
+          <div className="mt-3">
+            <GoHighLevelSecureConnectButton locationId={result.locationId} />
+          </div>
+        </>
       ) : null}
       {error ? <p className="mt-3 text-xs text-red-300">{error}</p> : null}
     </div>
