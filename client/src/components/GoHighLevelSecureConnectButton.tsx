@@ -19,6 +19,7 @@ type GoHighLevelSessionContext = {
     name: string;
   };
   csrfCookieReady: boolean;
+  csrfToken: string;
 };
 
 type GoHighLevelSecureConnectButtonProps = {
@@ -87,7 +88,7 @@ export function GoHighLevelSecureConnectButton({ locationId }: GoHighLevelSecure
     setMessage(null);
 
     try {
-      const csrfToken = readCookie("eeos_csrf");
+      const csrfToken = sessionContext.csrfToken;
 
       if (!csrfToken) {
         throw new Error("Your secure session token is missing. Refresh this page and sign in again before connecting GoHighLevel.");
@@ -190,14 +191,4 @@ function InlineNotice({ tone, message }: { tone: "success" | "warning" | "error"
       {message}
     </p>
   );
-}
-
-function readCookie(name: string) {
-  const prefix = `${name}=`;
-
-  return document.cookie
-    .split(";")
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith(prefix))
-    ?.slice(prefix.length);
 }

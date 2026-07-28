@@ -163,6 +163,11 @@ describe("GoHighLevel production OAuth security", () => {
     });
     expect(result.status).toBe(200);
     expect(result.headers.get("set-cookie")).toMatch(/^eeos_csrf=.+/);
+    expect(result.body).toMatchObject({
+      csrfCookieReady: true,
+      csrfToken: expect.stringMatching(/^[A-Za-z0-9_-]{32,}$/),
+    });
+    expect(result.headers.get("set-cookie")).toContain(result.body.csrfToken);
   });
 
   it("prevents a duplicate active connection before creating OAuth state", async () => {

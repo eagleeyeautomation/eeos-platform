@@ -107,6 +107,7 @@ type OwnerSessionContext = {
   role: string;
   location: string;
   locationId: string;
+  csrfToken: string;
 };
 
 function SafeOAuthPreflight() {
@@ -135,8 +136,9 @@ function SafeOAuthPreflight() {
         user?: { role?: string };
         organization?: { id?: string; name?: string };
         location?: { id?: string; name?: string };
+        csrfToken?: string;
       };
-      if (!sessionResponse.ok || !session.organization?.id || !session.location?.id) {
+      if (!sessionResponse.ok || !session.organization?.id || !session.location?.id || !session.csrfToken) {
         throw new Error(session.message ?? "The active organization-owner context could not be verified.");
       }
 
@@ -147,6 +149,7 @@ function SafeOAuthPreflight() {
         role: session.user?.role ?? "ORGANIZATION_OWNER",
         location: session.location.name ?? "Authorized location verified",
         locationId: session.location.id,
+        csrfToken: session.csrfToken,
       };
       setSessionContext(context);
       setInstallationConfirmed(
@@ -176,7 +179,7 @@ function SafeOAuthPreflight() {
     setError(null);
 
     try {
-      const csrfToken = readCookie("eeos_csrf");
+      const csrfToken = sessionContext.csrfToken;
       if (!csrfToken) throw new Error("The protected preflight CSRF token is unavailable.");
 
       const query = new URLSearchParams({
@@ -314,12 +317,6 @@ function SafeOAuthPreflight() {
       {error ? <p className="mt-3 text-xs text-red-300">{error}</p> : null}
     </div>
   );
-}
-
-function readCookie(name: string) {
-  const prefix = `${name}=`;
-  const value = document.cookie.split(";").map((item) => item.trim()).find((item) => item.startsWith(prefix));
-  return value ? decodeURIComponent(value.slice(prefix.length)) : null;
 }
 
 function InfoCard({

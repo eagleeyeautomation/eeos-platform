@@ -371,7 +371,7 @@ export function registerGhlOAuthRoutes(app: Express) {
   app.get("/api/integrations/gohighlevel/session-context", async (req: Request, res: Response) => {
     try {
       const context = await resolveGhlConnectSessionContext(req, getQueryParam(req, "locationId"));
-      ensureCsrfCookie(req, res);
+      const csrfToken = ensureCsrfCookie(req, res);
 
       res.status(200).json({
         authenticated: true,
@@ -391,6 +391,7 @@ export function registerGhlOAuthRoutes(app: Express) {
           name: context.locationName,
         },
         csrfCookieReady: true,
+        csrfToken,
       });
     } catch (error) {
       sendOAuthStartError(res, error);
@@ -761,13 +762,15 @@ function sendOAuthStartError(res: Response, error: unknown) {
 
 function ensureCsrfCookie(req: Request, res: Response) {
   const secure = isSecureRequest(req);
-  res.cookie(EEOS_CSRF_COOKIE, randomBytes(32).toString("base64url"), {
+  const csrfToken = randomBytes(32).toString("base64url");
+  res.cookie(EEOS_CSRF_COOKIE, csrfToken, {
     httpOnly: false,
     path: "/",
     sameSite: secure ? "none" : "lax",
     secure,
     maxAge: 10 * 60 * 1000,
   });
+  return csrfToken;
 }
 
 function validateCsrf(req: Request) {
