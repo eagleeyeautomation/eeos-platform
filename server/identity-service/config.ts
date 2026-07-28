@@ -57,8 +57,19 @@ export function loadIdentityServiceConfig(env: NodeJS.ProcessEnv = process.env):
   }
   const legacyMysqlDatabaseUrl = required("LEGACY_MYSQL_DATABASE_URL", env.LEGACY_MYSQL_DATABASE_URL);
   const sessionSecret = required("JWT_SECRET", env.JWT_SECRET);
-  const redisRestUrl = env.UPSTASH_REDIS_REST_URL;
-  const redisRestToken = env.UPSTASH_REDIS_REST_TOKEN;
+  const legacyRedisPair = env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN
+    ? { url: env.UPSTASH_REDIS_REST_URL, token: env.UPSTASH_REDIS_REST_TOKEN }
+    : undefined;
+  const integrationRedisPair = env.UPSTASH_REDIS_REST_KV_REST_API_URL
+    && env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN
+    ? {
+      url: env.UPSTASH_REDIS_REST_KV_REST_API_URL,
+      token: env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN,
+    }
+    : undefined;
+  const redisPair = legacyRedisPair ?? integrationRedisPair;
+  const redisRestUrl = redisPair?.url;
+  const redisRestToken = redisPair?.token;
   if (replayStoreProvider === "redis" && (!redisRestUrl || !redisRestToken)) {
     throw new Error("UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required for the redis replay store.");
   }

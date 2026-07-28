@@ -131,7 +131,8 @@ describe("Identity Service deployment readiness", () => {
       IDENTITY_SERVICE_EXPECTED_CLIENT_ID: "eeos-core-platform", IDENTITY_SERVICE_TRUSTED_CLIENT_JWKS: jwks,
       IDENTITY_SERVICE_ASSERTION_PRIVATE_KEY: privateKey, IDENTITY_SERVICE_ASSERTION_KEY_ID: "test-key",
       LEGACY_MYSQL_DATABASE_URL: "mysql://test.invalid/database", JWT_SECRET: "test-session-secret",
-      UPSTASH_REDIS_REST_URL: "https://redis.invalid", UPSTASH_REDIS_REST_TOKEN: "test-token" });
+      UPSTASH_REDIS_REST_KV_REST_API_URL: "https://redis.invalid",
+      UPSTASH_REDIS_REST_KV_REST_API_TOKEN: "test-token" });
     const redisClient = { set: vi.fn().mockResolvedValue("OK"), ping: vi.fn().mockResolvedValue("PONG") };
     const dependencies = readyDependencies();
     const server = createServer(createIdentityServiceApp(config, { ...dependencies, replayStore: undefined, redisClient }));
