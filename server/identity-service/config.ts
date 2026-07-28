@@ -7,6 +7,10 @@ import {
 
 const environmentSchema = z.enum(["local", "development", "test", "preview", "staging", "production"]);
 const logLevelSchema = z.enum(["debug", "info", "warn", "error"]);
+const redisPairSchema = z.object({
+  url: z.string().refine((value) => URL.canParse(value) && new URL(value).protocol === "https:"),
+  token: z.string().min(1),
+});
 
 export type IdentityServiceConfig = {
   host: string;
@@ -57,17 +61,17 @@ export function loadIdentityServiceConfig(env: NodeJS.ProcessEnv = process.env):
   }
   const legacyMysqlDatabaseUrl = required("LEGACY_MYSQL_DATABASE_URL", env.LEGACY_MYSQL_DATABASE_URL);
   const sessionSecret = required("JWT_SECRET", env.JWT_SECRET);
-  const legacyRedisPair = env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN
-    ? { url: env.UPSTASH_REDIS_REST_URL, token: env.UPSTASH_REDIS_REST_TOKEN }
-    : undefined;
-  const integrationRedisPair = env.UPSTASH_REDIS_REST_KV_REST_API_URL
-    && env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN
-    ? {
-      url: env.UPSTASH_REDIS_REST_KV_REST_API_URL,
-      token: env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN,
-    }
-    : undefined;
-  const redisPair = legacyRedisPair ?? integrationRedisPair;
+  const legacyRedisPair = redisPairSchema.safeParse({
+    url: env.UPSTASH_REDIS_REST_URL,
+    token: env.UPSTASH_REDIS_REST_TOKEN,
+  });
+  const integrationRedisPair = redisPairSchema.safeParse({
+    url: env.UPSTASH_REDIS_REST_KV_REST_API_URL,
+    token: env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN,
+  });
+  const redisPair = legacyRedisPair.success
+    ? legacyRedisPair.data
+    : integrationRedisPair.success ? integrationRedisPair.data : undefined;
   const redisRestUrl = redisPair?.url;
   const redisRestToken = redisPair?.token;
   if (replayStoreProvider === "redis" && (!redisRestUrl || !redisRestToken)) {
