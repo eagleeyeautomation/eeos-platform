@@ -760,13 +760,6 @@ function sendOAuthStartError(res: Response, error: unknown) {
 }
 
 function ensureCsrfCookie(req: Request, res: Response) {
-  const cookies = parseCookieHeader(req.headers.cookie || "");
-  const existing = cookies[EEOS_CSRF_COOKIE];
-
-  if (existing && existing.length >= 32) {
-    return;
-  }
-
   const secure = isSecureRequest(req);
   res.cookie(EEOS_CSRF_COOKIE, randomBytes(32).toString("base64url"), {
     httpOnly: false,

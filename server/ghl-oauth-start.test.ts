@@ -156,6 +156,15 @@ describe("GoHighLevel production OAuth security", () => {
     expect(persistAuditEventMock).toHaveBeenCalledWith(expect.objectContaining({ eventType: "oauth.start.allowed" }));
   });
 
+  it("rotates the browser-readable CSRF cookie when authenticated session context loads", async () => {
+    const result = await invoke("GET", "/api/integrations/gohighlevel/session-context", {
+      query: { locationId: "loc_sc" },
+      cookie: "eeos_csrf=stale-server-visible-cookie-that-the-browser-cannot-read",
+    });
+    expect(result.status).toBe(200);
+    expect(result.headers.get("set-cookie")).toMatch(/^eeos_csrf=.+/);
+  });
+
   it("prevents a duplicate active connection before creating OAuth state", async () => {
     getGhlTokenMock.mockResolvedValue({
       tenantId: "100",
