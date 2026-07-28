@@ -176,6 +176,112 @@ describe("EEOS first-party authentication", () => {
     });
   }, 15_000);
 
+  it("uses the owner fallback instead of returning to the public homepage", async () => {
+    const stored = await hashPassword("valid-password");
+    const account = user({ passwordHash: stored });
+    dbMocks.getUserByEmail.mockResolvedValue(account);
+    dbMocks.getUserById.mockResolvedValue(account);
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "owner@example.com",
+          password: "valid-password",
+          returnTo: "/",
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        success: true,
+        redirectTo: "/executive-home",
+        role: "ORGANIZATION_OWNER",
+      });
+    });
+  }, 15_000);
+
+  it("uses the platform-admin fallback instead of returning to the public homepage", async () => {
+    const stored = await hashPassword("valid-password");
+    const account = user({ role: "admin", passwordHash: stored });
+    dbMocks.getUserByEmail.mockResolvedValue(account);
+    dbMocks.getUserById.mockResolvedValue(account);
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "admin@example.com",
+          password: "valid-password",
+          returnTo: "/",
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        success: true,
+        redirectTo: "/admin",
+        role: "PLATFORM_ADMIN",
+      });
+    });
+  }, 15_000);
+
+  it("accepts valid authenticated internal return paths", async () => {
+    const stored = await hashPassword("valid-password");
+    const account = user({ passwordHash: stored });
+    dbMocks.getUserByEmail.mockResolvedValue(account);
+    dbMocks.getUserById.mockResolvedValue(account);
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "owner@example.com",
+          password: "valid-password",
+          returnTo: "/ai-recommendations?priority=high",
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        success: true,
+        redirectTo: "/ai-recommendations?priority=high",
+      });
+    });
+  }, 15_000);
+
+  it.each([
+    ["external URL", "https://example.com/redirect"],
+    ["protocol-relative URL", "//example.com/redirect"],
+    ["API path", "/api/private"],
+  ])("rejects an unsafe %s return destination", async (_label, returnTo) => {
+    const stored = await hashPassword("valid-password");
+    const account = user({ passwordHash: stored });
+    dbMocks.getUserByEmail.mockResolvedValue(account);
+    dbMocks.getUserById.mockResolvedValue(account);
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "owner@example.com",
+          password: "valid-password",
+          returnTo,
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        success: true,
+        redirectTo: "/executive-home",
+      });
+    });
+  }, 15_000);
+
   it("rejects invalid passwords without issuing a session", async () => {
     const stored = await hashPassword("valid-password");
     dbMocks.getUserByEmail.mockResolvedValue(user({ passwordHash: stored }));

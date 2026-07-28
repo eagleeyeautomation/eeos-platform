@@ -19,6 +19,11 @@ import Footer from "@/components/Footer";
 import BusinessMemoryCommandCenter from "@/components/BusinessMemoryCommandCenter";
 import AthenaExecutiveBrief from "@/components/AthenaExecutiveBrief";
 import AthenaLearningLoop from "@/components/AthenaLearningLoop";
+import { EeosMascotGuide } from "@/components/eeos/EeosMascotGuide";
+import { EeosMetricCard } from "@/components/eeos/EeosMetricCard";
+import { EeosStatusBadge } from "@/components/eeos/EeosStatusBadge";
+import { EeosSurface } from "@/components/eeos/EeosSurface";
+import { Button } from "@/components/ui/button";
 
 type EndpointHealth = {
   ok: boolean;
@@ -258,33 +263,34 @@ export default function ExecutiveDashboard() {
   const hasLiveData = Boolean(data?.ok && data.metrics && (metrics.totalContacts > 0 || metrics.users > 0 || metrics.opportunities > 0));
 
   return (
-    <div className="min-h-screen bg-[#0B0B0B] text-white">
+    <div className="eeos-dashboard-shell min-h-screen text-[var(--text-primary)]">
       <Navigation />
 
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        <section className="flex flex-col gap-5 border-b border-[#E7D8A3] pb-6 lg:flex-row lg:items-end lg:justify-between">
+        <section className="flex flex-col gap-5 border-b border-[var(--border-primary)] pb-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#C9A227]/40 bg-[#071C33] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#C9A227]">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[color:rgba(201,162,39,0.4)] bg-[var(--surface-primary)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--eeos-gold)]">
               <Database className="h-3.5 w-3.5" />
               Live PRN Staffers GoHighLevel Data
             </div>
-            <h1 className="text-3xl font-semibold tracking-normal text-white sm:text-4xl">
+            <h1 className="text-3xl font-semibold tracking-normal text-[var(--text-primary)] sm:text-4xl">
               EEOS Executive Dashboard
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#D8D8D8]">
-              Eagle Eye operating view for PRN Staffers South Carolina, powered by the private GoHighLevel integration.
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+              Executive operating view for PRN Staffers South Carolina, powered by the private GoHighLevel integration.
             </p>
           </div>
 
-          <button
+          <Button
             type="button"
             onClick={() => void loadDashboard()}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[#D9C579] bg-[#F8F4E8] px-4 text-sm font-semibold text-[#0B0B0B] transition hover:border-[#C9A227] hover:bg-[#F1E7C5] disabled:cursor-not-allowed disabled:opacity-60"
+            variant="eeosPrimary"
+            className="h-11 px-4 font-semibold"
             disabled={loading}
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
-          </button>
+          </Button>
         </section>
 
         {loading ? (
@@ -295,6 +301,13 @@ export default function ExecutiveDashboard() {
           <StatePanel title="No live records returned" message="The integration responded, but no dashboard records were available." tone="empty" />
         ) : (
           <>
+            <EeosMascotGuide
+              variant="welcome"
+              title={`Executive intelligence for ${locationName}`}
+              description="EEOS is monitoring live operational signals, recommendations, system health, and connected data from one executive command view."
+              alt="EEOS eagle intelligence guide"
+            />
+
             <AthenaExecutiveBrief />
 
             <AthenaLearningLoop />
@@ -313,46 +326,45 @@ export default function ExecutiveDashboard() {
 
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {cards.map((card) => (
-                <MetricCard key={card.label} {...card} />
+                <EeosMetricCard key={card.label} {...card} />
               ))}
             </section>
 
             <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-              <div className="rounded-lg border border-[#E7D8A3] bg-[#FFFFFF] p-5">
+              <EeosSurface className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#C9A227]">Business Health Score</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--eeos-gold)]">Business Health Score</p>
                     <div className="mt-4 flex items-end gap-3">
-                      <span className="text-6xl font-semibold text-white">{metrics.healthScore}</span>
-                      <span className="pb-2 text-lg text-[#B8B8B8]">/ 100</span>
+                      <span className="text-6xl font-semibold text-[var(--text-primary)]">{metrics.healthScore}</span>
+                      <span className="pb-2 text-lg text-[var(--text-muted)]">/ 100</span>
                     </div>
-                    <p className="mt-3 text-sm text-[#D8D8D8]">Live signal quality, opportunity coverage, and data availability are all healthy.</p>
+                    <p className="mt-3 text-sm text-[var(--text-secondary)]">Live signal quality, opportunity coverage, and data availability are all healthy.</p>
                   </div>
-                  <div className="rounded-full border border-[#C9A227]/40 bg-[#061A2F] p-3 text-[#C9A227]">
+                  <div className="rounded-full border border-[color:rgba(16,185,129,0.42)] bg-[color:rgba(16,185,129,0.1)] p-3 text-[#6ee7b7]">
                     <CheckCircle2 className="h-7 w-7" />
                   </div>
                 </div>
-              </div>
+              </EeosSurface>
 
-              <div className="rounded-lg border border-[#E7D8A3] bg-[#FFFFFF] p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#C9A227]">Connection Details</p>
+              <EeosSurface className="p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--eeos-gold)]">Connection Details</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <DetailRow icon={Clock} label="Last Sync" value={formatDate(data?.lastSync)} />
                   <DetailRow icon={MapPin} label="Connected Location" value={locationName} />
                 </div>
-              </div>
+              </EeosSurface>
             </section>
 
-            <section className="rounded-lg border border-[#E7D8A3] bg-[#FFFFFF] p-5">
+            <EeosSurface className="p-5">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#C9A227]">Endpoint Health Status</p>
-                  <h2 className="mt-1 text-xl font-semibold text-white">GoHighLevel API checks</h2>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--eeos-gold)]">Endpoint Health Status</p>
+                  <h2 className="mt-1 text-xl font-semibold text-[var(--text-primary)]">GoHighLevel API checks</h2>
                 </div>
-                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#10B981]/35 bg-[#05291F] px-3 py-1 text-xs font-semibold text-[#34D399]">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
+                <EeosStatusBadge status="healthy">
                   Connected
-                </span>
+                </EeosStatusBadge>
               </div>
 
               <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -360,7 +372,7 @@ export default function ExecutiveDashboard() {
                   <EndpointRow key={name} name={name} health={health} />
                 ))}
               </div>
-            </section>
+            </EeosSurface>
           </>
         )}
       </main>
@@ -392,39 +404,41 @@ function ExecutiveRecommendations({ response, error, onRefresh }: {
   ] : [];
 
   return (
-    <section className="rounded-lg border border-[#C9A227]/35 bg-[#FFFFFF] p-5 shadow-[0_24px_80px_rgba(201,162,39,0.08)]">
+    <EeosSurface tone="intelligence" className="p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#8C6F12]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(201,162,39,0.4)] bg-[color:rgba(201,162,39,0.1)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--eeos-gold)]">
             <Brain className="h-3.5 w-3.5" />
             Executive Recommendations
           </div>
-          <h2 className="mt-3 text-2xl font-semibold text-white">Intelligence Engine V1</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#D8D8D8]">
+          <h2 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">Intelligence Engine V1</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
             Rules-based analysis of verified live PRN Staffers GoHighLevel metrics. No automatic actions are taken.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {top ? <PriorityBadge priority={toDisplayPriority(top.priority)} /> : null}
-          <button
+          <Button
             type="button"
             onClick={onRefresh}
-            className="inline-flex h-8 items-center gap-2 rounded-md border border-[#D9C579] bg-[#F8F4E8] px-3 text-xs font-semibold text-[#0B0B0B] transition hover:border-[#C9A227] hover:bg-[#F1E7C5]"
+            size="sm"
+            variant="eeosPrimary"
+            className="text-xs font-semibold"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Refresh Recommendations
-          </button>
+          </Button>
         </div>
       </div>
 
       {error ? (
-        <div className="mt-5 rounded-md border border-[#F59E0B]/35 bg-[#2A1C05] p-4 text-sm text-[#FBBF24]">{error}</div>
+        <div className="mt-5 rounded-md border border-[color:rgba(239,68,68,0.45)] bg-[color:rgba(239,68,68,0.1)] p-4 text-sm text-[#fca5a5]">{error}</div>
       ) : !response || response.recommendations.length === 0 ? (
-        <div className="mt-5 rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4 text-sm text-[#D8D8D8]">No recommendation data available. Insufficient data.</div>
+        <div className="mt-5 rounded-md border border-[var(--border-primary)] bg-white/[0.03] p-4 text-sm text-[var(--text-secondary)]">No recommendation data available. Insufficient data.</div>
       ) : (
         <>
           {response.stale ? (
-            <div className="mt-5 rounded-md border border-[#F59E0B]/35 bg-[#2A1C05] p-4 text-sm text-[#FBBF24]">
+            <div className="mt-5 rounded-md border border-[color:rgba(201,162,39,0.48)] bg-[color:rgba(201,162,39,0.1)] p-4 text-sm text-[#e4c75f]">
               Stale-data warning: last recommendation data is older than 15 minutes.
             </div>
           ) : null}
@@ -436,7 +450,7 @@ function ExecutiveRecommendations({ response, error, onRefresh }: {
           </div>
         </>
       )}
-    </section>
+    </EeosSurface>
   );
 }
 
@@ -447,37 +461,37 @@ function RecommendationCard({ label, value, icon: Icon, recommendation }: {
   recommendation?: ExecutiveRecommendation;
 }) {
   return (
-    <div className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4">
+    <div className="rounded-lg border border-[var(--border-primary)] bg-white/[0.035] p-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2 text-[#C9A227]">
+        <div className="flex items-center gap-2 text-[var(--eeos-gold)]">
           <Icon className="h-4 w-4" />
           <p className="text-xs font-semibold uppercase tracking-[0.14em]">{label}</p>
         </div>
         {recommendation ? <PriorityBadge priority={toDisplayPriority(recommendation.priority)} compact /> : null}
       </div>
-      <p className="mt-3 text-sm leading-6 text-[#E8E8E8]">{value}</p>
+      <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{value}</p>
       {recommendation ? (
-        <div className="mt-4 space-y-3 border-t border-[#E7D8A3] pt-3">
+        <div className="mt-4 space-y-3 border-t border-[var(--border-primary)] pt-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#B8B8B8]">Confidence</p>
-            <p className="mt-1 text-sm text-white">{recommendation.confidence}/100</p>
-            <p className="mt-1 text-xs leading-5 text-[#A0A0A0]">{recommendation.confidenceReason}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Confidence</p>
+            <p className="mt-1 text-sm text-[var(--text-primary)]">{recommendation.confidence}/100</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{recommendation.confidenceReason}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#B8B8B8]">Supporting Evidence</p>
-            <ul className="mt-1 space-y-1 text-xs leading-5 text-[#D8D8D8]">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Supporting Evidence</p>
+            <ul className="mt-1 space-y-1 text-xs leading-5 text-[var(--text-secondary)]">
               {recommendation.evidence.map((item) => (
                 <li key={`${item.metric}-${item.value}`}>{item.metric}: {item.value} ({item.source})</li>
               ))}
             </ul>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#B8B8B8]">Recommended Action</p>
-            <p className="mt-1 text-xs leading-5 text-[#E8E8E8]">{recommendation.recommendedAction}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Recommended Action</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{recommendation.recommendedAction}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#B8B8B8]">How Success Will Be Measured</p>
-            <p className="mt-1 text-xs leading-5 text-[#E8E8E8]">{recommendation.measurement}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">How Success Will Be Measured</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{recommendation.measurement}</p>
           </div>
         </div>
       ) : null}
@@ -487,10 +501,10 @@ function RecommendationCard({ label, value, icon: Icon, recommendation }: {
 
 function PriorityBadge({ priority, compact = false }: { priority: RecommendationPriority; compact?: boolean }) {
   const styles: Record<RecommendationPriority, string> = {
-    Critical: "border-[#EF4444]/45 bg-[#2A0808] text-[#FCA5A5]",
-    High: "border-[#F59E0B]/45 bg-[#2A1C05] text-[#FBBF24]",
-    Medium: "border-[#C9A227]/45 bg-[#F8F4E8] text-[#8C6F12]",
-    Low: "border-[#10B981]/40 bg-[#05291F] text-[#34D399]",
+    Critical: "border-[color:rgba(239,68,68,0.48)] bg-[color:rgba(239,68,68,0.1)] text-[#fca5a5]",
+    High: "border-[color:rgba(239,68,68,0.38)] bg-[color:rgba(239,68,68,0.08)] text-[#fca5a5]",
+    Medium: "border-[color:rgba(201,162,39,0.45)] bg-[color:rgba(201,162,39,0.1)] text-[#e4c75f]",
+    Low: "border-[var(--border-primary)] bg-white/[0.04] text-[var(--text-secondary)]",
   };
 
   return (
@@ -524,29 +538,26 @@ function B2BIntelligenceSection({ response, error }: {
   ] : [];
 
   return (
-    <section className="rounded-lg border border-[#C9A227]/30 bg-[#FFFFFF] p-5 shadow-[0_24px_80px_rgba(201,162,39,0.06)]">
+    <EeosSurface tone="intelligence" className="p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#8C6F12]">
-            <Database className="h-3.5 w-3.5" />
-            B2B Intelligence
-          </div>
-          <h2 className="mt-3 text-2xl font-semibold text-white">GoHighLevel Business Development Signals</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#D8D8D8]">
+          <EeosStatusBadge status="intelligence">B2B Intelligence</EeosStatusBadge>
+          <h2 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">GoHighLevel Business Development Signals</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
             {response?.summary || "Insufficient data."}
           </p>
         </div>
         {response ? (
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#8C6F12]">
+          <EeosStatusBadge status="intelligence" showIcon={false}>
             Confidence {response.confidence}/100
-          </span>
+          </EeosStatusBadge>
         ) : null}
       </div>
 
       {error ? (
-        <div className="mt-5 rounded-md border border-[#F59E0B]/35 bg-[#2A1C05] p-4 text-sm text-[#FBBF24]">{error}</div>
+        <div className="mt-5 rounded-md border border-[color:rgba(239,68,68,0.45)] bg-[color:rgba(239,68,68,0.1)] p-4 text-sm text-[#fca5a5]">{error}</div>
       ) : !response ? (
-        <div className="mt-5 rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4 text-sm text-[#D8D8D8]">No B2B intelligence data available. Insufficient data.</div>
+        <div className="mt-5 rounded-md border border-[var(--border-primary)] bg-white/[0.03] p-4 text-sm text-[var(--text-secondary)]">No B2B intelligence data available. Insufficient data.</div>
       ) : (
         <div className="mt-5 grid gap-3 lg:grid-cols-3">
           {items.map((item) => (
@@ -554,7 +565,7 @@ function B2BIntelligenceSection({ response, error }: {
           ))}
         </div>
       )}
-    </section>
+    </EeosSurface>
   );
 }
 
@@ -566,15 +577,15 @@ function B2BInsightCard({ label, insight, icon: Icon }: {
   const displayInsight = insight || insufficientB2BInsight(label);
 
   return (
-    <div className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4">
-      <div className="flex items-center gap-2 text-[#C9A227]">
+    <div className="rounded-lg border border-[var(--border-primary)] bg-white/[0.035] p-4">
+      <div className="flex items-center gap-2 text-[var(--eeos-gold)]">
         <Icon className="h-4 w-4" />
         <p className="text-xs font-semibold uppercase tracking-[0.14em]">{label}</p>
       </div>
-      <p className="mt-3 text-sm leading-6 text-[#E8E8E8]">{displayInsight.observation}</p>
-      <div className="mt-4 border-t border-[#E7D8A3] pt-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#B8B8B8]">Evidence</p>
-        <ul className="mt-1 space-y-1 text-xs leading-5 text-[#D8D8D8]">
+      <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{displayInsight.observation}</p>
+      <div className="mt-4 border-t border-[var(--border-primary)] pt-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Evidence</p>
+        <ul className="mt-1 space-y-1 text-xs leading-5 text-[var(--text-secondary)]">
           {displayInsight.evidence.map((item) => (
             <li key={`${item.metric}-${item.value}`}>{item.metric}: {item.value}</li>
           ))}
@@ -612,29 +623,26 @@ function C2BIntelligenceSection({ response, error }: {
   ] : [];
 
   return (
-    <section className="rounded-lg border border-[#C9A227]/30 bg-[#FFFFFF] p-5 shadow-[0_24px_80px_rgba(201,162,39,0.06)]">
+    <EeosSurface tone="intelligence" className="p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#8C6F12]">
-            <Users className="h-3.5 w-3.5" />
-            C2B Intelligence
-          </div>
-          <h2 className="mt-3 text-2xl font-semibold text-white">Consumer Activity Signals</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#D8D8D8]">
+          <EeosStatusBadge status="intelligence">C2B Intelligence</EeosStatusBadge>
+          <h2 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">Consumer Activity Signals</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
             {response?.consumerDemandSummary || "Insufficient data."}
           </p>
         </div>
         {response ? (
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#8C6F12]">
+          <EeosStatusBadge status="intelligence" showIcon={false}>
             Confidence {response.confidence}/100
-          </span>
+          </EeosStatusBadge>
         ) : null}
       </div>
 
       {error ? (
-        <div className="mt-5 rounded-md border border-[#F59E0B]/35 bg-[#2A1C05] p-4 text-sm text-[#FBBF24]">{error}</div>
+        <div className="mt-5 rounded-md border border-[color:rgba(239,68,68,0.45)] bg-[color:rgba(239,68,68,0.1)] p-4 text-sm text-[#fca5a5]">{error}</div>
       ) : !response ? (
-        <div className="mt-5 rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4 text-sm text-[#D8D8D8]">No C2B intelligence data available. Insufficient data.</div>
+        <div className="mt-5 rounded-md border border-[var(--border-primary)] bg-white/[0.03] p-4 text-sm text-[var(--text-secondary)]">No C2B intelligence data available. Insufficient data.</div>
       ) : (
         <div className="mt-5 grid gap-3 lg:grid-cols-3">
           {items.map((item) => (
@@ -642,7 +650,7 @@ function C2BIntelligenceSection({ response, error }: {
           ))}
         </div>
       )}
-    </section>
+    </EeosSurface>
   );
 }
 
@@ -658,40 +666,18 @@ function demandSummaryInsight(response: C2BIntelligenceResponse): B2BInsight {
   };
 }
 
-function MetricCard({ label, value, detail, icon: Icon }: {
-  label: string;
-  value: string;
-  detail: string;
-  icon: typeof Users;
-}) {
-  return (
-    <div className="rounded-lg border border-[#E7D8A3] bg-[#FFFFFF] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.18)]">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#B8B8B8]">{label}</p>
-          <p className="mt-3 text-3xl font-semibold text-white">{value}</p>
-          <p className="mt-2 text-sm text-[#A0A0A0]">{detail}</p>
-        </div>
-        <div className="rounded-md border border-[#C9A227]/35 bg-[#F8F4E8] p-2.5 text-[#C9A227]">
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function DetailRow({ icon: Icon, label, value }: {
   icon: typeof Clock;
   label: string;
   value: string;
 }) {
   return (
-    <div className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4">
-      <div className="flex items-center gap-2 text-[#C9A227]">
+    <div className="rounded-lg border border-[var(--border-primary)] bg-white/[0.035] p-4">
+      <div className="flex items-center gap-2 text-[var(--eeos-gold)]">
         <Icon className="h-4 w-4" />
         <span className="text-xs font-semibold uppercase tracking-[0.14em]">{label}</span>
       </div>
-      <p className="mt-3 text-sm font-medium text-white">{value}</p>
+      <p className="mt-3 text-sm font-medium text-[var(--text-primary)]">{value}</p>
     </div>
   );
 }
@@ -703,19 +689,19 @@ function EndpointRow({ name, health }: { name: string; health: EndpointHealth })
   const ok = Boolean(attempt?.ok ?? health.ok);
 
   return (
-    <div className="rounded-md border border-[#E7D8A3] bg-[#FFFFFF] p-4">
+    <div className="rounded-lg border border-[var(--border-primary)] bg-white/[0.035] p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold capitalize text-white">{name}</p>
-          <p className="mt-1 break-all text-xs text-[#A0A0A0]">{visiblePath}</p>
+          <p className="text-sm font-semibold capitalize text-[var(--text-primary)]">{name}</p>
+          <p className="mt-1 break-all text-xs text-[var(--text-muted)]">{visiblePath}</p>
         </div>
-        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${ok ? "border-[#10B981]/35 bg-[#05291F] text-[#34D399]" : "border-[#F59E0B]/35 bg-[#2A1C05] text-[#FBBF24]"}`}>
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${ok ? "border-[color:rgba(16,185,129,0.42)] bg-[color:rgba(16,185,129,0.1)] text-[#6ee7b7]" : "border-[color:rgba(239,68,68,0.48)] bg-[color:rgba(239,68,68,0.1)] text-[#fca5a5]"}`}>
           {ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
           HTTP {visibleStatus}
         </span>
       </div>
-      <p className="mt-3 text-xs text-[#B8B8B8]">{health.responseTimeMs} ms response time</p>
-      {health.errorSummary ? <p className="mt-2 text-xs text-[#FBBF24]">{health.errorSummary}</p> : null}
+      <p className="mt-3 text-xs text-[var(--text-muted)]">{health.responseTimeMs} ms response time</p>
+      {health.errorSummary ? <p className="mt-2 text-xs text-[#fca5a5]">{health.errorSummary}</p> : null}
     </div>
   );
 }
@@ -723,13 +709,13 @@ function EndpointRow({ name, health }: { name: string; health: EndpointHealth })
 function StatePanel({ title, message, tone }: { title: string; message: string; tone: "loading" | "error" | "empty" }) {
   const Icon = tone === "error" ? AlertTriangle : tone === "empty" ? Database : RefreshCw;
   return (
-    <section className="rounded-lg border border-[#E7D8A3] bg-[#FFFFFF] p-8 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-[#C9A227]/35 bg-[#F8F4E8] text-[#C9A227]">
+    <EeosSurface tone={tone === "error" ? "critical" : "operational"} className="p-8 text-center">
+      <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full border ${tone === "error" ? "border-[color:rgba(239,68,68,0.5)] bg-[color:rgba(239,68,68,0.1)] text-[#fca5a5]" : "border-[color:rgba(201,162,39,0.42)] bg-[color:rgba(201,162,39,0.1)] text-[var(--eeos-gold)]"}`}>
         <Icon className={`h-6 w-6 ${tone === "loading" ? "animate-spin" : ""}`} />
       </div>
-      <h2 className="mt-4 text-xl font-semibold text-white">{title}</h2>
-      <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#D8D8D8]">{message}</p>
-    </section>
+      <h2 className="mt-4 text-xl font-semibold text-[var(--text-primary)]">{title}</h2>
+      <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">{message}</p>
+    </EeosSurface>
   );
 }
 

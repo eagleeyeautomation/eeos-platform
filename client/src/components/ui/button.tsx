@@ -19,6 +19,12 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
+        eeosPrimary:
+          "border border-[color:rgba(201,162,39,0.72)] bg-[var(--eeos-gold)] text-[var(--eeos-black)] shadow-[0_0_22px_rgba(201,162,39,0.16)] hover:bg-[#d4b03d] focus-visible:ring-[var(--focus-ring)]",
+        eeosSecondary:
+          "border border-[var(--border-primary)] bg-[var(--surface-primary)] text-[var(--text-primary)] hover:border-[var(--border-active)] hover:bg-[var(--surface-elevated)] focus-visible:ring-[var(--focus-ring)]",
+        success:
+          "border border-[color:rgba(16,185,129,0.55)] bg-[var(--status-success)] text-[var(--eeos-black)] hover:bg-[#34d399] focus-visible:ring-[color:rgba(16,185,129,0.45)]",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

@@ -60,7 +60,7 @@ function normalizeEmail(email: string) {
 }
 
 function safeReturnTo(value: string | undefined, fallback: string) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return fallback;
+  if (!value || value === "/" || !value.startsWith("/") || value.startsWith("//")) return fallback;
   if (value.startsWith("/api/")) return fallback;
   return value;
 }
