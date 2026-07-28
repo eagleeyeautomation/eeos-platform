@@ -420,6 +420,11 @@ export function registerGhlOAuthRoutes(app: Express) {
         return;
       }
 
+      const existingToken = await getGhlToken(context.organizationId);
+      if (existingToken?.isActive && existingToken.locationId === context.locationId) {
+        throw new GhlOAuthRequestError(409, "This GoHighLevel location is already connected.");
+      }
+
       const state = Buffer.from(JSON.stringify({
         tenantId: context.organizationId,
         locationId: context.locationId,

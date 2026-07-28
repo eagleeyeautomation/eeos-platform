@@ -1,9 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, ExternalLink, Loader2, Lock, PlugZap, ShieldCheck } from "lucide-react";
 import { Link } from "wouter";
 import Footer from "@/components/Footer";
 import { GoHighLevelSecureConnectButton } from "@/components/GoHighLevelSecureConnectButton";
 import Navigation from "@/components/Navigation";
+import {
+  buildGhlMarketplaceInstallUrl,
+  confirmInstallation,
+  hasInstallationConfirmation,
+} from "@/lib/gohighlevel-marketplace";
 
 export default function GoHighLevelIntegration() {
   return (
@@ -96,11 +101,8 @@ export default function GoHighLevelIntegration() {
   );
 }
 
-type PreflightStatus = {
-  provider: string;
-  destination: string;
-  stateStatus: string;
-  expiresAt: string;
+type OwnerSessionContext = {
+  organizationId: string;
   organization: string;
   role: string;
   location: string;
@@ -108,16 +110,22 @@ type PreflightStatus = {
 };
 
 function SafeOAuthPreflight() {
+  const [sessionContext, setSessionContext] = useState<OwnerSessionContext | null>(null);
+  const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
-  const [result, setResult] = useState<PreflightStatus | null>(null);
+  const [preflightResult, setPreflightResult] = useState<{
+    provider: string;
+    destination: string;
+    stateStatus: string;
+    expiresAt: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [installationConfirmed, setInstallationConfirmed] = useState(false);
 
-  async function verifyPreflight() {
-    setRunning(true);
-    setResult(null);
-    setError(null);
+  useEffect(() => {
+    let active = true;
 
-    try {
+    async function loadOwnerContext() {
       const sessionResponse = await fetch("/api/integrations/gohighlevel/session-context", {
         credentials: "include",
         headers: { Accept: "application/json" },
@@ -132,12 +140,48 @@ function SafeOAuthPreflight() {
         throw new Error(session.message ?? "The active organization-owner context could not be verified.");
       }
 
+      if (!active) return;
+      const context = {
+        organizationId: session.organization.id,
+        organization: session.organization.name ?? "Organization verified",
+        role: session.user?.role ?? "ORGANIZATION_OWNER",
+        location: session.location.name ?? "Authorized location verified",
+        locationId: session.location.id,
+      };
+      setSessionContext(context);
+      setInstallationConfirmed(
+        hasInstallationConfirmation(window.localStorage, context.organizationId, context.locationId),
+      );
+    }
+
+    void loadOwnerContext()
+      .catch((contextError) => {
+        if (active) {
+          setError(contextError instanceof Error ? contextError.message : "The secure connection manager could not be loaded.");
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function verifyPreflight() {
+    if (!sessionContext) return;
+    setRunning(true);
+    setPreflightResult(null);
+    setError(null);
+
+    try {
       const csrfToken = readCookie("eeos_csrf");
       if (!csrfToken) throw new Error("The protected preflight CSRF token is unavailable.");
 
       const query = new URLSearchParams({
-        organizationId: session.organization.id,
-        locationId: session.location.id,
+        organizationId: sessionContext.organizationId,
+        locationId: sessionContext.locationId,
       });
       const response = await fetch(`/api/integrations/gohighlevel/oauth/start?${query}`, {
         method: "POST",
@@ -158,15 +202,11 @@ function SafeOAuthPreflight() {
         throw new Error(payload.message ?? "OAuth preflight verification failed.");
       }
 
-      setResult({
+      setPreflightResult({
         provider: payload.provider ?? "gohighlevel",
         destination: new URL(payload.authorizationUrl).origin,
         stateStatus: payload.state.status,
         expiresAt: payload.state.expiresAt ?? "Not reported",
-        organization: session.organization.name ?? "Organization verified",
-        role: session.user?.role ?? "ORGANIZATION_OWNER",
-        location: session.location.name ?? "Authorized location verified",
-        locationId: session.location.id,
       });
     } catch (preflightError) {
       setError(preflightError instanceof Error ? preflightError.message : "OAuth preflight verification failed.");
@@ -179,31 +219,95 @@ function SafeOAuthPreflight() {
     <div className="rounded-xl border border-[rgba(201,162,39,0.16)] bg-[#0B0B0B]/40 p-4">
       <p className="text-sm font-semibold text-white">Safe production preflight</p>
       <p className="mt-1 text-xs leading-5 text-white/55">
-        Verify owner authorization and create an immediately invalidated OAuth state without opening GoHighLevel.
+        Installation and connection are separate. The install action never creates EEOS OAuth state or marks the location connected.
       </p>
-      <button
-        type="button"
-        onClick={verifyPreflight}
-        disabled={running}
-        className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[rgba(201,162,39,0.35)] px-4 text-sm font-semibold text-[#C9A227] disabled:opacity-50"
-      >
-        {running ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ShieldCheck className="h-4 w-4" aria-hidden="true" />}
-        {running ? "Verifying…" : "Verify OAuth Preflight"}
-      </button>
-      {result ? (
+      {loading ? (
+        <p className="mt-3 inline-flex items-center gap-2 text-xs text-white/55">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          Loading secure organization context…
+        </p>
+      ) : null}
+      {sessionContext ? (
         <>
-          <div className="mt-3 space-y-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-300">
-            <p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-4 w-4" />Preflight verified — HTTP 200</p>
-            <p>Organization: {result.organization}</p>
-            <p>Effective role: {result.role}</p>
-            <p>Location: {result.location}</p>
-            <p>Provider: {result.provider}</p>
-            <p>Authorization destination: {result.destination}</p>
-            <p>OAuth state: created and {result.stateStatus}</p>
-            <p>Original expiry: {result.expiresAt}</p>
-          </div>
-          <div className="mt-3">
-            <GoHighLevelSecureConnectButton locationId={result.locationId} />
+          <div className="mt-4 space-y-4">
+            <div className="rounded-xl border border-[rgba(201,162,39,0.22)] bg-[rgba(255,255,255,0.04)] p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-[#C9A227]">Stage 1</p>
+              <h3 className="mt-1 text-base font-semibold text-white">Install EEOS in HighLevel</h3>
+              <p className="mt-2 text-xs leading-5 text-white/55">
+                This opens the authoritative private Marketplace listing. Installation alone does not connect data to EEOS, create EEOS OAuth state, exchange a code, or store tokens.
+              </p>
+              <a
+                href={buildGhlMarketplaceInstallUrl()}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[rgba(201,162,39,0.35)] px-4 text-sm font-semibold text-[#C9A227]"
+              >
+                Install EEOS in HighLevel
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />
+              </a>
+              {!installationConfirmed ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    confirmInstallation(window.localStorage, sessionContext.organizationId, sessionContext.locationId);
+                    setInstallationConfirmed(true);
+                  }}
+                  className="ml-0 mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-white/10 px-4 text-sm font-semibold text-white sm:ml-3"
+                >
+                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                  I installed EEOS in {sessionContext.location}
+                </button>
+              ) : (
+                <p className="mt-3 text-xs font-semibold text-emerald-300">
+                  Marketplace installation owner-confirmed for {sessionContext.location}. This is not an OAuth connection status.
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-[rgba(201,162,39,0.22)] bg-[rgba(255,255,255,0.04)] p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-[#C9A227]">Stage 2</p>
+              <h3 className="mt-1 text-base font-semibold text-white">Connect {sessionContext.location} to EEOS</h3>
+              <p className="mt-2 text-xs leading-5 text-white/55">
+                EEOS creates persisted, single-use OAuth state only when the protected Connect action starts. The callback remains bound to this organization and location.
+              </p>
+              {installationConfirmed ? (
+                <div className="mt-3">
+                  <GoHighLevelSecureConnectButton locationId={sessionContext.locationId} />
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-amber-300">
+                  Confirm the South Carolina Marketplace installation before connecting.
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-[rgba(201,162,39,0.22)] bg-[rgba(255,255,255,0.04)] p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-[#C9A227]">Safe verification</p>
+              <p className="mt-2 text-xs leading-5 text-white/55">
+                Verify owner authorization and create an immediately invalidated OAuth state without opening GoHighLevel.
+              </p>
+              <button
+                type="button"
+                onClick={verifyPreflight}
+                disabled={running}
+                className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[rgba(201,162,39,0.35)] px-4 text-sm font-semibold text-[#C9A227] disabled:opacity-50"
+              >
+                {running ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ShieldCheck className="h-4 w-4" aria-hidden="true" />}
+                {running ? "Verifying…" : "Verify OAuth Preflight"}
+              </button>
+              {preflightResult ? (
+                <div className="mt-3 space-y-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+                  <p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-4 w-4" />Preflight verified — HTTP 200</p>
+                  <p>Organization: {sessionContext.organization}</p>
+                  <p>Effective role: {sessionContext.role}</p>
+                  <p>Location: {sessionContext.location}</p>
+                  <p>Provider: {preflightResult.provider}</p>
+                  <p>Authorization destination: {preflightResult.destination}</p>
+                  <p>OAuth state: created and {preflightResult.stateStatus}</p>
+                  <p>Original expiry: {preflightResult.expiresAt}</p>
+                </div>
+              ) : null}
+            </div>
           </div>
         </>
       ) : null}

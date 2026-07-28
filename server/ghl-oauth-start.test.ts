@@ -131,6 +131,7 @@ describe("GoHighLevel production OAuth security", () => {
     vi.clearAllMocks();
     process.env.GHL_CLIENT_ID = "test-client-id";
     process.env.GHL_REDIRECT_URI = "https://app.geteeos.com/api/integrations/eea/oauth/callback";
+    getGhlTokenMock.mockResolvedValue(undefined);
     authenticatedUser();
     organization();
   });
@@ -153,6 +154,20 @@ describe("GoHighLevel production OAuth security", () => {
     expect(persistOAuthStateMock).toHaveBeenCalledOnce();
     expect(consumeOAuthStateMock).not.toHaveBeenCalled();
     expect(persistAuditEventMock).toHaveBeenCalledWith(expect.objectContaining({ eventType: "oauth.start.allowed" }));
+  });
+
+  it("prevents a duplicate active connection before creating OAuth state", async () => {
+    getGhlTokenMock.mockResolvedValue({
+      tenantId: "100",
+      locationId: "loc_sc",
+      isActive: true,
+    } as never);
+    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
+      query: { locationId: "loc_sc", organizationId: "100" },
+      ...csrf,
+    });
+    expect(result.status).toBe(409);
+    expect(persistOAuthStateMock).not.toHaveBeenCalled();
   });
 
   it("returns a sanitized owner JSON preflight and immediately invalidates its persisted state", async () => {
@@ -253,6 +268,21 @@ describe("GoHighLevel production OAuth security", () => {
   it("denies a location outside the owner's active membership scope", async () => {
     const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
       query: { locationId: "loc_other", organizationId: "100" },
+      preflight: true,
+      ...csrf,
+    });
+    expect(result.status).toBe(403);
+    expect(persistOAuthStateMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["Alabama", "loc_al"],
+    ["Florida", "loc_fl"],
+    ["Delaware", "loc_de"],
+    ["an unrelated location", "loc_other"],
+  ])("denies %s before creating OAuth state", async (_label, locationId) => {
+    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
+      query: { locationId, organizationId: "100" },
       preflight: true,
       ...csrf,
     });

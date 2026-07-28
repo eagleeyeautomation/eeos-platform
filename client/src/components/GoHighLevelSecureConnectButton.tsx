@@ -27,7 +27,7 @@ type GoHighLevelSecureConnectButtonProps = {
 
 export function GoHighLevelSecureConnectButton({ locationId }: GoHighLevelSecureConnectButtonProps) {
   const [sessionContext, setSessionContext] = useState<GoHighLevelSessionContext | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "starting" | "blocked" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "starting" | "connected" | "blocked" | "error">("loading");
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,8 +49,20 @@ export function GoHighLevelSecureConnectButton({ locationId }: GoHighLevelSecure
           return;
         }
 
+        const statusResponse = await fetch(`/api/ghl/status?locationId=${encodeURIComponent(locationId)}`, {
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
+        const connectionStatus = (await statusResponse.json().catch(() => null)) as { connected?: boolean; message?: string } | null;
+        if (!active) return;
+        if (!statusResponse.ok || !connectionStatus) {
+          setStatus("error");
+          setMessage(connectionStatus?.message ?? "Unable to verify the current GoHighLevel connection status.");
+          return;
+        }
+
         setSessionContext(payload);
-        setStatus("ready");
+        setStatus(connectionStatus.connected ? "connected" : "ready");
         setMessage(null);
       } catch (error) {
         if (!active) return;
@@ -129,18 +141,23 @@ export function GoHighLevelSecureConnectButton({ locationId }: GoHighLevelSecure
         </p>
       </div>
 
-      <button
-        type="button"
-        onClick={startOAuth}
-        disabled={disabled}
-        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#C9A227] px-5 text-sm font-semibold text-[#0B0B0B] shadow-[0_0_20px_rgba(201,162,39,0.25)] transition hover:bg-[#D8B84A] disabled:cursor-not-allowed disabled:bg-[#FFFFFF]/20 disabled:text-[#FFFFFF]/45 disabled:shadow-none"
-      >
-        {status === "starting" || status === "loading" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <KeyRound className="h-4 w-4" aria-hidden="true" />}
-        {status === "starting" ? "Opening GoHighLevel..." : "Connect GoHighLevel"}
-      </button>
+      {status !== "connected" ? (
+        <button
+          type="button"
+          onClick={startOAuth}
+          disabled={disabled}
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#C9A227] px-5 text-sm font-semibold text-[#0B0B0B] shadow-[0_0_20px_rgba(201,162,39,0.25)] transition hover:bg-[#D8B84A] disabled:cursor-not-allowed disabled:bg-[#FFFFFF]/20 disabled:text-[#FFFFFF]/45 disabled:shadow-none"
+        >
+          {status === "starting" || status === "loading" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <KeyRound className="h-4 w-4" aria-hidden="true" />}
+          {status === "starting" ? "Opening GoHighLevel..." : `Connect ${sessionContext?.location.name ?? "South Carolina"} to EEOS`}
+        </button>
+      ) : null}
 
       {status === "ready" ? (
         <InlineNotice tone="success" message="Ready to start the secure GoHighLevel authorization flow. EEOS will use POST plus CSRF protection." />
+      ) : null}
+      {status === "connected" ? (
+        <InlineNotice tone="success" message={`${sessionContext?.location.name ?? "South Carolina"} is connected to EEOS. Duplicate connection is disabled.`} />
       ) : null}
       {message ? <InlineNotice tone={status === "blocked" ? "warning" : "error"} message={message} /> : null}
     </div>
