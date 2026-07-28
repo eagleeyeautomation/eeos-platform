@@ -774,13 +774,20 @@ function ensureCsrfCookie(req: Request, res: Response) {
 }
 
 function validateCsrf(req: Request) {
-  const cookies = parseCookieHeader(req.headers.cookie || "");
-  const cookieToken = cookies[EEOS_CSRF_COOKIE];
   const headerToken = req.header("x-eeos-csrf-token");
+  const cookieTokens = readCookieValues(req.headers.cookie || "", EEOS_CSRF_COOKIE);
 
-  if (!cookieToken || !headerToken || !safeEqual(cookieToken, headerToken)) {
+  if (!headerToken || !cookieTokens.some((cookieToken) => safeEqual(cookieToken, headerToken))) {
     throw new GhlOAuthRequestError(403, "A valid EEOS CSRF token is required before connecting GoHighLevel.");
   }
+}
+
+function readCookieValues(cookieHeader: string, name: string) {
+  return cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .filter((part) => part.startsWith(`${name}=`))
+    .map((part) => part.slice(name.length + 1));
 }
 
 function safeEqual(left: string, right: string) {

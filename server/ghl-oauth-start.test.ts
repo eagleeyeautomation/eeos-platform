@@ -170,6 +170,16 @@ describe("GoHighLevel production OAuth security", () => {
     expect(result.headers.get("set-cookie")).toContain(result.body.csrfToken);
   });
 
+  it("accepts the issued CSRF value when a legacy same-name cookie is also present", async () => {
+    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
+      query: { locationId: "loc_sc", organizationId: "100" },
+      cookie: "eeos_csrf=legacy-cookie-value-that-does-not-match; eeos_csrf=csrf-token-with-enough-length-123456",
+      csrfHeader: "csrf-token-with-enough-length-123456",
+    });
+    expect(result.status).toBe(200);
+    expect(persistOAuthStateMock).toHaveBeenCalledOnce();
+  });
+
   it("prevents a duplicate active connection before creating OAuth state", async () => {
     getGhlTokenMock.mockResolvedValue({
       tenantId: "100",
