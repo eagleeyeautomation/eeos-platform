@@ -91,19 +91,26 @@ export async function persistOAuthState(state: string, payload: Record<string, s
 
 export async function consumeOAuthState(state: string) {
   return withDatabase(async (client) => {
-    const result = await client.query<{ id: string }>(
+    const result = await client.query<{
+      id: string;
+      organization_id: string;
+      payload: Record<string, unknown>;
+    }>(
       `
         update eeos_oauth_states
         set consumed_at = now(), status = 'consumed'
         where state_hash = $1
           and consumed_at is null
           and expires_at > now()
-        returning id
+        returning id, organization_id, payload
       `,
       [hashState(state)],
     );
 
-    return Boolean(result.rows[0]);
+    const consumed = result.rows[0];
+    return consumed
+      ? { organizationId: consumed.organization_id, payload: consumed.payload }
+      : null;
   });
 }
 

@@ -12,7 +12,7 @@ import type { Express, Request, Response } from "express";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./_core/env";
 import { sdk } from "./_core/sdk";
-import { upsertGhlToken, getGhlToken, getMembershipById, getUserSubaccounts } from "./db";
+import { upsertGhlToken, getGhlToken, getMembershipById, getMembershipUser, getUserSubaccounts } from "./db";
 import { consumeOAuthState, persistAuditEvent, persistOAuthState, upsertGhlTokenRecord } from "./db/runtimePersistence";
 
 const GHL_AUTH_URL = "https://marketplace.gohighlevel.com/oauth/chooselocation";
@@ -32,6 +32,8 @@ type GhlConnectSessionContext = {
   locationId: string;
   locationName: string;
 };
+
+const allowedOAuthMembershipRole = "owner";
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -190,46 +192,51 @@ function encryptTokenPayload(payload: Record<string, unknown>) {
   });
 }
 
-type GhlOAuthStateValidation =
-  | { source: "eeos"; tenantId: string; validated: true }
-  | { source: "marketplace"; tenantId: string; validated: false }
-  | { source: "absent"; tenantId: string; validated: false };
-
 function tryDecodeEeosStatePayload(state: string) {
   const stateBody = state.includes(".") ? state.slice(0, state.indexOf(".")) : state;
 
   try {
     const decoded = JSON.parse(Buffer.from(stateBody, "base64url").toString()) as Record<string, unknown>;
     const tenantId = typeof decoded.tenantId === "string" ? decoded.tenantId : "";
+    const locationId = typeof decoded.locationId === "string" ? decoded.locationId : "";
 
-    if (!tenantId) {
+    if (!tenantId || !locationId) {
       return null;
     }
 
-    return { tenantId };
+    return { tenantId, locationId };
   } catch {
     return null;
   }
 }
 
-async function validateOptionalOAuthState(state: string | undefined): Promise<GhlOAuthStateValidation> {
+async function validateRequiredOAuthState(state: string | undefined) {
   if (!state) {
-    return { source: "absent", tenantId: "ghl-marketplace-install", validated: false };
+    throw new GhlOAuthRequestError(400, "GoHighLevel OAuth state is required.");
   }
 
   const payload = tryDecodeEeosStatePayload(state);
 
   if (!payload) {
-    return { source: "marketplace", tenantId: "ghl-marketplace-install", validated: false };
+    throw new GhlOAuthRequestError(400, "GoHighLevel OAuth state is malformed.");
   }
 
   const consumed = await consumeOAuthState(state);
 
   if (!consumed) {
-    throw new Error("GoHighLevel OAuth state is expired, missing, or already used.");
+    throw new GhlOAuthRequestError(400, "GoHighLevel OAuth state is expired, missing, or already used.");
   }
 
-  return { source: "eeos", tenantId: payload.tenantId, validated: true };
+  if (
+    consumed.organizationId !== payload.tenantId
+    || consumed.payload.provider !== "gohighlevel"
+    || consumed.payload.tenantId !== payload.tenantId
+    || consumed.payload.locationId !== payload.locationId
+  ) {
+    throw new GhlOAuthRequestError(400, "GoHighLevel OAuth state does not match the authorized organization and location.");
+  }
+
+  return payload;
 }
 
 function buildProviderErrorMessage(error: string, errorDescription: string | undefined) {
@@ -401,6 +408,10 @@ export function registerGhlOAuthRoutes(app: Express) {
       const locationId = getQueryParam(req, "locationId");
       validateCsrf(req);
       const context = await resolveGhlConnectSessionContext(req, locationId);
+      const requestedOrganizationId = getQueryParam(req, "organizationId");
+      if (requestedOrganizationId && requestedOrganizationId !== context.organizationId) {
+        throw new GhlOAuthRequestError(403, "The requested organization is not authorized.");
+      }
 
       if (!getGhlClientId()) {
         res.status(503).json({ error: "GHL integration not configured" });
@@ -417,6 +428,7 @@ export function registerGhlOAuthRoutes(app: Express) {
       await persistOAuthState(
         state,
         {
+          provider: "gohighlevel",
           tenantId: context.organizationId,
           locationId: context.locationId,
           membershipId: String(context.membershipId),
@@ -425,6 +437,13 @@ export function registerGhlOAuthRoutes(app: Express) {
         new Date(Date.now() + 10 * 60_000),
       );
 
+      await persistAuditEvent({
+        organizationId: context.organizationId,
+        source: "gohighlevel",
+        eventType: "oauth.start.allowed",
+        locationId: context.locationId,
+        metadata: { userId: String(context.userId), role: context.userRole },
+      });
       logGhlOAuth("start.authorization_url_created", {
         tenantId: context.organizationId,
         locationId: context.locationId,
@@ -443,27 +462,11 @@ export function registerGhlOAuthRoutes(app: Express) {
    * The tenantId (user's openId) is encoded in the state parameter.
    */
   app.get("/api/ghl/auth", async (req: Request, res: Response) => {
-    if (!getGhlClientId()) {
-      res.status(503).json({ error: "GHL integration not configured" });
-      return;
-    }
-
-    // Use user session or generate a state token
-    const tenantId = (req as Request & { user?: { openId?: string } }).user?.openId
-      || getQueryParam(req, "tenantId")
-      || "anonymous";
-
-    const state = Buffer.from(JSON.stringify({
-      tenantId,
-      nonce: Math.random().toString(36).slice(2),
-      ts: Date.now(),
-    })).toString("base64url");
-
-    await persistOAuthState(state, { tenantId }, new Date(Date.now() + 10 * 60_000));
-
-    const authUrl = buildGhlAuthUrl(state);
-    console.log(`[GHL] Redirecting tenant ${tenantId} to GHL OAuth`);
-    res.redirect(302, authUrl);
+    logGhlOAuth("legacy_start.denied", { method: req.method, statusCode: 410 });
+    res.status(410).json({
+      error: "gone",
+      message: "This OAuth start route is no longer available.",
+    });
   });
 
   /**
@@ -494,6 +497,15 @@ export function registerGhlOAuthRoutes(app: Express) {
       hasErrorDescription: Boolean(errorDescription),
     });
 
+    let stateValidation: Awaited<ReturnType<typeof validateRequiredOAuthState>>;
+    try {
+      stateValidation = await validateRequiredOAuthState(state);
+    } catch (err) {
+      logGhlOAuthError("callback_failed", err, { path: req.path });
+      renderErrorPage(res, 400, err instanceof GhlOAuthRequestError ? err.message : "OAuth state validation failed.");
+      return;
+    }
+
     if (error) {
       const message = buildProviderErrorMessage(error, errorDescription);
 
@@ -513,12 +525,11 @@ export function registerGhlOAuthRoutes(app: Express) {
     }
 
     try {
-      const stateValidation = await validateOptionalOAuthState(state);
       const tenantId = stateValidation.tenantId;
       logGhlOAuth("state_validated", {
         tenantId,
-        stateSource: stateValidation.source,
-        validated: stateValidation.validated,
+        locationId: stateValidation.locationId,
+        validated: true,
       });
 
       const redirectUri = getApprovedRedirectUri();
@@ -547,6 +558,9 @@ export function registerGhlOAuthRoutes(app: Express) {
 
       if (!locationId) {
         throw new Error("GoHighLevel token response did not include a location ID.");
+      }
+      if (locationId !== stateValidation.locationId) {
+        throw new Error("GoHighLevel OAuth location does not match the authorized state.");
       }
 
       logGhlOAuth("token_storage_started", { tenantId, locationId });
@@ -583,7 +597,7 @@ export function registerGhlOAuthRoutes(app: Express) {
       renderSuccessPage(res, locationId);
     } catch (err) {
       logGhlOAuthError("callback_failed", err, { path: req.path });
-      renderErrorPage(res, 400, err instanceof Error ? err.message : "Token exchange failed.");
+      renderErrorPage(res, 400, err instanceof GhlOAuthRequestError ? err.message : "GoHighLevel connection could not be completed.");
     }
   };
 
@@ -596,38 +610,56 @@ export function registerGhlOAuthRoutes(app: Express) {
    * Used by the ConnectGHL page to show live connection state.
    */
   app.get("/api/ghl/status", async (req: Request, res: Response) => {
-    const tenantId = getQueryParam(req, "tenantId");
-    if (!tenantId) {
-      res.json({ connected: false, reason: "no_tenant" });
-      return;
-    }
+    try {
+      const requestedLocation = getQueryParam(req, "locationId");
+      const context = await resolveGhlConnectSessionContext(req, requestedLocation, false);
+      const requestedTenant = getQueryParam(req, "tenantId");
+      if (requestedTenant && requestedTenant !== context.organizationId) {
+        throw new GhlOAuthRequestError(403, "The requested organization is not authorized.");
+      }
 
-    const token = await getGhlToken(tenantId);
-    if (!token || !token.isActive) {
-      res.json({ connected: false, reason: "not_connected" });
-      return;
-    }
+      const token = await getGhlToken(context.organizationId);
+      if (!token || !token.isActive || token.locationId !== context.locationId) {
+        res.status(200).json({
+          connected: false,
+          provider: "gohighlevel",
+          locationId: context.locationId,
+          revoked: Boolean(token && !token.isActive),
+        });
+        return;
+      }
 
-    const isExpired = token.expiresAt < new Date();
-    res.json({
-      connected: true,
-      locationId: token.locationId,
-      companyId: token.companyId,
-      isExpired,
-      expiresAt: token.expiresAt,
-      webhookRegistered: token.webhookRegistered,
-      connectedAt: token.connectedAt,
-    });
+      res.status(200).json({
+        connected: true,
+        provider: "gohighlevel",
+        locationId: context.locationId,
+        connectedAt: token.connectedAt,
+        expiresAt: token.expiresAt,
+        revoked: false,
+        scopes: token.scope?.split(/[,\s]+/).filter(Boolean) ?? [],
+      });
+    } catch (error) {
+      sendOAuthStartError(res, error);
+    }
   });
 }
 
-async function resolveGhlConnectSessionContext(req: Request, locationId: string | undefined): Promise<GhlConnectSessionContext> {
+async function resolveGhlConnectSessionContext(
+  req: Request,
+  locationId: string | undefined,
+  requireOwner = true,
+): Promise<GhlConnectSessionContext> {
   let user: Awaited<ReturnType<typeof sdk.authenticateRequest>>;
 
   try {
     user = await sdk.authenticateRequest(req);
   } catch {
     throw new GhlOAuthRequestError(401, "Authentication is required before connecting GoHighLevel.");
+  }
+
+  if (user.role === "admin") {
+    logGhlOAuth("start.denied", { userId: user.id, role: "PLATFORM_ADMIN", reason: "support_context_required" });
+    throw new GhlOAuthRequestError(403, "Platform administrators require an approved audited support context.");
   }
 
   const subaccounts = await getUserSubaccounts(user.id);
@@ -645,16 +677,40 @@ async function resolveGhlConnectSessionContext(req: Request, locationId: string 
   }
 
   const membership = await getMembershipById(selected.membershipId);
+  const membershipUser = await getMembershipUser(selected.membershipId, user.id);
 
-  if (!membership) {
+  if (!membership || !membershipUser?.isActive) {
     throw new GhlOAuthRequestError(403, "The selected EEOS organization could not be verified.");
+  }
+
+  if (requireOwner && membershipUser.role !== allowedOAuthMembershipRole) {
+    const role = membershipUser.role === "executive"
+      ? "LOCATION_MANAGER"
+      : membershipUser.role === "analyst" ? "STAFF" : membershipUser.role === "viewer" ? "READ_ONLY" : "UNKNOWN";
+    logGhlOAuth("start.denied", {
+      userId: user.id,
+      organizationId: String(membership.organizationId),
+      locationId: selected.ghlLocationId,
+      role,
+      reason: "role_not_allowed",
+    });
+    await persistAuditEvent({
+      organizationId: String(membership.organizationId),
+      source: "gohighlevel",
+      eventType: "oauth.start.denied",
+      locationId: selected.ghlLocationId,
+      metadata: { userId: String(user.id), role, reason: "role_not_allowed" },
+    });
+    throw new GhlOAuthRequestError(403, "Organization owner access is required to connect GoHighLevel.");
   }
 
   return {
     userId: user.id,
     userName: user.name || "EEOS user",
     userEmail: user.email || "Email unavailable",
-    userRole: user.role,
+    userRole: membershipUser.role === "owner"
+      ? "ORGANIZATION_OWNER"
+      : membershipUser.role === "executive" ? "LOCATION_MANAGER" : membershipUser.role === "analyst" ? "STAFF" : "READ_ONLY",
     organizationId: String(membership.organizationId),
     organizationName: selected.orgName,
     membershipId: selected.membershipId,
@@ -675,7 +731,7 @@ class GhlOAuthRequestError extends Error {
 
 function sendOAuthStartError(res: Response, error: unknown) {
   const statusCode = error instanceof GhlOAuthRequestError ? error.statusCode : 500;
-  const message = error instanceof Error ? error.message : "GoHighLevel OAuth could not be started.";
+  const message = error instanceof GhlOAuthRequestError ? error.message : "GoHighLevel OAuth could not be started.";
 
   logGhlOAuthError("start.failed", error, { statusCode });
   res.status(statusCode).json({
