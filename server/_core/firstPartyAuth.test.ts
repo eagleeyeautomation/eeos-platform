@@ -34,8 +34,14 @@ const authorizationMocks = vi.hoisted(() => ({
   resolveAuthorizationContext: vi.fn(),
 }));
 
+const passwordResetEmailMocks = vi.hoisted(() => ({
+  buildPasswordResetUrl: vi.fn(),
+  sendPasswordResetEmail: vi.fn(),
+}));
+
 vi.mock("../db", () => dbMocks);
 vi.mock("../authorization", () => authorizationMocks);
+vi.mock("./passwordResetEmail", () => passwordResetEmailMocks);
 
 const now = new Date("2026-07-23T12:00:00.000Z");
 
@@ -87,6 +93,13 @@ describe("EEOS first-party authentication", () => {
     dbMocks.touchAuthSession.mockResolvedValue(undefined);
     dbMocks.upsertMembershipUser.mockResolvedValue(undefined);
     dbMocks.upsertUser.mockResolvedValue(undefined);
+    passwordResetEmailMocks.buildPasswordResetUrl.mockImplementation(
+      (token: string) => `https://app.geteeos.com/reset-password?token=${encodeURIComponent(token)}`,
+    );
+    passwordResetEmailMocks.sendPasswordResetEmail.mockResolvedValue({
+      delivered: true,
+      providerMessageId: "message-1",
+    });
 
     authorizationMocks.listAuthorizedLocationsForMembership.mockResolvedValue([{ id: "loc-sc", name: "South Carolina" }]);
     authorizationMocks.resolveAuthorizationContext.mockImplementation(async (account: User) => (
@@ -332,6 +345,93 @@ describe("EEOS first-party authentication", () => {
     });
   });
 
+  it("stores only the reset-token hash, uses a one-hour expiration, and sends the raw token only in the delivery URL", async () => {
+    const account = user();
+    dbMocks.getUserByEmail.mockResolvedValue(account);
+    const requestedAt = Date.now();
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: account.email }),
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({
+        success: true,
+        message: "If the account exists, reset instructions will be sent.",
+      });
+    });
+
+    expect(passwordResetEmailMocks.buildPasswordResetUrl).toHaveBeenCalledOnce();
+    const rawToken = passwordResetEmailMocks.buildPasswordResetUrl.mock.calls[0][0] as string;
+    const resetUrl = `https://app.geteeos.com/reset-password?token=${encodeURIComponent(rawToken)}`;
+    expect(passwordResetEmailMocks.sendPasswordResetEmail).toHaveBeenCalledWith({
+      recipientEmail: account.email,
+      resetUrl,
+    });
+    expect(dbMocks.createPasswordResetToken).toHaveBeenCalledWith(expect.objectContaining({
+      userId: account.id,
+      tokenHash: hashOpaqueToken(rawToken),
+      expiresAt: expect.any(Date),
+    }));
+    const storedReset = dbMocks.createPasswordResetToken.mock.calls[0][0];
+    expect(JSON.stringify(storedReset)).not.toContain(rawToken);
+    expect(storedReset.expiresAt.getTime()).toBeGreaterThanOrEqual(requestedAt + 60 * 60_000);
+    expect(storedReset.expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 60 * 60_000);
+  });
+
+  it("returns the same neutral response for a nonexistent email without creating or delivering a token", async () => {
+    dbMocks.getUserByEmail.mockResolvedValue(undefined);
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "missing@example.com" }),
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({
+        success: true,
+        message: "If the account exists, reset instructions will be sent.",
+      });
+    });
+
+    expect(dbMocks.createPasswordResetToken).not.toHaveBeenCalled();
+    expect(passwordResetEmailMocks.sendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+
+  it("preserves the neutral response and logs only a sanitized reason when delivery fails", async () => {
+    const account = user();
+    dbMocks.getUserByEmail.mockResolvedValue(account);
+    passwordResetEmailMocks.sendPasswordResetEmail.mockResolvedValue({
+      delivered: false,
+      reason: "provider",
+    });
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: account.email }),
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({
+        success: true,
+        message: "If the account exists, reset instructions will be sent.",
+      });
+    });
+
+    const rawToken = passwordResetEmailMocks.buildPasswordResetUrl.mock.calls[0][0] as string;
+    expect(warning).toHaveBeenCalledWith("[PasswordResetEmail] Delivery failed: provider.");
+    expect(JSON.stringify(warning.mock.calls)).not.toContain(rawToken);
+    warning.mockRestore();
+  });
+
   it("revokes all user sessions after password reset", async () => {
     const account = user();
     const token = "reset-token-value";
@@ -358,10 +458,52 @@ describe("EEOS first-party authentication", () => {
         openId: account.openId,
         passwordHash: expect.any(String),
       }));
+      const passwordHash = dbMocks.upsertUser.mock.calls[0][0].passwordHash;
+      await expect(verifyPassword("new-valid-password", passwordHash)).resolves.toBe(true);
       expect(dbMocks.markPasswordResetTokenUsed).toHaveBeenCalledWith(50);
       expect(dbMocks.revokeUserAuthSessions).toHaveBeenCalledWith(account.id);
     });
   }, 15_000);
+
+  it.each([
+    ["missing", undefined],
+    ["already used", {
+      id: 51,
+      userId: 1,
+      tokenHash: hashOpaqueToken("reset-token-value"),
+      expiresAt: new Date(Date.now() + 60_000),
+      usedAt: new Date(),
+      createdAt: now,
+    }],
+    ["expired", {
+      id: 52,
+      userId: 1,
+      tokenHash: hashOpaqueToken("reset-token-value"),
+      expiresAt: new Date(Date.now() - 1),
+      usedAt: null,
+      createdAt: now,
+    }],
+  ])("rejects a %s reset token without changing the password", async (_label, reset) => {
+    dbMocks.getPasswordResetTokenByHash.mockResolvedValue(reset);
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: "reset-token-value", password: "new-valid-password" }),
+      });
+
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({
+        success: false,
+        error: "Reset link is invalid or expired.",
+      });
+    });
+
+    expect(dbMocks.upsertUser).not.toHaveBeenCalled();
+    expect(dbMocks.markPasswordResetTokenUsed).not.toHaveBeenCalled();
+    expect(dbMocks.revokeUserAuthSessions).not.toHaveBeenCalled();
+  });
 
   it("accepts invitations without returning the raw invitation token", async () => {
     const token = "invitation-token-value";

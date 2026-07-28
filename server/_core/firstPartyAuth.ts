@@ -21,6 +21,7 @@ import {
 import { listAuthorizedLocationsForMembership, requirePlatformAdmin, resolveAuthorizationContext } from "../authorization";
 import { getSessionCookieOptions } from "./cookies";
 import { hashPassword, validatePasswordPolicy, verifyPassword } from "./passwordAuth";
+import { buildPasswordResetUrl, sendPasswordResetEmail } from "./passwordResetEmail";
 import { createOpaqueToken, hashOpaqueToken, readClientIp } from "./sessionTokens";
 import { sdk } from "./sdk";
 
@@ -249,7 +250,23 @@ export function registerFirstPartyAuthRoutes(app: Express) {
           tokenHash: hashOpaqueToken(token),
           expiresAt: new Date(Date.now() + 60 * 60_000),
         });
-        await audit({ actorUserId: user.id, action: "auth.password_reset.requested", targetType: "user", targetId: String(user.id) });
+        const resetUrl = buildPasswordResetUrl(token);
+        const delivery = resetUrl
+          ? await sendPasswordResetEmail({
+              recipientEmail: user.email ?? normalizeEmail(parsed.data.email),
+              resetUrl,
+            })
+          : { delivered: false as const, reason: "configuration" as const };
+        if (!delivery.delivered) {
+          console.warn(`[PasswordResetEmail] Delivery failed: ${delivery.reason}.`);
+        }
+        await audit({
+          actorUserId: user.id,
+          action: "auth.password_reset.requested",
+          targetType: "user",
+          targetId: String(user.id),
+          metadata: { delivery: delivery.delivered ? "delivered" : delivery.reason },
+        });
       }
     }
     res.status(200).json({ success: true, message: "If the account exists, reset instructions will be sent." });
