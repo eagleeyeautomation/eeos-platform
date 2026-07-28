@@ -76,9 +76,21 @@ export function createIdentityServiceApp(
     const replaySafe = dependencies.replayProtectionProductionSafe ?? replayStore.productionSafe();
     const signerAvailable = await (dependencies.signerReadiness ?? signer)?.ready() ?? false;
     const mysqlAvailable = await identityAdapter?.ready() ?? false;
-    const ready = Boolean(sessionValidationService && identityAdapter && assertionVerifier.operational?.()
-      && replayAvailable && signerAvailable && mysqlAvailable && (!productionLike || replaySafe));
-    res.status(ready ? 200 : 503).json({ status: ready ? "ready" : "not_ready", service: "eeos-identity-service", version: "v1" });
+    const checks = {
+      sessionValidation: Boolean(sessionValidationService && identityAdapter),
+      serviceAssertionVerifier: Boolean(assertionVerifier.operational?.()),
+      redis: replayAvailable,
+      redisProductionSafe: !productionLike || replaySafe,
+      assertionSigner: signerAvailable,
+      legacyMysql: mysqlAvailable,
+    };
+    const ready = Object.values(checks).every(Boolean);
+    res.status(ready ? 200 : 503).json({
+      status: ready ? "ready" : "not_ready",
+      service: "eeos-identity-service",
+      version: "v1",
+      checks,
+    });
   });
 
   app.use("/internal/v1", rateLimitMiddleware(rateLimiter));

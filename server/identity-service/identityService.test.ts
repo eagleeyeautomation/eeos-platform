@@ -75,13 +75,25 @@ async function post(baseUrl: string, endpoint: string, bodyText: string, token?:
 }
 
 describe("EEOS Identity Service skeleton", () => {
-  it("returns liveness 200 and readiness 503 without dependency details", async () => withService({}, async (baseUrl) => {
+  it("returns liveness 200 and readiness 503 with sanitized dependency booleans", async () => withService({}, async (baseUrl) => {
     const live = await fetch(`${baseUrl}/health/live`);
     const ready = await fetch(`${baseUrl}/health/ready`);
     expect(live.status).toBe(200);
     expect(await live.json()).toEqual({ status: "ok", service: "eeos-identity-service", version: "v1" });
     expect(ready.status).toBe(503);
-    expect(await ready.json()).toEqual({ status: "not_ready", service: "eeos-identity-service", version: "v1" });
+    expect(await ready.json()).toEqual({
+      status: "not_ready",
+      service: "eeos-identity-service",
+      version: "v1",
+      checks: {
+        sessionValidation: false,
+        serviceAssertionVerifier: true,
+        redis: true,
+        redisProductionSafe: true,
+        assertionSigner: false,
+        legacyMysql: false,
+      },
+    });
   }));
 
   it.each([

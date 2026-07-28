@@ -25,7 +25,10 @@ async function readiness(dependencies: Parameters<typeof createIdentityServiceAp
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("Test server did not start.");
-  try { return (await fetch(`http://127.0.0.1:${address.port}/health/ready`)).status; }
+  try {
+    const response = await fetch(`http://127.0.0.1:${address.port}/health/ready`);
+    return { status: response.status, body: await response.json() as Record<string, unknown> };
+  }
   finally { await new Promise<void>((resolve) => server.close(() => resolve())); }
 }
 
@@ -98,16 +101,28 @@ describe("Identity Service deployment readiness", () => {
   });
 
   it("returns ready only when replay, signer, verifier, and MySQL are available", async () => {
-    expect(await readiness(readyDependencies())).toBe(200);
+    const healthy = await readiness(readyDependencies());
+    expect(healthy.status).toBe(200);
+    expect(healthy.body.checks).toEqual({
+      sessionValidation: true,
+      serviceAssertionVerifier: true,
+      redis: true,
+      redisProductionSafe: true,
+      assertionSigner: true,
+      legacyMysql: true,
+    });
     const replayUnavailable = readyDependencies();
     replayUnavailable.replayStore.ready = vi.fn().mockResolvedValue(false);
-    expect(await readiness(replayUnavailable)).toBe(503);
+    const replayFailure = await readiness(replayUnavailable);
+    expect(replayFailure.status).toBe(503);
+    expect(replayFailure.body).toMatchObject({ checks: { redis: false } });
     const signerUnavailable = readyDependencies();
     signerUnavailable.signerReadiness.ready = vi.fn().mockResolvedValue(false);
-    expect(await readiness(signerUnavailable)).toBe(503);
+    expect((await readiness(signerUnavailable)).status).toBe(503);
     const mysqlUnavailable = readyDependencies();
     mysqlUnavailable.identityAdapter.ready = vi.fn().mockResolvedValue(false);
-    expect(await readiness(mysqlUnavailable)).toBe(503);
+    expect((await readiness(mysqlUnavailable)).status).toBe(503);
+    expect(JSON.stringify(replayFailure.body)).not.toMatch(/token|password|private|jwks|database_url|https?:\/\//i);
   });
 
   it("reports production-ready with a configured atomic Redis replay client", async () => {
