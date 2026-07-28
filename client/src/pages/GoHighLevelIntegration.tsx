@@ -1,4 +1,5 @@
-import { ExternalLink, Lock, PlugZap, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, ExternalLink, Loader2, Lock, PlugZap, ShieldCheck } from "lucide-react";
 import { Link } from "wouter";
 import Footer from "@/components/Footer";
 import Navigation from "@/components/Navigation";
@@ -47,6 +48,7 @@ export default function GoHighLevelIntegration() {
                 Manage GoHighLevel Connections
                 <ExternalLink className="h-4 w-4" aria-hidden="true" />
               </Link>
+              <SafeOAuthPreflight />
             </div>
 
             <aside className="space-y-4">
@@ -91,6 +93,121 @@ export default function GoHighLevelIntegration() {
       <Footer />
     </div>
   );
+}
+
+type PreflightStatus = {
+  provider: string;
+  destination: string;
+  stateStatus: string;
+  expiresAt: string;
+  organization: string;
+  role: string;
+  location: string;
+};
+
+function SafeOAuthPreflight() {
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<PreflightStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function verifyPreflight() {
+    setRunning(true);
+    setResult(null);
+    setError(null);
+
+    try {
+      const sessionResponse = await fetch("/api/integrations/gohighlevel/session-context", {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+      const session = await sessionResponse.json() as {
+        message?: string;
+        user?: { role?: string };
+        organization?: { id?: string; name?: string };
+        location?: { id?: string; name?: string };
+      };
+      if (!sessionResponse.ok || !session.organization?.id || !session.location?.id) {
+        throw new Error(session.message ?? "The active organization-owner context could not be verified.");
+      }
+
+      const csrfToken = readCookie("eeos_csrf");
+      if (!csrfToken) throw new Error("The protected preflight CSRF token is unavailable.");
+
+      const query = new URLSearchParams({
+        organizationId: session.organization.id,
+        locationId: session.location.id,
+      });
+      const response = await fetch(`/api/integrations/gohighlevel/oauth/start?${query}`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "x-eeos-csrf-token": csrfToken,
+          "x-eeos-oauth-preflight": "verify",
+        },
+      });
+      const payload = await response.json() as {
+        message?: string;
+        provider?: string;
+        authorizationUrl?: string;
+        state?: { status?: string; expiresAt?: string };
+      };
+      if (!response.ok || !payload.authorizationUrl || payload.state?.status !== "invalidated") {
+        throw new Error(payload.message ?? "OAuth preflight verification failed.");
+      }
+
+      setResult({
+        provider: payload.provider ?? "gohighlevel",
+        destination: new URL(payload.authorizationUrl).origin,
+        stateStatus: payload.state.status,
+        expiresAt: payload.state.expiresAt ?? "Not reported",
+        organization: session.organization.name ?? "Organization verified",
+        role: session.user?.role ?? "ORGANIZATION_OWNER",
+        location: session.location.name ?? "Authorized location verified",
+      });
+    } catch (preflightError) {
+      setError(preflightError instanceof Error ? preflightError.message : "OAuth preflight verification failed.");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-[rgba(201,162,39,0.16)] bg-[#0B0B0B]/40 p-4">
+      <p className="text-sm font-semibold text-white">Safe production preflight</p>
+      <p className="mt-1 text-xs leading-5 text-white/55">
+        Verify owner authorization and create an immediately invalidated OAuth state without opening GoHighLevel.
+      </p>
+      <button
+        type="button"
+        onClick={verifyPreflight}
+        disabled={running}
+        className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[rgba(201,162,39,0.35)] px-4 text-sm font-semibold text-[#C9A227] disabled:opacity-50"
+      >
+        {running ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ShieldCheck className="h-4 w-4" aria-hidden="true" />}
+        {running ? "Verifying…" : "Verify OAuth Preflight"}
+      </button>
+      {result ? (
+        <div className="mt-3 space-y-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+          <p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-4 w-4" />Preflight verified — HTTP 200</p>
+          <p>Organization: {result.organization}</p>
+          <p>Effective role: {result.role}</p>
+          <p>Location: {result.location}</p>
+          <p>Provider: {result.provider}</p>
+          <p>Authorization destination: {result.destination}</p>
+          <p>OAuth state: created and {result.stateStatus}</p>
+          <p>Original expiry: {result.expiresAt}</p>
+        </div>
+      ) : null}
+      {error ? <p className="mt-3 text-xs text-red-300">{error}</p> : null}
+    </div>
+  );
+}
+
+function readCookie(name: string) {
+  const prefix = `${name}=`;
+  const value = document.cookie.split(";").map((item) => item.trim()).find((item) => item.startsWith(prefix));
+  return value ? decodeURIComponent(value.slice(prefix.length)) : null;
 }
 
 function InfoCard({

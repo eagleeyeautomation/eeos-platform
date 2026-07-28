@@ -17,6 +17,8 @@ import { upsertGhlToken, getGhlToken } from "./db";
 import { consumeOAuthState, persistAuditEvent, persistOAuthState, upsertGhlTokenRecord } from "./db/runtimePersistence";
 
 const GHL_AUTH_URL = "https://marketplace.gohighlevel.com/oauth/chooselocation";
+const EEOS_OAUTH_PREFLIGHT_HEADER = "x-eeos-oauth-preflight";
+const EEOS_OAUTH_PREFLIGHT_VALUE = "verify";
 const GHL_TOKEN_URL = "https://services.leadconnectorhq.com/oauth/token";
 const APPROVED_GHL_CALLBACK_PATH = "/api/integrations/eea/oauth/callback";
 const APPROVED_GHL_CALLBACK_URL = "https://eeos-platform-production.up.railway.app/api/integrations/eea/oauth/callback";
@@ -405,6 +407,7 @@ export function registerGhlOAuthRoutes(app: Express) {
   app.post("/api/integrations/gohighlevel/oauth/start", async (req: Request, res: Response) => {
     try {
       const locationId = getQueryParam(req, "locationId");
+      const isPreflight = req.header(EEOS_OAUTH_PREFLIGHT_HEADER) === EEOS_OAUTH_PREFLIGHT_VALUE;
       validateCsrf(req);
       const context = await resolveGhlConnectSessionContext(req, locationId);
       const requestedOrganizationId = getQueryParam(req, "organizationId");
@@ -424,6 +427,7 @@ export function registerGhlOAuthRoutes(app: Express) {
         ts: Date.now(),
       })).toString("base64url");
 
+      const stateExpiresAt = new Date(Date.now() + 10 * 60_000);
       await persistOAuthState(
         state,
         {
@@ -433,23 +437,50 @@ export function registerGhlOAuthRoutes(app: Express) {
           membershipId: String(context.membershipId),
           userId: String(context.userId),
         },
-        new Date(Date.now() + 10 * 60_000),
+        stateExpiresAt,
       );
+
+      const authorizationUrl = buildGhlAuthUrl(state);
+      if (isPreflight) {
+        const invalidatedState = await consumeOAuthState(state);
+        if (!invalidatedState) {
+          throw new GhlOAuthRequestError(500, "OAuth preflight state could not be safely invalidated.");
+        }
+      }
 
       await persistAuditEvent({
         organizationId: context.organizationId,
         source: "gohighlevel",
         eventType: "oauth.start.allowed",
         locationId: context.locationId,
-        metadata: { userId: String(context.userId), role: context.userRole },
+        metadata: {
+          userId: String(context.userId),
+          role: context.userRole,
+          ...(isPreflight ? { mode: "preflight", stateStatus: "invalidated" } : {}),
+        },
       });
       logGhlOAuth("start.authorization_url_created", {
         tenantId: context.organizationId,
         locationId: context.locationId,
         userId: context.userId,
+        mode: isPreflight ? "preflight" : "standard",
       });
 
-      res.status(200).json({ authorizationUrl: buildGhlAuthUrl(state) });
+      if (isPreflight) {
+        res.status(200).json({
+          success: true,
+          provider: "gohighlevel",
+          authorizationUrl,
+          state: {
+            created: true,
+            status: "invalidated",
+            expiresAt: stateExpiresAt.toISOString(),
+          },
+        });
+        return;
+      }
+
+      res.status(200).json({ authorizationUrl });
     } catch (error) {
       sendOAuthStartError(res, error);
     }

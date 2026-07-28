@@ -69,12 +69,14 @@ async function invoke(method: "GET" | "POST", path: string, options: {
   query?: Record<string, string>;
   cookie?: string;
   csrfHeader?: string;
+  preflight?: boolean;
 } = {}) {
   const handler = handlers().get(`${method} ${path}`);
   if (!handler) throw new Error(`Missing ${method} ${path} handler.`);
   const headers: Record<string, string> = {};
   if (options.cookie) headers.cookie = options.cookie;
   if (options.csrfHeader) headers["x-eeos-csrf-token"] = options.csrfHeader;
+  if (options.preflight) headers["x-eeos-oauth-preflight"] = "verify";
   const req = {
     method,
     path,
@@ -139,21 +141,77 @@ describe("GoHighLevel production OAuth security", () => {
     vi.unstubAllGlobals();
   });
 
-  it("allows an organization owner to complete OAuth preflight with persisted state and audit", async () => {
+  it("preserves the standard browser response used for the external redirect", async () => {
     const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
       query: { locationId: "loc_sc", organizationId: "100" },
       ...csrf,
     });
     expect(result.status).toBe(200);
-    expect(result.body.authorizationUrl).toContain("marketplace.gohighlevel.com/oauth/chooselocation");
+    expect(result.body).toEqual({
+      authorizationUrl: expect.stringContaining("marketplace.gohighlevel.com/oauth/chooselocation"),
+    });
     expect(persistOAuthStateMock).toHaveBeenCalledOnce();
+    expect(consumeOAuthStateMock).not.toHaveBeenCalled();
     expect(persistAuditEventMock).toHaveBeenCalledWith(expect.objectContaining({ eventType: "oauth.start.allowed" }));
+  });
+
+  it("returns a sanitized owner JSON preflight and immediately invalidates its persisted state", async () => {
+    consumeOAuthStateMock.mockResolvedValue({
+      organizationId: "100",
+      payload: { provider: "gohighlevel", tenantId: "100", locationId: "loc_sc" },
+    });
+    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
+      query: { locationId: "loc_sc", organizationId: "100" },
+      preflight: true,
+      ...csrf,
+    });
+
+    expect(result.status).toBe(200);
+    expect(result.body).toMatchObject({
+      success: true,
+      provider: "gohighlevel",
+      authorizationUrl: expect.stringContaining("marketplace.gohighlevel.com/oauth/chooselocation"),
+      state: {
+        created: true,
+        status: "invalidated",
+        expiresAt: expect.any(String),
+      },
+    });
+    const persistedState = persistOAuthStateMock.mock.calls[0][0];
+    const persistedPayload = persistOAuthStateMock.mock.calls[0][1];
+    expect(persistedPayload).toMatchObject({
+      provider: "gohighlevel",
+      tenantId: "100",
+      locationId: "loc_sc",
+      membershipId: "7",
+      userId: "42",
+    });
+    expect(consumeOAuthStateMock).toHaveBeenCalledWith(persistedState);
+    expect(JSON.stringify(result.body)).not.toMatch(
+      /clientSecret|sessionToken|cookie|privateKey|vault|database|refreshToken|accessToken|test-client-secret/i,
+    );
+  });
+
+  it("fails closed when a preflight state cannot be invalidated", async () => {
+    consumeOAuthStateMock.mockResolvedValue(null);
+    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
+      query: { locationId: "loc_sc", organizationId: "100" },
+      preflight: true,
+      ...csrf,
+    });
+    expect(result.status).toBe(500);
+    expect(result.body).not.toHaveProperty("authorizationUrl");
   });
 
   it("allows a dual-role platform admin with an active selected owner membership", async () => {
     authenticatedUser("admin");
+    consumeOAuthStateMock.mockResolvedValue({
+      organizationId: "100",
+      payload: { provider: "gohighlevel", tenantId: "100", locationId: "loc_sc" },
+    });
     const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
       query: { locationId: "loc_sc", organizationId: "100" },
+      preflight: true,
       ...csrf,
     });
     expect(result.status).toBe(200);
@@ -163,7 +221,9 @@ describe("GoHighLevel production OAuth security", () => {
   it("requires an approved audited support context for platform administrators without an owner membership", async () => {
     authenticatedUser("admin");
     getUserSubaccountsMock.mockResolvedValue([]);
-    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", { query: { locationId: "loc_sc" }, ...csrf });
+    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
+      query: { locationId: "loc_sc" }, preflight: true, ...csrf,
+    });
     expect(result.status).toBe(403);
     expect(persistOAuthStateMock).not.toHaveBeenCalled();
   });
@@ -172,6 +232,7 @@ describe("GoHighLevel production OAuth security", () => {
     authenticatedUser("admin");
     const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
       query: { locationId: "loc_sc", organizationId: "999" },
+      preflight: true,
       ...csrf,
     });
     expect(result.status).toBe(403);
@@ -182,6 +243,7 @@ describe("GoHighLevel production OAuth security", () => {
     getMembershipByIdMock.mockResolvedValue({ id: 7, organizationId: 100, status: "suspended" } as never);
     const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
       query: { locationId: "loc_sc", organizationId: "100" },
+      preflight: true,
       ...csrf,
     });
     expect(result.status).toBe(403);
@@ -191,6 +253,7 @@ describe("GoHighLevel production OAuth security", () => {
   it("denies a location outside the owner's active membership scope", async () => {
     const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
       query: { locationId: "loc_other", organizationId: "100" },
+      preflight: true,
       ...csrf,
     });
     expect(result.status).toBe(403);
@@ -204,7 +267,9 @@ describe("GoHighLevel production OAuth security", () => {
     ["unknown", "unknown"],
   ])("rejects %s OAuth starts", async (_label, role) => {
     organization(role as never);
-    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", { query: { locationId: "loc_sc" }, ...csrf });
+    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
+      query: { locationId: "loc_sc" }, preflight: true, ...csrf,
+    });
     expect(result.status).toBe(403);
     expect(persistOAuthStateMock).not.toHaveBeenCalled();
     expect(persistAuditEventMock).toHaveBeenCalledWith(expect.objectContaining({ eventType: "oauth.start.denied" }));
@@ -212,28 +277,34 @@ describe("GoHighLevel production OAuth security", () => {
 
   it("rejects a missing membership role", async () => {
     getMembershipUserMock.mockResolvedValue(undefined);
-    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", { query: { locationId: "loc_sc" }, ...csrf });
+    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
+      query: { locationId: "loc_sc" }, preflight: true, ...csrf,
+    });
     expect(result.status).toBe(403);
   });
 
   it("rejects unauthenticated requests", async () => {
     authenticateRequestMock.mockRejectedValue(new Error("No session"));
-    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", { query: { locationId: "loc_sc" }, ...csrf });
+    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
+      query: { locationId: "loc_sc" }, preflight: true, ...csrf,
+    });
     expect(result.status).toBe(401);
   });
 
   it("rejects missing or invalid CSRF before authentication", async () => {
-    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", { query: { locationId: "loc_sc" } });
+    const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
+      query: { locationId: "loc_sc" }, preflight: true,
+    });
     expect(result.status).toBe(403);
     expect(authenticateRequestMock).not.toHaveBeenCalled();
   });
 
   it("rejects wrong organizations and unauthorized locations", async () => {
     expect((await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
-      query: { locationId: "loc_sc", organizationId: "999" }, ...csrf,
+      query: { locationId: "loc_sc", organizationId: "999" }, preflight: true, ...csrf,
     })).status).toBe(403);
     expect((await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
-      query: { locationId: "loc_other" }, ...csrf,
+      query: { locationId: "loc_other" }, preflight: true, ...csrf,
     })).status).toBe(403);
   });
 
