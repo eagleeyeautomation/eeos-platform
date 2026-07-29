@@ -302,9 +302,39 @@ describe("controlled GoHighLevel operations snapshot", () => {
     )).rejects.toThrow("Unsupported");
     expect(fetchMock).not.toHaveBeenCalled();
     expect(GHL_SNAPSHOT_OPERATION_CONTRACTS["opportunities-search"].allowedQuery)
-      .toEqual(new Set(["locationId", "status", "limit", "page"]));
+      .toEqual(new Set(["locationId", "status", "limit", "page", "startAfter", "startAfterId"]));
     expect(GHL_SNAPSHOT_OPERATION_CONTRACTS["opportunities-search"].allowedQuery)
       .not.toContain("location_id");
+  });
+
+  it("reconstructs opportunities pagination with only the documented cursor pair", async () => {
+    const providerGet = vi.fn(async (path: string) => {
+      if (path.startsWith("/opportunities/pipelines")) return { pipelines: [] };
+      if (path.startsWith("/contacts/")) return { contacts: [] };
+      if (path.includes("startAfter=")) return { opportunities: [] };
+      return {
+        opportunities: Array.from({ length: GHL_SNAPSHOT_LIMITS.pageSize }, (_, index) => ({
+          id: `opportunity-${index}`,
+          locationId: input.locationId,
+          status: "open",
+        })),
+        meta: {
+          nextPageUrl: `https://services.leadconnectorhq.com/opportunities/search?q=&location_id=${input.locationId}&pipeline_id=&startAfter=1625203104328&startAfterId=opaque-opportunity-id&limit=20&page=1`,
+        },
+      };
+    });
+    await buildGhlOperationsSnapshot(input, {
+      getToken: vi.fn().mockResolvedValue(token),
+      providerGet,
+    });
+    expect(providerGet).toHaveBeenCalledWith(
+      `/opportunities/search?locationId=${input.locationId}&status=open&limit=20&startAfter=1625203104328&startAfterId=opaque-opportunity-id`,
+      token.accessToken,
+    );
+    const paginatedPath = providerGet.mock.calls
+      .map(([path]) => path)
+      .find((path) => path.includes("startAfter="));
+    expect(paginatedPath).not.toMatch(/[?&](?:q|location_id|pipeline_id)=/);
   });
 
   it("redacts opaque contacts pagination identifiers from diagnostics", async () => {

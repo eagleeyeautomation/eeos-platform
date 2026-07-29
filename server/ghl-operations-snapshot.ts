@@ -25,7 +25,7 @@ const OPERATION_CONTRACTS: Record<SnapshotOperation, {
   "opportunities-search": {
     path: "/opportunities/search",
     version: "v3",
-    allowedQuery: new Set(["locationId", "status", "limit", "page"]),
+    allowedQuery: new Set(["locationId", "status", "limit", "page", "startAfter", "startAfterId"]),
   },
   "pipelines-list": {
     path: "/opportunities/pipelines",
@@ -292,8 +292,30 @@ function nextContactsPath(payload: JsonRecord, locationId: string) {
 function nextOpportunityPath(payload: JsonRecord, locationId: string, page: number) {
   const opportunities = array(payload.opportunities);
   const meta = object(payload.meta);
-  const providerNext = safeProviderNextPath(text(meta.nextPageUrl), locationId);
-  if (providerNext) return providerNext;
+  const providerNext = text(meta.nextPageUrl);
+  let startAfter = number(meta.startAfter);
+  let startAfterId = text(meta.startAfterId);
+  if (providerNext) {
+    const next = new URL(providerNext, GHL_API_ORIGIN);
+    if (next.origin !== GHL_API_ORIGIN) {
+      throw new GhlSnapshotError("binding_mismatch", "GoHighLevel returned an unapproved pagination destination.");
+    }
+    const responseLocation = next.searchParams.get("locationId") || next.searchParams.get("location_id");
+    if (responseLocation && responseLocation !== locationId) {
+      throw new GhlSnapshotError("binding_mismatch", "GoHighLevel returned cross-location pagination.");
+    }
+    startAfter ??= number(next.searchParams.get("startAfter"));
+    startAfterId ||= text(next.searchParams.get("startAfterId"));
+  }
+  if (startAfter !== undefined && startAfterId) {
+    return `/opportunities/search?${new URLSearchParams({
+      locationId,
+      status: "open",
+      limit: String(PAGE_SIZE),
+      startAfter: String(startAfter),
+      startAfterId,
+    })}`;
+  }
   const nextPage = number(meta.nextPage);
   if (opportunities.length < PAGE_SIZE && nextPage === undefined) return null;
   const query = new URLSearchParams({
