@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   assertSnapshotProviderMethod,
   buildGhlOperationsSnapshot,
+  GHL_SNAPSHOT_OPERATION_CONTRACTS,
   GHL_SNAPSHOT_LIMITS,
   snapshotProviderGet,
 } from "./ghl-operations-snapshot";
@@ -136,12 +137,12 @@ describe("controlled GoHighLevel operations snapshot", () => {
       headers: new Headers(),
       json: async () => ({ contacts: [] }),
     });
-    await snapshotProviderGet("/contacts/?locationId=safe", "secret", fetchMock);
+    await snapshotProviderGet("contacts-list", "/contacts/?locationId=safe", "secret", fetchMock);
     expect(fetchMock).toHaveBeenCalledWith(
       expect.objectContaining({ origin: "https://services.leadconnectorhq.com" }),
       expect.objectContaining({ method: "GET" }),
     );
-    await expect(snapshotProviderGet("https://example.com/contacts", "secret", fetchMock))
+    await expect(snapshotProviderGet("contacts-list", "https://example.com/contacts", "secret", fetchMock))
       .rejects.toThrow("Unapproved");
   });
 
@@ -193,15 +194,26 @@ describe("controlled GoHighLevel operations snapshot", () => {
 
   it("retries bounded transient GET failures and respects Retry-After", async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 429, headers: new Headers({ "retry-after": "0" }) })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        headers: new Headers({ "retry-after": "0" }),
+        json: async () => ({ error: "RateLimited", message: "Try again" }),
+      })
       .mockResolvedValueOnce({ ok: true, status: 200, headers: new Headers(), json: async () => ({ count: 0 }) });
-    await expect(snapshotProviderGet("/contacts/?locationId=safe", "secret", fetchMock)).resolves.toEqual({ count: 0 });
+    await expect(snapshotProviderGet("contacts-list", "/contacts/?locationId=safe", "secret", fetchMock))
+      .resolves.toEqual({ count: 0 });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it.each([401, 403])("does not retry authorization failure HTTP %s", async (status) => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status, headers: new Headers() });
-    await expect(snapshotProviderGet("/contacts/?locationId=safe", "secret", fetchMock))
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status,
+      headers: new Headers(),
+      json: async () => ({ error: "Unauthorized", message: "Authorization failed" }),
+    });
+    await expect(snapshotProviderGet("contacts-list", "/contacts/?locationId=safe", "secret", fetchMock))
       .rejects.toMatchObject({ code: "reauthorization_required" });
     expect(fetchMock).toHaveBeenCalledOnce();
   });
@@ -216,5 +228,123 @@ describe("controlled GoHighLevel operations snapshot", () => {
       path.startsWith("/contacts/")
       || path.startsWith("/opportunities/search")
       || path.startsWith("/opportunities/pipelines"))).toBe(true);
+  });
+
+  it("uses exact endpoint-specific paths, versions, authorization, and query contracts", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({}),
+    });
+    await snapshotProviderGet(
+      "pipelines-list",
+      "/opportunities/pipelines?locationId=location-safe",
+      "provider-secret",
+      fetchMock,
+    );
+    await snapshotProviderGet(
+      "opportunities-search",
+      "/opportunities/search?location_id=location-safe&status=open&limit=20",
+      "provider-secret",
+      fetchMock,
+    );
+    await snapshotProviderGet(
+      "contacts-list",
+      "/contacts/?locationId=location-safe&limit=20",
+      "provider-secret",
+      fetchMock,
+    );
+    expect(fetchMock.mock.calls.map(([url, init]) => ({
+      path: (url as URL).pathname,
+      query: (url as URL).search,
+      version: (init as RequestInit).headers && ((init as RequestInit).headers as Record<string, string>).Version,
+      authorization: (init as RequestInit).headers && ((init as RequestInit).headers as Record<string, string>).Authorization,
+      method: (init as RequestInit).method,
+    }))).toEqual([
+      {
+        path: "/opportunities/pipelines",
+        query: "?locationId=location-safe",
+        version: "v3",
+        authorization: "Bearer provider-secret",
+        method: "GET",
+      },
+      {
+        path: "/opportunities/search",
+        query: "?location_id=location-safe&status=open&limit=20",
+        version: "v3",
+        authorization: "Bearer provider-secret",
+        method: "GET",
+      },
+      {
+        path: "/contacts/",
+        query: "?locationId=location-safe&limit=20",
+        version: "2021-07-28",
+        authorization: "Bearer provider-secret",
+        method: "GET",
+      },
+    ]);
+  });
+
+  it("rejects mixed, unsupported, undefined, and empty request parameters", async () => {
+    const fetchMock = vi.fn();
+    await expect(snapshotProviderGet(
+      "pipelines-list",
+      "/opportunities/pipelines?locationId=safe&status=open",
+      "secret",
+      fetchMock,
+    )).rejects.toThrow("Unsupported");
+    await expect(snapshotProviderGet(
+      "contacts-list",
+      "/contacts/?locationId=safe&pipelineId=other",
+      "secret",
+      fetchMock,
+    )).rejects.toThrow("Unsupported");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(GHL_SNAPSHOT_OPERATION_CONTRACTS["opportunities-search"].allowedQuery)
+      .toEqual(new Set(["location_id", "status", "limit", "page"]));
+  });
+
+  it("identifies and redacts a pipelines HTTP 400 without retrying", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      headers: new Headers({ "x-request-id": "safe-trace-1" }),
+      json: async () => ({
+        error: "BadRequest",
+        message: "Invalid Version for rJH8XytyAfEQSoOTQeuZ private@example.com Bearer provider-secret",
+        contact: { name: "Private Person", phone: "555-0100" },
+      }),
+    });
+    await expect(snapshotProviderGet(
+      "pipelines-list",
+      `/opportunities/pipelines?locationId=${input.locationId}`,
+      "provider-secret",
+      fetchMock,
+    )).rejects.toMatchObject({
+      operation: "pipelines-list",
+      providerErrorCode: "BadRequest",
+      message: expect.stringContaining("Invalid Version"),
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const log = JSON.stringify(errorSpy.mock.calls);
+    expect(log).toContain("pipelines-list");
+    expect(log).toContain("/opportunities/pipelines");
+    expect(log).toContain("safe-trace-1");
+    expect(log).toContain("rJH8…QeuZ");
+    expect(log).not.toMatch(/rJH8XytyAfEQSoOTQeuZ|private@example\.com|Private Person|555-0100|provider-secret/);
+  });
+
+  it.each([500, 503])("keeps HTTP %s retries bounded", async (status) => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status,
+      headers: new Headers({ "retry-after": "0" }),
+      json: async () => ({ error: "Transient", message: "Try again" }),
+    });
+    await expect(snapshotProviderGet("contacts-list", "/contacts/?locationId=safe", "secret", fetchMock))
+      .rejects.toMatchObject({ code: "provider_unavailable" });
+    expect(fetchMock).toHaveBeenCalledTimes(GHL_SNAPSHOT_LIMITS.maxRetries + 1);
   });
 });

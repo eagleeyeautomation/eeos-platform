@@ -9,7 +9,30 @@ const REQUIRED_SCOPES = ["contacts.readonly", "opportunities.readonly"];
 const jobs = new Map<string, Promise<GhlOperationsSnapshot>>();
 
 type JsonRecord = Record<string, unknown>;
-type ProviderGet = (path: string) => Promise<JsonRecord>;
+export type SnapshotOperation = "contacts-list" | "opportunities-search" | "pipelines-list";
+type ProviderGet = (operation: SnapshotOperation, path: string) => Promise<JsonRecord>;
+
+const OPERATION_CONTRACTS: Record<SnapshotOperation, {
+  path: string;
+  version: string;
+  allowedQuery: ReadonlySet<string>;
+}> = {
+  "contacts-list": {
+    path: "/contacts/",
+    version: "2021-07-28",
+    allowedQuery: new Set(["locationId", "limit", "startAfterId", "startAfter"]),
+  },
+  "opportunities-search": {
+    path: "/opportunities/search",
+    version: "v3",
+    allowedQuery: new Set(["location_id", "status", "limit", "page"]),
+  },
+  "pipelines-list": {
+    path: "/opportunities/pipelines",
+    version: "v3",
+    allowedQuery: new Set(["locationId"]),
+  },
+};
 
 export type GhlOperationsSnapshot = {
   organizationId: string;
@@ -44,6 +67,8 @@ export class GhlSnapshotError extends Error {
       | "reauthorization_required"
       | "scope_missing",
     message: string,
+    readonly operation?: SnapshotOperation,
+    readonly providerErrorCode?: string,
   ) {
     super(message);
     this.name = "GhlSnapshotError";
@@ -110,6 +135,7 @@ async function wait(ms: number) {
 }
 
 export async function snapshotProviderGet(
+  operation: SnapshotOperation,
   path: string,
   accessToken: string,
   fetchImpl: typeof fetch = fetch,
@@ -117,27 +143,133 @@ export async function snapshotProviderGet(
   assertSnapshotProviderMethod("GET");
   const url = new URL(path, GHL_API_ORIGIN);
   if (url.origin !== GHL_API_ORIGIN) throw new Error("Unapproved GoHighLevel provider origin.");
+  const contract = OPERATION_CONTRACTS[operation];
+  if (url.pathname !== contract.path) throw new Error(`Unapproved path for ${operation}.`);
+  for (const name of Array.from(url.searchParams.keys())) {
+    if (!contract.allowedQuery.has(name)) throw new Error(`Unsupported ${operation} query parameter.`);
+  }
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
     const response = await fetchImpl(url, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        Version: "2021-07-28",
+        Version: contract.version,
         Accept: "application/json",
       },
     });
-    if (response.ok) return object(await response.json());
+    if (response.ok) {
+      logProviderOperation({
+        operation,
+        url,
+        status: response.status,
+        locationId: readRequestLocation(url),
+        requestId: readProviderRequestId(response.headers),
+        reachedProvider: true,
+        retried: attempt > 0,
+      });
+      return object(await response.json());
+    }
+    const safeProviderError = await readSafeProviderError(response, readRequestLocation(url));
+    logProviderOperation({
+      operation,
+      url,
+      status: response.status,
+      locationId: readRequestLocation(url),
+      requestId: readProviderRequestId(response.headers),
+      providerErrorCode: safeProviderError.code,
+      providerErrorMessage: safeProviderError.message,
+      reachedProvider: true,
+      retried: attempt > 0,
+    }, true);
     if (response.status === 401 || response.status === 403) {
-      throw new GhlSnapshotError("reauthorization_required", "GoHighLevel authorization must be renewed.");
+      throw new GhlSnapshotError(
+        "reauthorization_required",
+        `${operation} authorization must be renewed.`,
+        operation,
+        safeProviderError.code,
+      );
     }
     if ((response.status === 429 || response.status >= 500) && attempt < MAX_RETRIES) {
       await wait(providerDelay(attempt, response.headers.get("retry-after")));
       continue;
     }
-    throw new GhlSnapshotError("provider_unavailable", `GoHighLevel read failed with HTTP ${response.status}.`);
+    throw new GhlSnapshotError(
+      "provider_unavailable",
+      `${operation} failed with HTTP ${response.status}: ${safeProviderError.message}`,
+      operation,
+      safeProviderError.code,
+    );
   }
   throw new GhlSnapshotError("provider_unavailable", "GoHighLevel read failed.");
+}
+
+function readRequestLocation(url: URL) {
+  return url.searchParams.get("locationId") || url.searchParams.get("location_id") || "";
+}
+
+function readProviderRequestId(headers: Headers) {
+  const value = headers.get("x-request-id") || headers.get("x-trace-id") || "";
+  return /^[A-Za-z0-9._-]{1,100}$/.test(value) ? value : undefined;
+}
+
+async function readSafeProviderError(response: Response, locationId: string) {
+  const payload = object(await response.json().catch(() => ({})));
+  const rawCode = text(payload.error) || text(payload.code);
+  const code = /^[A-Za-z0-9._-]{1,64}$/.test(rawCode) ? rawCode : "provider_error";
+  const rawMessage = Array.isArray(payload.message)
+    ? payload.message.filter((value): value is string => typeof value === "string").join("; ")
+    : text(payload.message);
+  const message = sanitizeProviderMessage(rawMessage || "Bad Request", locationId);
+  return { code, message };
+}
+
+function sanitizeProviderMessage(value: string, locationId: string) {
+  return value
+    .slice(0, 240)
+    .replaceAll(locationId, locationId ? maskGhlLocationId(locationId) : "")
+    .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[redacted-email]")
+    .replace(/(?:access|refresh|client)[_-]?token["'=:\s]+[^"',\s}]+/gi, "token=[redacted]");
+}
+
+function safeQuery(url: URL, locationId: string) {
+  return Array.from(url.searchParams.entries()).map(([name, value]) => ({
+    name,
+    value: name === "locationId" || name === "location_id"
+      ? maskGhlLocationId(locationId)
+      : value,
+  }));
+}
+
+function logProviderOperation(input: {
+  operation: SnapshotOperation;
+  url: URL;
+  status: number;
+  locationId: string;
+  requestId?: string;
+  providerErrorCode?: string;
+  providerErrorMessage?: string;
+  reachedProvider: boolean;
+  retried: boolean;
+}, failed = false) {
+  const output = failed ? console.error : console.log;
+  output(JSON.stringify({
+    level: failed ? "error" : "info",
+    component: "ghl_operations_snapshot",
+    event: failed ? "provider_get.failed" : "provider_get.succeeded",
+    operation: input.operation,
+    method: "GET",
+    path: input.url.pathname,
+    status: input.status,
+    query: safeQuery(input.url, input.locationId),
+    maskedLocationId: maskGhlLocationId(input.locationId),
+    ...(input.requestId ? { providerRequestId: input.requestId } : {}),
+    ...(input.providerErrorCode ? { providerErrorCode: input.providerErrorCode } : {}),
+    ...(input.providerErrorMessage ? { providerErrorMessage: input.providerErrorMessage } : {}),
+    reachedProvider: input.reachedProvider,
+    retried: input.retried,
+  }));
 }
 
 function nextContactsPath(payload: JsonRecord, locationId: string) {
@@ -185,6 +317,7 @@ function safeProviderNextPath(value: string, locationId: string) {
 }
 
 async function collectPages(input: {
+  operation: Extract<SnapshotOperation, "contacts-list" | "opportunities-search">;
   firstPath: string;
   locationId: string;
   listKey: "contacts" | "opportunities";
@@ -196,7 +329,7 @@ async function collectPages(input: {
   let providerTotal: number | undefined;
   let pages = 0;
   while (path && pages < MAX_PAGES) {
-    const payload = await input.get(path);
+    const payload = await input.get(input.operation, path);
     const page = array(payload[input.listKey]);
     assertLocation(page, input.locationId);
     records.push(...page);
@@ -238,8 +371,13 @@ export async function buildGhlOperationsSnapshot(
     if (missing.length) {
       throw new GhlSnapshotError("scope_missing", `The connected GoHighLevel token is missing required read scope: ${missing.join(", ")}.`);
     }
-    const get = async (path: string) => (dependencies.providerGet ?? snapshotProviderGet)(path, token.accessToken);
-    const pipelinesPayload = await get(`/opportunities/pipelines?locationId=${encodeURIComponent(input.locationId)}`);
+    const get = async (operation: SnapshotOperation, path: string) => dependencies.providerGet
+      ? dependencies.providerGet(path, token.accessToken)
+      : snapshotProviderGet(operation, path, token.accessToken);
+    const pipelinesPayload = await get(
+      "pipelines-list",
+      `/opportunities/pipelines?locationId=${encodeURIComponent(input.locationId)}`,
+    );
     const pipelineRecords = array(pipelinesPayload.pipelines);
     assertLocation(pipelineRecords, input.locationId);
 
@@ -266,13 +404,15 @@ export async function buildGhlOperationsSnapshot(
     }
 
     const contacts = await collectPages({
+      operation: "contacts-list",
       firstPath: `/contacts/?${new URLSearchParams({ locationId: input.locationId, limit: String(PAGE_SIZE) })}`,
       locationId: input.locationId,
       listKey: "contacts",
-      get: (path) => get(path),
+      get,
       next: (payload, locationId) => nextContactsPath(payload, locationId),
     });
     const opportunities = await collectPages({
+      operation: "opportunities-search",
       firstPath: `/opportunities/search?${new URLSearchParams({
         location_id: input.locationId,
         status: "open",
@@ -280,7 +420,7 @@ export async function buildGhlOperationsSnapshot(
       })}`,
       locationId: input.locationId,
       listKey: "opportunities",
-      get: (path) => get(path),
+      get,
       next: nextOpportunityPath,
     });
 
@@ -336,3 +476,4 @@ export async function buildGhlOperationsSnapshot(
 }
 
 export const GHL_SNAPSHOT_LIMITS = { pageSize: PAGE_SIZE, maxPages: MAX_PAGES, maxRetries: MAX_RETRIES };
+export const GHL_SNAPSHOT_OPERATION_CONTRACTS = OPERATION_CONTRACTS;
