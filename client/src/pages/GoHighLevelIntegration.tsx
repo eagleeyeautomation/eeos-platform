@@ -122,6 +122,29 @@ export type SafeGhlConnectionStatus = {
   lastVerifiedAt: string | null;
 };
 
+export type SafeGhlOperationsSnapshot = {
+  organizationId: string;
+  organizationName: string;
+  location: { name: string; maskedProviderLocationId: string };
+  provider: "gohighlevel";
+  connection: { connected: true; healthy: true };
+  contacts: { total: number; createdLast7Days: number; createdLast30Days: number };
+  opportunities: {
+    openTotal: number;
+    createdLast7Days: number;
+    createdLast30Days: number;
+    byStage: Array<{
+      pipelineIdentifier: string;
+      pipelineName: string;
+      stageIdentifier: string;
+      stageName: string;
+      count: number;
+    }>;
+  };
+  generatedAt: string;
+  partial: boolean;
+};
+
 export function getGhlConnectionPresentation(
   status: SafeGhlConnectionStatus | null,
   locationName: string,
@@ -170,6 +193,121 @@ export async function verifyGhlLocation(context: Pick<OwnerSessionContext, "orga
     throw new Error(payload.message ?? "The GoHighLevel location identity check failed.");
   }
   return payload;
+}
+
+export async function loadGhlOperationsSnapshot(context: OwnerSessionContext) {
+  const query = new URLSearchParams({
+    organizationId: context.organizationId,
+    locationId: context.locationId,
+  });
+  const response = await fetch(`/api/ghl/operations-snapshot?${query}`, {
+    method: "POST",
+    credentials: "include",
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+      "x-eeos-csrf-token": context.csrfToken,
+    },
+  });
+  const payload = await response.json() as SafeGhlOperationsSnapshot & {
+    error?: string;
+    message?: string;
+  };
+  if (!response.ok) {
+    const message = payload.error === "reauthorization_required"
+      ? "Reauthorization required before a new snapshot can run."
+      : response.status === 403
+        ? "Permission denied for this organization or location."
+        : "Provider unavailable. No snapshot values were changed.";
+    throw new Error(payload.message || message);
+  }
+  return payload;
+}
+
+function OperationsSnapshotPanel({ context }: { context: OwnerSessionContext }) {
+  const [snapshot, setSnapshot] = useState<SafeGhlOperationsSnapshot | null>(null);
+  const [running, setRunning] = useState(false);
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
+
+  async function refresh() {
+    setRunning(true);
+    setSnapshotError(null);
+    try {
+      setSnapshot(await loadGhlOperationsSnapshot(context));
+    } catch (error) {
+      setSnapshotError(error instanceof Error ? error.message : "Provider unavailable.");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  const metrics = snapshot ? [
+    ["Total contacts", snapshot.contacts.total],
+    ["Contacts · 7 days", snapshot.contacts.createdLast7Days],
+    ["Contacts · 30 days", snapshot.contacts.createdLast30Days],
+    ["Open opportunities", snapshot.opportunities.openTotal],
+    ["Opportunities · 7 days", snapshot.opportunities.createdLast7Days],
+    ["Opportunities · 30 days", snapshot.opportunities.createdLast30Days],
+  ] as const : [];
+
+  return (
+    <div className="mt-4 rounded-xl border border-[rgba(201,162,39,0.22)] bg-[#0B0B0B]/55 p-4 text-white">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-[#C9A227]">South Carolina operations</p>
+          <p className="mt-1 text-xs text-white/55">
+            On-demand aggregate counts only. No contact records are displayed or stored.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={refresh}
+          disabled={running}
+          className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[rgba(201,162,39,0.35)] px-4 text-sm font-semibold text-[#C9A227] disabled:opacity-50"
+        >
+          {running ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ShieldCheck className="h-4 w-4" aria-hidden="true" />}
+          {running ? "Loading snapshot…" : "Refresh snapshot"}
+        </button>
+      </div>
+      {snapshot ? (
+        <div className="mt-4 space-y-4">
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-emerald-300">Connected</span>
+            <span className={`rounded-full px-3 py-1 ${snapshot.partial ? "bg-amber-500/10 text-amber-300" : "bg-emerald-500/10 text-emerald-300"}`}>
+              {snapshot.partial ? "Partial result" : "Snapshot available"}
+            </span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {metrics.map(([label, value]) => (
+              <div key={label} className="rounded-lg bg-white/5 p-3">
+                <p className="text-[11px] text-white/50">{label}</p>
+                <p className="mt-1 text-xl font-semibold text-white">{value}</p>
+              </div>
+            ))}
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-white">Open opportunities by pipeline stage</p>
+            {snapshot.opportunities.byStage.length ? (
+              <ul className="mt-2 space-y-1 text-xs text-white/65">
+                {snapshot.opportunities.byStage.map((stage) => (
+                  <li key={`${stage.pipelineIdentifier}:${stage.stageIdentifier}`} className="flex justify-between gap-3">
+                    <span>{stage.pipelineName} · {stage.stageName}</span>
+                    <span className="font-semibold text-white">{stage.count}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="mt-2 text-xs text-white/50">No open opportunities were returned.</p>}
+          </div>
+          <p className="text-[11px] text-white/45">
+            Generated {new Date(snapshot.generatedAt).toLocaleString()} · {snapshot.location.name} · {snapshot.location.maskedProviderLocationId}
+          </p>
+        </div>
+      ) : !running ? (
+        <p className="mt-4 text-xs text-white/50">Connected. Request a snapshot when you are ready.</p>
+      ) : null}
+      {snapshotError ? <p className="mt-4 text-xs text-red-300">{snapshotError}</p> : null}
+    </div>
+  );
 }
 
 function SafeOAuthPreflight() {
@@ -398,6 +536,7 @@ function SafeOAuthPreflight() {
                       <p>Read-only verification completed: {locationVerification.verifiedAt}</p>
                     </div>
                   ) : null}
+                  <OperationsSnapshotPanel context={sessionContext} />
                 </div>
               ) : installationConfirmed && connectionPresentation.showConnect ? (
                 <div className="mt-3">

@@ -9,6 +9,7 @@ import {
   storeGhlConnectionToken,
   verifyGhlLocationIdentity,
 } from "./ghl-token-store";
+import { buildGhlOperationsSnapshot } from "./ghl-operations-snapshot";
 
 vi.mock("./_core/env", () => ({
   ENV: {
@@ -35,12 +36,17 @@ vi.mock("./ghl-token-store", () => ({
   storeGhlConnectionToken: vi.fn(),
   verifyGhlLocationIdentity: vi.fn(),
 }));
+vi.mock("./ghl-operations-snapshot", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./ghl-operations-snapshot")>();
+  return { ...original, buildGhlOperationsSnapshot: vi.fn() };
+});
 
 const authenticateRequestMock = vi.mocked(sdk.authenticateRequest);
 const readSessionTokenMock = vi.mocked(sdk.readSessionToken);
 const safeGhlConnectionStatusMock = vi.mocked(safeGhlConnectionStatus);
 const storeGhlConnectionTokenMock = vi.mocked(storeGhlConnectionToken);
 const verifyGhlLocationIdentityMock = vi.mocked(verifyGhlLocationIdentity);
+const buildGhlOperationsSnapshotMock = vi.mocked(buildGhlOperationsSnapshot);
 const getUserSubaccountsMock = vi.mocked(getUserSubaccounts);
 const getMembershipByIdMock = vi.mocked(getMembershipById);
 const getMembershipUserMock = vi.mocked(getMembershipUser);
@@ -139,6 +145,18 @@ function organization(role: "owner" | "executive" | "analyst" | "viewer" | "unkn
   getOrganizationByIdMock.mockResolvedValue({ id: 100, name: "PRN Staffers", isActive: true } as never);
 }
 
+function certifiedSnapshotOrganization(role: "owner" | "executive" | "analyst" | "viewer" = "owner") {
+  getUserSubaccountsMock.mockResolvedValue([{
+    membershipId: 7,
+    orgName: "PRN Staffers Inc.",
+    ghlLocationId: "rJH8XytyAfEQSoOTQeuZ",
+    name: "PRN Staffers CSC",
+  } as never]);
+  getMembershipByIdMock.mockResolvedValue({ id: 7, organizationId: 1, status: "active" } as never);
+  getMembershipUserMock.mockResolvedValue({ role, isActive: true } as never);
+  getOrganizationByIdMock.mockResolvedValue({ id: 1, name: "PRN Staffers Inc.", isActive: true } as never);
+}
+
 function encodedState(tenantId = "100", locationId = "loc_sc") {
   return Buffer.from(JSON.stringify({ tenantId, locationId, nonce: "safe", ts: Date.now() })).toString("base64url");
 }
@@ -163,6 +181,18 @@ describe("GoHighLevel production OAuth security", () => {
     });
     authenticatedUser();
     organization();
+    buildGhlOperationsSnapshotMock.mockResolvedValue({
+      organizationId: "1",
+      organizationName: "PRN Staffers Inc.",
+      location: { name: "South Carolina", maskedProviderLocationId: "rJH8…QeuZ" },
+      provider: "gohighlevel",
+      connection: { connected: true, healthy: true },
+      contacts: { total: 10, createdLast7Days: 2, createdLast30Days: 4 },
+      opportunities: { openTotal: 3, createdLast7Days: 1, createdLast30Days: 2, byStage: [] },
+      pipelines: [],
+      generatedAt: "2026-07-29T00:00:00.000Z",
+      partial: false,
+    });
   });
 
   afterEach(() => {
@@ -551,5 +581,68 @@ describe("GoHighLevel production OAuth security", () => {
     });
     expect(result.status).toBe(403);
     expect(verifyGhlLocationIdentityMock).not.toHaveBeenCalled();
+  });
+
+  it("allows an authenticated owner to request the exact certified snapshot with CSRF", async () => {
+    certifiedSnapshotOrganization();
+    const result = await invoke("POST", "/api/ghl/operations-snapshot", {
+      query: { organizationId: "1", locationId: "rJH8XytyAfEQSoOTQeuZ" },
+      ...csrf,
+    });
+    expect(result.status).toBe(200);
+    expect(buildGhlOperationsSnapshotMock).toHaveBeenCalledWith({
+      organizationId: "1",
+      organizationName: "PRN Staffers Inc.",
+      locationId: "rJH8XytyAfEQSoOTQeuZ",
+      locationName: "PRN Staffers CSC",
+    });
+    expect(result.headers.get("cache-control")).toContain("no-store");
+    expect(persistAuditEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      eventType: "operations.snapshot.read",
+      organizationId: "1",
+      locationId: "rJH8XytyAfEQSoOTQeuZ",
+    }));
+    expect(JSON.stringify(result.body)).not.toMatch(/accessToken|refreshToken|secret/i);
+  });
+
+  it("rejects unauthenticated, invalid-CSRF, and unauthorized-role snapshot requests", async () => {
+    certifiedSnapshotOrganization();
+    authenticateRequestMock.mockRejectedValueOnce(new Error("No session"));
+    expect((await invoke("POST", "/api/ghl/operations-snapshot", {
+      query: { organizationId: "1", locationId: "rJH8XytyAfEQSoOTQeuZ" },
+      ...csrf,
+    })).status).toBe(401);
+
+    authenticatedUser();
+    expect((await invoke("POST", "/api/ghl/operations-snapshot", {
+      query: { organizationId: "1", locationId: "rJH8XytyAfEQSoOTQeuZ" },
+      cookie: csrf.cookie,
+      csrfHeader: "invalid",
+    })).status).toBe(403);
+
+    certifiedSnapshotOrganization("executive");
+    expect((await invoke("POST", "/api/ghl/operations-snapshot", {
+      query: { organizationId: "1", locationId: "rJH8XytyAfEQSoOTQeuZ" },
+      ...csrf,
+    })).status).toBe(403);
+    expect(buildGhlOperationsSnapshotMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects wrong organization, wrong location, and GET snapshot triggers", async () => {
+    certifiedSnapshotOrganization();
+    expect((await invoke("POST", "/api/ghl/operations-snapshot", {
+      query: { organizationId: "999", locationId: "rJH8XytyAfEQSoOTQeuZ" },
+      ...csrf,
+    })).status).toBe(403);
+
+    organization();
+    expect((await invoke("POST", "/api/ghl/operations-snapshot", {
+      query: { organizationId: "100", locationId: "loc_sc" },
+      ...csrf,
+    })).status).toBe(403);
+
+    const getResult = await invoke("GET", "/api/ghl/operations-snapshot");
+    expect(getResult.status).toBe(405);
+    expect(getResult.headers.get("cache-control")).toBe("no-store");
   });
 });

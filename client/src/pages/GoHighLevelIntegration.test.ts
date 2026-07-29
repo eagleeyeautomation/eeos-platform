@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getGhlConnectionPresentation,
+  loadGhlOperationsSnapshot,
   loadGhlConnectionStatus,
   verifyGhlLocation,
 } from "./GoHighLevelIntegration";
@@ -94,5 +95,55 @@ describe("GoHighLevel owner connection status", () => {
         headers: { Accept: "application/json" },
       },
     );
+  });
+
+  it("requests a protected no-cache aggregate snapshot without provider credentials", async () => {
+    const response = {
+      organizationId: "1",
+      organizationName: "PRN Staffers Inc.",
+      location: { name: "PRN Staffers CSC", maskedProviderLocationId: "rJH8…QeuZ" },
+      provider: "gohighlevel",
+      connection: { connected: true, healthy: true },
+      contacts: { total: 9, createdLast7Days: 1, createdLast30Days: 3 },
+      opportunities: { openTotal: 2, createdLast7Days: 0, createdLast30Days: 1, byStage: [] },
+      generatedAt: "2026-07-29T12:00:00.000Z",
+      partial: false,
+    };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => response });
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(loadGhlOperationsSnapshot({
+      organizationId: "1",
+      organization: "PRN Staffers Inc.",
+      role: "ORGANIZATION_OWNER",
+      location: "PRN Staffers CSC",
+      locationId: "rJH8XytyAfEQSoOTQeuZ",
+      csrfToken: "session-bound-csrf",
+    })).resolves.toEqual(response);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/ghl/operations-snapshot?organizationId=1&locationId=rJH8XytyAfEQSoOTQeuZ",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: expect.objectContaining({ "x-eeos-csrf-token": "session-bound-csrf" }),
+      }),
+    );
+    expect(JSON.stringify(response)).not.toMatch(/accessToken|refreshToken|email|phone|contactId/i);
+  });
+
+  it("rejects provider failures instead of presenting false zero metrics", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({ error: "provider_unavailable" }),
+    }));
+    await expect(loadGhlOperationsSnapshot({
+      organizationId: "1",
+      organization: "PRN Staffers Inc.",
+      role: "ORGANIZATION_OWNER",
+      location: "PRN Staffers CSC",
+      locationId: "rJH8XytyAfEQSoOTQeuZ",
+      csrfToken: "session-bound-csrf",
+    })).rejects.toThrow("Provider unavailable");
   });
 });

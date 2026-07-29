@@ -19,6 +19,10 @@ import {
   storeGhlConnectionToken,
   verifyGhlLocationIdentity,
 } from "./ghl-token-store";
+import {
+  buildGhlOperationsSnapshot,
+  GhlSnapshotError,
+} from "./ghl-operations-snapshot";
 
 const GHL_AUTH_URL = "https://marketplace.gohighlevel.com/oauth/chooselocation";
 const EEOS_OAUTH_PREFLIGHT_HEADER = "x-eeos-oauth-preflight";
@@ -27,6 +31,8 @@ const GHL_TOKEN_URL = "https://services.leadconnectorhq.com/oauth/token";
 const APPROVED_GHL_CALLBACK_PATH = "/api/integrations/eea/oauth/callback";
 const APPROVED_GHL_CALLBACK_URL = "https://eeos-platform-production.up.railway.app/api/integrations/eea/oauth/callback";
 const EEOS_CSRF_COOKIE = "eeos_csrf";
+const CERTIFIED_SNAPSHOT_ORGANIZATION_ID = "1";
+const CERTIFIED_SNAPSHOT_LOCATION_ID = "rJH8XytyAfEQSoOTQeuZ";
 
 type GhlConnectSessionContext = {
   userId: number;
@@ -597,6 +603,69 @@ export function registerGhlOAuthRoutes(app: Express) {
         .json({ success: true, ...verification });
     } catch (error) {
       sendOAuthStartError(res, error);
+    }
+  });
+
+  app.get("/api/ghl/operations-snapshot", (_req: Request, res: Response) => {
+    res
+      .set("Cache-Control", "no-store")
+      .status(405)
+      .json({ error: "method_not_allowed", message: "Use the protected snapshot refresh action." });
+  });
+
+  app.post("/api/ghl/operations-snapshot", async (req: Request, res: Response) => {
+    try {
+      validateCsrf(req);
+      const requestedLocation = getQueryParam(req, "locationId");
+      const context = await resolveGhlConnectSessionContext(req, requestedLocation);
+      const requestedOrganization = getQueryParam(req, "organizationId");
+      if (requestedOrganization && requestedOrganization !== context.organizationId) {
+        throw new GhlOAuthRequestError(403, "The requested organization is not authorized.");
+      }
+      if (
+        context.organizationId !== CERTIFIED_SNAPSHOT_ORGANIZATION_ID
+        || context.locationId !== CERTIFIED_SNAPSHOT_LOCATION_ID
+      ) {
+        throw new GhlOAuthRequestError(403, "This snapshot is restricted to the certified South Carolina location.");
+      }
+
+      const snapshot = await buildGhlOperationsSnapshot({
+        organizationId: context.organizationId,
+        organizationName: context.organizationName,
+        locationId: context.locationId,
+        locationName: context.locationName,
+      });
+      await persistAuditEvent({
+        organizationId: context.organizationId,
+        source: "gohighlevel",
+        eventType: "operations.snapshot.read",
+        locationId: context.locationId,
+        metadata: {
+          userId: String(context.userId),
+          role: context.userRole,
+          partial: snapshot.partial,
+          provider: snapshot.provider,
+        },
+      });
+      res
+        .set("Cache-Control", "private, no-store, max-age=0")
+        .set("Pragma", "no-cache")
+        .status(200)
+        .json(snapshot);
+    } catch (error) {
+      const statusCode = error instanceof GhlSnapshotError
+        ? error.code === "reauthorization_required" ? 401
+          : error.code === "scope_missing" || error.code === "binding_mismatch" ? 403
+            : 503
+        : error instanceof GhlOAuthRequestError ? error.statusCode : 500;
+      res
+        .set("Cache-Control", "private, no-store, max-age=0")
+        .set("Pragma", "no-cache")
+        .status(statusCode)
+        .json({
+          error: error instanceof GhlSnapshotError ? error.code : statusCode === 401 ? "unauthorized" : "snapshot_failed",
+          message: error instanceof Error ? redactSecrets(error.message) : "The snapshot could not be generated.",
+        });
     }
   });
 }
