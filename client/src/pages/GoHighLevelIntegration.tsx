@@ -110,6 +110,68 @@ type OwnerSessionContext = {
   csrfToken: string;
 };
 
+export type SafeGhlConnectionStatus = {
+  connected: boolean;
+  provider: "gohighlevel";
+  organizationId: string;
+  maskedLocationId: string;
+  tokenExpiresAt: string | null;
+  tokenExpired: boolean;
+  refreshAvailable: boolean;
+  connectedAt: string | null;
+  lastVerifiedAt: string | null;
+};
+
+export function getGhlConnectionPresentation(
+  status: SafeGhlConnectionStatus | null,
+  locationName: string,
+) {
+  return status?.connected
+    ? { label: `${locationName} Connected`, showConnect: false }
+    : { label: `Connect ${locationName} to EEOS`, showConnect: status !== null };
+}
+
+export async function loadGhlConnectionStatus(context: Pick<OwnerSessionContext, "organizationId" | "locationId">) {
+  const query = new URLSearchParams({
+    tenantId: context.organizationId,
+    locationId: context.locationId,
+  });
+  const response = await fetch(`/api/ghl/status?${query}`, {
+    credentials: "include",
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  const payload = await response.json() as SafeGhlConnectionStatus & { message?: string };
+  if (!response.ok) throw new Error(payload.message ?? "GoHighLevel connection status could not be loaded.");
+  return payload;
+}
+
+export async function verifyGhlLocation(context: Pick<OwnerSessionContext, "organizationId" | "locationId">) {
+  const query = new URLSearchParams({
+    tenantId: context.organizationId,
+    locationId: context.locationId,
+  });
+  const response = await fetch(`/api/ghl/verify-location?${query}`, {
+    credentials: "include",
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  const payload = await response.json() as {
+    success?: boolean;
+    message?: string;
+    provider?: string;
+    organizationId?: string;
+    maskedLocationId?: string;
+    locationName?: string;
+    accountContext?: string;
+    verifiedAt?: string;
+  };
+  if (!response.ok || !payload.success) {
+    throw new Error(payload.message ?? "The GoHighLevel location identity check failed.");
+  }
+  return payload;
+}
+
 function SafeOAuthPreflight() {
   const [sessionContext, setSessionContext] = useState<OwnerSessionContext | null>(null);
   const [loading, setLoading] = useState(true);
@@ -122,6 +184,17 @@ function SafeOAuthPreflight() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [installationConfirmed, setInstallationConfirmed] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<SafeGhlConnectionStatus | null>(null);
+  const [verifyingLocation, setVerifyingLocation] = useState(false);
+  const [locationVerification, setLocationVerification] = useState<{
+    locationName: string;
+    maskedLocationId: string;
+    verifiedAt: string;
+  } | null>(null);
+  const connectionPresentation = getGhlConnectionPresentation(
+    connectionStatus,
+    sessionContext?.location ?? "authorized location",
+  );
 
   useEffect(() => {
     let active = true;
@@ -152,6 +225,7 @@ function SafeOAuthPreflight() {
         csrfToken: session.csrfToken,
       };
       setSessionContext(context);
+      setConnectionStatus(await loadGhlConnectionStatus(context));
       setInstallationConfirmed(
         hasInstallationConfirmation(window.localStorage, context.organizationId, context.locationId),
       );
@@ -218,6 +292,27 @@ function SafeOAuthPreflight() {
     }
   }
 
+  async function verifyConnectedLocation() {
+    if (!sessionContext || !connectionStatus?.connected) return;
+    setVerifyingLocation(true);
+    setLocationVerification(null);
+    setError(null);
+    try {
+      const result = await verifyGhlLocation(sessionContext);
+      setLocationVerification({
+        locationName: result.locationName ?? sessionContext.location,
+        maskedLocationId: result.maskedLocationId ?? connectionStatus.maskedLocationId,
+        verifiedAt: result.verifiedAt ?? new Date().toISOString(),
+      });
+    } catch (verificationError) {
+      setError(verificationError instanceof Error
+        ? verificationError.message
+        : "The GoHighLevel location identity check failed.");
+    } finally {
+      setVerifyingLocation(false);
+    }
+  }
+
   return (
     <div className="rounded-xl border border-[rgba(201,162,39,0.16)] bg-[#0B0B0B]/40 p-4">
       <p className="text-sm font-semibold text-white">Safe production preflight</p>
@@ -273,7 +368,38 @@ function SafeOAuthPreflight() {
               <p className="mt-2 text-xs leading-5 text-white/55">
                 EEOS creates persisted, single-use OAuth state only when the protected Connect action starts. The callback remains bound to this organization and location.
               </p>
-              {installationConfirmed ? (
+              {connectionStatus === null ? (
+                <p className="mt-3 inline-flex items-center gap-2 text-xs text-white/55">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  Loading authoritative connection status…
+                </p>
+              ) : connectionStatus.connected ? (
+                <div className="mt-3 space-y-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+                  <p className="flex items-center gap-2 font-semibold">
+                    <CheckCircle2 className="h-4 w-4" />
+                    {connectionPresentation.label}
+                  </p>
+                  <p>Location binding: {connectionStatus.maskedLocationId}</p>
+                  <button
+                    type="button"
+                    onClick={verifyConnectedLocation}
+                    disabled={verifyingLocation}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-emerald-500/30 px-4 text-sm font-semibold disabled:opacity-50"
+                  >
+                    {verifyingLocation
+                      ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                      : <ShieldCheck className="h-4 w-4" aria-hidden="true" />}
+                    {verifyingLocation ? "Verifying location…" : `Verify ${sessionContext.location} location`}
+                  </button>
+                  {locationVerification ? (
+                    <div className="space-y-1">
+                      <p>Verified location: {locationVerification.locationName}</p>
+                      <p>Verified binding: {locationVerification.maskedLocationId}</p>
+                      <p>Read-only verification completed: {locationVerification.verifiedAt}</p>
+                    </div>
+                  ) : null}
+                </div>
+              ) : installationConfirmed && connectionPresentation.showConnect ? (
                 <div className="mt-3">
                   <GoHighLevelSecureConnectButton locationId={sessionContext.locationId} />
                 </div>

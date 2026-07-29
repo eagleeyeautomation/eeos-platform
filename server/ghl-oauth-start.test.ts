@@ -517,6 +517,7 @@ describe("GoHighLevel production OAuth security", () => {
       maskedLocationId: "loc_…c_sc",
       refreshAvailable: true,
     });
+    expect(result.headers.get("cache-control")).toBe("no-store");
     expect(JSON.stringify(result.body)).not.toMatch(/accessToken|refreshToken|secret|must-not-leak/i);
   });
 
@@ -539,6 +540,7 @@ describe("GoHighLevel production OAuth security", () => {
       organizationId: "100",
       locationName: "South Carolina",
     });
+    expect(result.headers.get("cache-control")).toBe("no-store");
     expect(verifyGhlLocationIdentityMock).toHaveBeenCalledWith("100", "loc_sc");
   });
 

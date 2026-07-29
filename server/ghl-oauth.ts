@@ -573,7 +573,10 @@ export function registerGhlOAuthRoutes(app: Express) {
         throw new GhlOAuthRequestError(403, "The requested organization is not authorized.");
       }
 
-      res.status(200).json(await safeGhlConnectionStatus(context.organizationId, context.locationId));
+      res
+        .set("Cache-Control", "no-store")
+        .status(200)
+        .json(await safeGhlConnectionStatus(context.organizationId, context.locationId));
     } catch (error) {
       sendOAuthStartError(res, error);
     }
@@ -588,7 +591,10 @@ export function registerGhlOAuthRoutes(app: Express) {
         throw new GhlOAuthRequestError(403, "The requested organization is not authorized.");
       }
       const verification = await verifyGhlLocationIdentity(context.organizationId, context.locationId);
-      res.status(200).json({ success: true, ...verification });
+      res
+        .set("Cache-Control", "no-store")
+        .status(200)
+        .json({ success: true, ...verification });
     } catch (error) {
       sendOAuthStartError(res, error);
     }
