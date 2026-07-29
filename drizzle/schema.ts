@@ -116,6 +116,8 @@ export const subaccounts = mysqlTable("subaccounts", {
   ghlLocationId: varchar("ghlLocationId", { length: 128 }).notNull().unique(),
   ghlCompanyId: varchar("ghlCompanyId", { length: 128 }),
   name: varchar("name", { length: 256 }).notNull(), // e.g. "Delaware", "South Carolina"
+  city: varchar("city", { length: 128 }),
+  state: varchar("state", { length: 64 }),
   timezone: varchar("timezone", { length: 64 }).default("America/New_York"),
   isActive: boolean("isActive").default(true).notNull(),
   // IE configuration (can override membership defaults)

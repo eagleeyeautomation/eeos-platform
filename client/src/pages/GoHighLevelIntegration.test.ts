@@ -17,14 +17,14 @@ describe("GoHighLevel owner connection status", () => {
       {
         organization: { id: "1", name: "PRN Staffers Inc." },
         provider: "gohighlevel",
-        location: { id: "loc-sc", name: "South Carolina" },
+        location: { id: "loc-sc", name: "South Carolina", city: "Beaufort", state: "South Carolina" },
         connection: { connected: true, lastVerifiedAt: null },
         snapshot: { status: "complete" as const, generatedAt: null },
       },
       {
         organization: { id: "1", name: "PRN Staffers Inc." },
         provider: "gohighlevel",
-        location: { id: "loc-de", name: "Delaware" },
+        location: { id: "loc-de", name: "Delaware", city: "Milford", state: "Delaware" },
         connection: { connected: false, lastVerifiedAt: null },
         snapshot: { status: "not_available" as const, generatedAt: null },
       },
@@ -33,7 +33,7 @@ describe("GoHighLevel owner connection status", () => {
     expect(resolveSelectedOwnerLocation(
       locations,
       "1:gohighlevel:loc-de",
-    )?.location).toEqual({ id: "loc-de", name: "Delaware" });
+    )?.location).toEqual({ id: "loc-de", name: "Delaware", city: "Milford", state: "Delaware" });
   });
 
   it("loads the exact organization and South Carolina status with session credentials and no cache", async () => {

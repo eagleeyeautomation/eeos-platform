@@ -27,7 +27,7 @@ const context = {
 const selected: ManagedLocation = {
   organization: { id: "1", name: "PRN Staffers Inc." },
   provider: "gohighlevel",
-  location: { id: "rJH8XytyAfEQSoOTQeuZ", name: "PRN Staffers CSC" },
+  location: { id: "rJH8XytyAfEQSoOTQeuZ", name: "PRN Staffers CSC", city: "Beaufort", state: "South Carolina" },
   connection: { connected: true, lastVerifiedAt: null },
   snapshot: { status: "complete", generatedAt: "2026-07-29T12:00:00.000Z" },
 };
@@ -143,7 +143,7 @@ describe("multi-location Executive Dashboard operations view", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
       user: { role: "ORGANIZATION_OWNER" },
       organization: { id: "1", name: "PRN Staffers Inc." },
-      location: { id: "rJH8XytyAfEQSoOTQeuZ", name: "PRN Staffers CSC" },
+      location: { id: "rJH8XytyAfEQSoOTQeuZ", name: "PRN Staffers CSC", city: "Beaufort", state: "South Carolina" },
       csrfToken: "csrf-test-only",
     }));
     await expect(loadSelectedOwnerContext(selected, fetchMock as typeof fetch)).resolves.toEqual(context);
@@ -160,7 +160,7 @@ describe("multi-location Executive Dashboard operations view", () => {
     const response = (overrides: Record<string, unknown>) => vi.fn().mockResolvedValue(jsonResponse({
       user: { role: "ORGANIZATION_OWNER" },
       organization: { id: "1", name: "PRN Staffers Inc." },
-      location: { id: "rJH8XytyAfEQSoOTQeuZ", name: "PRN Staffers CSC" },
+      location: { id: "rJH8XytyAfEQSoOTQeuZ", name: "PRN Staffers CSC", city: "Beaufort", state: "South Carolina" },
       csrfToken: "csrf-test-only",
       ...overrides,
     })) as typeof fetch;

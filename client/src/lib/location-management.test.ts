@@ -11,14 +11,14 @@ const locations: ManagedLocation[] = [
   {
     organization: { id: "1", name: "PRN Staffers" },
     provider: "gohighlevel",
-    location: { id: "loc-sc", name: "South Carolina" },
+    location: { id: "loc-sc", name: "South Carolina", city: "Beaufort", state: "South Carolina" },
     connection: { connected: true, lastVerifiedAt: "2026-07-29T00:00:00.000Z" },
     snapshot: { status: "complete", generatedAt: "2026-07-29T00:00:00.000Z" },
   },
   {
     organization: { id: "2", name: "Another Customer" },
     provider: "gohighlevel",
-    location: { id: "loc-al", name: "Alabama Office" },
+    location: { id: "loc-al", name: "Alabama Office", city: null, state: null },
     connection: { connected: false, lastVerifiedAt: null },
     snapshot: { status: "not_available", generatedAt: null },
   },

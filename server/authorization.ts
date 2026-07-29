@@ -187,6 +187,8 @@ export async function listOwnerOrganizationLocations(user: User) {
       membershipId: context.membershipId!,
       locationId: subaccount.ghlLocationId,
       locationName: subaccount.name,
+      city: subaccount.city,
+      state: subaccount.state,
     };
   }));
 

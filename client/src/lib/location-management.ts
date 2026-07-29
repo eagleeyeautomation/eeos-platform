@@ -1,7 +1,7 @@
 export type ManagedLocation = {
   organization: { id: string; name: string };
   provider: string;
-  location: { id: string; name: string };
+  location: { id: string; name: string; city: string | null; state: string | null };
   connection: { connected: boolean; lastVerifiedAt: string | null };
   snapshot: {
     status: "complete" | "partial" | "not_available";

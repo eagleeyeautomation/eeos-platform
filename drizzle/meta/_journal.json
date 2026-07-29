@@ -22,6 +22,13 @@
       "when": 1784835481855,
       "tag": "0002_secret_mojo",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1785354287454,
+      "tag": "0003_amusing_white_queen",
+      "breakpoints": true
     }
   ]
 }

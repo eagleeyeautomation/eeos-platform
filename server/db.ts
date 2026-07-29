@@ -704,6 +704,68 @@ export async function getSubaccountByGhlLocationId(ghlLocationId: string): Promi
 
 export type InsertSubaccount = typeof subaccounts.$inferInsert;
 
+export type MetadataOnlySubaccountInput = {
+  membershipId: number;
+  providerLocationId: string;
+  name: string;
+  city: string;
+  state: string;
+};
+
+export type MetadataOnlySubaccountResult =
+  | { created: true; id: number }
+  | { created: false; reason: "provider_binding_exists" | "location_exists" };
+
+export async function createMetadataOnlySubaccount(
+  input: MetadataOnlySubaccountInput,
+): Promise<MetadataOnlySubaccountResult> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const existingBinding = await db.select({ id: subaccounts.id }).from(subaccounts)
+    .where(eq(subaccounts.ghlLocationId, input.providerLocationId))
+    .limit(1);
+  if (existingBinding.length > 0) {
+    return { created: false, reason: "provider_binding_exists" };
+  }
+
+  const existingLocation = await db.select({ id: subaccounts.id }).from(subaccounts)
+    .where(and(
+      eq(subaccounts.membershipId, input.membershipId),
+      eq(subaccounts.name, input.name),
+      eq(subaccounts.city, input.city),
+      eq(subaccounts.state, input.state),
+    ))
+    .limit(1);
+  if (existingLocation.length > 0) {
+    return { created: false, reason: "location_exists" };
+  }
+
+  try {
+    const result = await db.insert(subaccounts).values({
+      membershipId: input.membershipId,
+      ghlLocationId: input.providerLocationId,
+      name: input.name,
+      city: input.city,
+      state: input.state,
+      timezone: "America/New_York",
+      isActive: true,
+      ieEnabled: true,
+    });
+    return { created: true, id: Number(result[0].insertId) };
+  } catch (error) {
+    if (
+      typeof error === "object"
+      && error !== null
+      && "code" in error
+      && error.code === "ER_DUP_ENTRY"
+    ) {
+      return { created: false, reason: "provider_binding_exists" };
+    }
+    throw error;
+  }
+}
+
 export async function upsertSubaccount(sub: InsertSubaccount): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

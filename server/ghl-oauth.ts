@@ -16,6 +16,7 @@ import {
   listOwnerOrganizationLocations,
   resolveOrganizationAuthorizationContext,
 } from "./authorization";
+import { createMetadataOnlySubaccount } from "./db";
 import {
   consumeOAuthState,
   persistAuditEvent,
@@ -340,6 +341,8 @@ export function registerGhlOAuthRoutes(app: Express) {
               location: {
                 id: location.locationId,
                 name: location.locationName,
+                city: location.city,
+                state: location.state,
               },
               connection: {
                 connected: connection.connected,
@@ -353,6 +356,71 @@ export function registerGhlOAuthRoutes(app: Express) {
                 : { status: "not_available", generatedAt: null },
             };
           }),
+        });
+    } catch (error) {
+      sendOAuthStartError(res, error);
+    }
+  });
+
+  app.post("/api/location-management/locations", async (req: Request, res: Response) => {
+    try {
+      let user: Awaited<ReturnType<typeof sdk.authenticateRequest>>;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        throw new GhlOAuthRequestError(401, "Authentication is required.");
+      }
+      validateCsrf(req);
+
+      const body = parseMetadataOnlyLocationBody(req.body);
+      const ownerLocations = await listOwnerOrganizationLocations(user);
+      const authorizedOrganizationLocations = ownerLocations.filter(
+        (location) => location.organizationId === body.organizationId,
+      );
+      const authorizedMemberships = new Set(
+        authorizedOrganizationLocations.map((location) => location.membershipId),
+      );
+
+      if (authorizedMemberships.size !== 1) {
+        throw new GhlOAuthRequestError(
+          403,
+          "An active organization-owner membership is required for the requested organization.",
+        );
+      }
+
+      const membershipId = Number(authorizedOrganizationLocations[0].membershipId);
+      if (!Number.isSafeInteger(membershipId) || membershipId <= 0) {
+        throw new GhlOAuthRequestError(403, "The organization membership is invalid.");
+      }
+      const result = await createMetadataOnlySubaccount({
+        membershipId,
+        providerLocationId: body.providerLocationId,
+        name: body.name,
+        city: body.city,
+        state: body.state,
+      });
+      if (!result.created) {
+        throw new GhlOAuthRequestError(409, "This operational location already exists.");
+      }
+
+      res
+        .set("Cache-Control", "private, no-store, max-age=0")
+        .set("Pragma", "no-cache")
+        .status(201)
+        .json({
+          success: true,
+          organization: {
+            id: body.organizationId,
+            name: authorizedOrganizationLocations[0].organizationName,
+          },
+          provider: "gohighlevel",
+          location: {
+            name: body.name,
+            city: body.city,
+            state: body.state,
+            maskedProviderBinding: maskGhlLocationId(body.providerLocationId),
+          },
+          connection: { connected: false, status: "Not Connected" },
         });
     } catch (error) {
       sendOAuthStartError(res, error);
@@ -871,6 +939,46 @@ class GhlOAuthRequestError extends Error {
     super(message);
     this.name = "GhlOAuthRequestError";
   }
+}
+
+function parseMetadataOnlyLocationBody(body: unknown) {
+  if (!body || typeof body !== "object") {
+    throw new GhlOAuthRequestError(400, "Valid operational-location metadata is required.");
+  }
+
+  const record = body as Record<string, unknown>;
+  if (record.provider !== "gohighlevel") {
+    throw new GhlOAuthRequestError(400, "The provider must be gohighlevel.");
+  }
+
+  const organizationId = parseRequiredMetadataField(record.organizationId, "organizationId", 20);
+  if (!/^[1-9]\d*$/.test(organizationId)) {
+    throw new GhlOAuthRequestError(400, "A valid organizationId is required.");
+  }
+
+  const providerLocationId = parseRequiredMetadataField(record.providerLocationId, "providerLocationId", 128);
+  if (!/^[A-Za-z0-9_-]{4,128}$/.test(providerLocationId)) {
+    throw new GhlOAuthRequestError(400, "A valid providerLocationId is required.");
+  }
+
+  return {
+    organizationId,
+    providerLocationId,
+    name: parseRequiredMetadataField(record.name, "name", 256),
+    city: parseRequiredMetadataField(record.city, "city", 128),
+    state: parseRequiredMetadataField(record.state, "state", 64),
+  };
+}
+
+function parseRequiredMetadataField(value: unknown, field: string, maxLength: number) {
+  if (typeof value !== "string") {
+    throw new GhlOAuthRequestError(400, `${field} is required.`);
+  }
+  const normalized = value.trim();
+  if (!normalized || normalized.length > maxLength) {
+    throw new GhlOAuthRequestError(400, `${field} is invalid.`);
+  }
+  return normalized;
 }
 
 function sendOAuthStartError(res: Response, error: unknown) {

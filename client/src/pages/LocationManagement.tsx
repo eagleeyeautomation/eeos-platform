@@ -108,9 +108,11 @@ export default function LocationManagement() {
                         <p className="mt-1 text-sm text-white/55">{location.organization.name} · {location.provider}</p>
                       </div>
                     </div>
-                    <div className="grid gap-3 text-sm sm:grid-cols-4 lg:min-w-[620px]">
-                      <Meta label="State" value={inferStateLabel(location.location.name)} />
-                      <Meta label="Connection" value={location.connection.connected ? "Connected" : "Not connected"} />
+                    <div className="grid gap-3 text-sm sm:grid-cols-3 xl:min-w-[760px] xl:grid-cols-6">
+                      <Meta label="Location name" value={location.location.name} />
+                      <Meta label="City" value={location.location.city ?? "Not specified"} />
+                      <Meta label="State" value={location.location.state ?? inferStateLabel(location.location.name)} />
+                      <Meta label="Connection status" value={location.connection.connected ? "Connected" : "Not connected"} />
                       <Meta label="Last verified" value={formatTimestamp(location.connection.lastVerifiedAt)} />
                       <Meta label="Snapshot" value={location.snapshot.status.replace("_", " ")} />
                     </div>
