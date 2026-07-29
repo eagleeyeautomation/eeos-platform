@@ -299,6 +299,65 @@ export async function readLatestSnapshotHistory(
   });
 }
 
+export type StoredCompletedSnapshot = {
+  generatedAt: string;
+  aggregate: {
+    contacts: {
+      total: number;
+      createdLast7Days: number;
+      createdLast30Days: number;
+    };
+    opportunities: {
+      openTotal: number;
+      createdLast7Days: number;
+      createdLast30Days: number;
+      byStage: Array<{
+        pipelineIdentifier: string;
+        pipelineName: string;
+        stageIdentifier: string;
+        stageName: string;
+        count: number;
+      }>;
+    };
+  };
+};
+
+export async function readLatestCompletedSnapshot(
+  organizationId: string,
+  locationId: string,
+  provider: "gohighlevel",
+): Promise<StoredCompletedSnapshot | null> {
+  return withDatabase(async (client) => {
+    const result = await client.query<{
+      metadata: Record<string, unknown>;
+      created_at: Date | string;
+    }>(
+      `
+        select metadata, created_at
+        from eeos_audit_events
+        where organization_id = $1
+          and location_id = $2
+          and source = $3
+          and event_type = 'operations.snapshot.read'
+          and coalesce((metadata->>'partial')::boolean, false) = false
+        order by created_at desc
+        limit 1
+      `,
+      [organizationId, locationId, provider],
+    );
+    const row = result.rows[0];
+    if (!row) return null;
+    const aggregate = row.metadata?.aggregate;
+    if (!aggregate || typeof aggregate !== "object") return null;
+    return {
+      generatedAt: typeof row.metadata.generatedAt === "string"
+        ? row.metadata.generatedAt
+        : new Date(row.created_at).toISOString(),
+      aggregate: aggregate as StoredCompletedSnapshot["aggregate"],
+    };
+  });
+}
+
 export async function disconnectGhlConnection(organizationId: string) {
   await withDatabase(async (client) => {
     await client.query(

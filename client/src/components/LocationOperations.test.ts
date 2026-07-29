@@ -3,6 +3,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import {
   buildSnapshotRequest,
+  buildLatestSnapshotRequest,
+  isCurrentHydrationRequest,
+  loadLatestStoredSnapshot,
   loadSelectedOwnerContext,
   requestCertifiedSnapshot,
   LocationSnapshotView,
@@ -84,6 +87,56 @@ describe("multi-location Executive Dashboard operations view", () => {
       },
     });
     expect(request.url).not.toMatch(/leadconnectorhq|gohighlevel\.com/i);
+  });
+
+  it("hydrates through the authenticated stored-snapshot GET without provider or POST access", async () => {
+    const request = buildLatestSnapshotRequest(context);
+    expect(request).toEqual({
+      url: "/api/ghl/operations-snapshot/latest?locationId=rJH8XytyAfEQSoOTQeuZ&provider=gohighlevel",
+      init: {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      },
+    });
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ status: "available", snapshot }));
+    await expect(loadLatestStoredSnapshot(context, fetchMock as typeof fetch)).resolves.toEqual(snapshot);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: "GET" });
+    expect(JSON.stringify(fetchMock.mock.calls)).not.toMatch(
+      /leadconnectorhq|marketplace\\.gohighlevel|POST|accessToken|refreshToken/i,
+    );
+  });
+
+  it("returns a safe empty state instead of zero metrics when no completed snapshot exists", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+      status: "not_available",
+      message: "No completed snapshot available",
+    }));
+    await expect(loadLatestStoredSnapshot(context, fetchMock as typeof fetch)).resolves.toBeNull();
+    expect(JSON.stringify(fetchMock.mock.calls)).not.toMatch(/POST|leadconnectorhq|marketplace\\.gohighlevel/i);
+  });
+
+  it("rejects mismatched stored snapshots and preserves partial display semantics", async () => {
+    const wrongOrganization = vi.fn().mockResolvedValue(jsonResponse({
+      status: "available",
+      snapshot: { ...snapshot, organizationId: "2" },
+    }));
+    await expect(loadLatestStoredSnapshot(context, wrongOrganization as typeof fetch))
+      .rejects.toThrow("selected organization");
+    const partial = { ...snapshot, partial: true };
+    const html = renderToStaticMarkup(createElement(LocationSnapshotView, { snapshot: partial }));
+    expect(html).toContain("Partial result");
+    expect(html).not.toContain(context.locationId);
+  });
+
+  it("prevents stale location hydration responses from replacing the current selection", () => {
+    const southCarolinaRequest = 1;
+    const delawareRequest = 2;
+    expect(isCurrentHydrationRequest(southCarolinaRequest, delawareRequest)).toBe(false);
+    expect(isCurrentHydrationRequest(delawareRequest, delawareRequest)).toBe(true);
+    expect(isCurrentHydrationRequest(delawareRequest, southCarolinaRequest)).toBe(false);
   });
 
   it("loads the active owner context from the authenticated server session", async () => {

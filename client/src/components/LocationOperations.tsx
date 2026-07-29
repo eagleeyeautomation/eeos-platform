@@ -16,6 +16,7 @@ import {
 } from "@/lib/location-management";
 
 const SNAPSHOT_ROUTE = "/api/ghl/operations-snapshot";
+const LATEST_SNAPSHOT_ROUTE = "/api/ghl/operations-snapshot/latest";
 const SESSION_ROUTE = "/api/integrations/gohighlevel/session-context";
 
 type OwnerSnapshotContext = {
@@ -54,6 +55,7 @@ export type LocationOperationsSnapshot = {
 type PanelState =
   | { kind: "loading" }
   | { kind: "ready"; context: OwnerSnapshotContext }
+  | { kind: "empty"; context: OwnerSnapshotContext }
   | { kind: "refreshing"; context: OwnerSnapshotContext }
   | { kind: "snapshot"; context: OwnerSnapshotContext; snapshot: LocationOperationsSnapshot }
   | { kind: "error"; title: string; message: string; context?: OwnerSnapshotContext };
@@ -74,6 +76,22 @@ export function buildSnapshotRequest(context: Pick<OwnerSnapshotContext, "organi
         Accept: "application/json",
         "x-eeos-csrf-token": context.csrfToken,
       },
+    },
+  };
+}
+
+export function buildLatestSnapshotRequest(context: Pick<OwnerSnapshotContext, "locationId" | "provider">) {
+  const query = new URLSearchParams({
+    locationId: context.locationId,
+    provider: context.provider,
+  });
+  return {
+    url: `${LATEST_SNAPSHOT_ROUTE}?${query}`,
+    init: {
+      method: "GET",
+      credentials: "include" as const,
+      cache: "no-store" as const,
+      headers: { Accept: "application/json" },
     },
   };
 }
@@ -152,6 +170,32 @@ export async function requestCertifiedSnapshot(
   return validateSnapshotBinding(payload as unknown as LocationOperationsSnapshot, context);
 }
 
+export async function loadLatestStoredSnapshot(
+  context: OwnerSnapshotContext,
+  fetchImpl: typeof fetch = fetch,
+  signal?: AbortSignal,
+) {
+  const request = buildLatestSnapshotRequest(context);
+  const response = await fetchImpl(request.url, { ...request.init, signal });
+  const payload = await readJson(response);
+  if (!response.ok) {
+    throw new Error(response.status === 401
+      ? "Authentication is required."
+      : response.status === 403
+        ? "Permission denied for this organization, provider, or location."
+        : "Stored snapshot history is unavailable.");
+  }
+  if (payload.status === "not_available") return null;
+  if (payload.status !== "available" || !payload.snapshot) {
+    throw new Error("Stored snapshot history returned an invalid response.");
+  }
+  return validateSnapshotBinding(payload.snapshot as LocationOperationsSnapshot, context);
+}
+
+export function isCurrentHydrationRequest(sequence: number, currentSequence: number) {
+  return sequence === currentSequence;
+}
+
 function formatGeneratedAt(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Not available";
@@ -225,9 +269,14 @@ export default function LocationOperations() {
   const [selected, setSelected] = useState<ManagedLocation | null>(null);
   const [state, setState] = useState<PanelState>({ kind: "loading" });
   const requestInFlight = useRef(false);
+  const hydrationSequence = useRef(0);
+  const hydrationAbort = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let active = true;
+    const sequence = ++hydrationSequence.current;
+    const controller = new AbortController();
+    hydrationAbort.current = controller;
     void loadManagedLocations()
       .then(async (available) => {
         const selection = selectManagedLocation(
@@ -236,29 +285,47 @@ export default function LocationOperations() {
         );
         if (!selection) throw new Error("No certified location is available.");
         const context = await loadSelectedOwnerContext(selection);
-        if (active) {
+        const stored = await loadLatestStoredSnapshot(context, fetch, controller.signal);
+        if (active && isCurrentHydrationRequest(sequence, hydrationSequence.current)) {
           setLocations(available);
           setSelected(selection);
-          setState({ kind: "ready", context });
+          setState(stored
+            ? { kind: "snapshot", context, snapshot: stored }
+            : { kind: "empty", context });
         }
       })
       .catch((error) => {
-        if (active) setState({ kind: "error", title: "Operations unavailable", message: error instanceof Error ? error.message : "Locations could not be loaded." });
+        if (active && error instanceof Error && error.name !== "AbortError") {
+          setState({ kind: "error", title: "Operations unavailable", message: error.message });
+        }
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, []);
 
   async function changeLocation(selectionKey: string) {
     const next = locations.find((location) => locationSelectionKey(location) === selectionKey);
     if (!next || requestInFlight.current) return;
+    const sequence = ++hydrationSequence.current;
+    hydrationAbort.current?.abort();
+    const controller = new AbortController();
+    hydrationAbort.current = controller;
+    setSelected(next);
     setState({ kind: "loading" });
     try {
       const context = await loadSelectedOwnerContext(next);
+      const stored = await loadLatestStoredSnapshot(context, fetch, controller.signal);
+      if (!isCurrentHydrationRequest(sequence, hydrationSequence.current)) return;
       window.localStorage.setItem(SELECTED_LOCATION_STORAGE_KEY, selectionKey);
-      setSelected(next);
-      setState({ kind: "ready", context });
+      setState(stored
+        ? { kind: "snapshot", context, snapshot: stored }
+        : { kind: "empty", context });
     } catch (error) {
-      setState({ kind: "error", title: "Location selection denied", message: error instanceof Error ? error.message : "The location could not be selected." });
+      if (isCurrentHydrationRequest(sequence, hydrationSequence.current) && error instanceof Error && error.name !== "AbortError") {
+        setState({ kind: "error", title: "Location selection denied", message: error.message });
+      }
     }
   }
 
@@ -266,6 +333,8 @@ export default function LocationOperations() {
     if (requestInFlight.current || state.kind === "loading" || (state.kind === "error" && !state.context)) return;
     const context = state.context;
     if (!context) return;
+    ++hydrationSequence.current;
+    hydrationAbort.current?.abort();
     requestInFlight.current = true;
     setState({ kind: "refreshing", context });
     try {
@@ -277,7 +346,7 @@ export default function LocationOperations() {
     }
   }
 
-  const context = state.kind === "ready" || state.kind === "refreshing" || state.kind === "snapshot" || state.kind === "error"
+  const context = state.kind === "ready" || state.kind === "empty" || state.kind === "refreshing" || state.kind === "snapshot" || state.kind === "error"
     ? state.context
     : null;
 
@@ -310,8 +379,9 @@ export default function LocationOperations() {
           </button>
         </div>
       </div>
-      {state.kind === "loading" ? <Status icon={Loader2} title="Loading" message="Verifying the selected organization, provider, and location." spin />
+      {state.kind === "loading" ? <Status icon={Loader2} title="Loading stored snapshot" message="Reading the latest completed aggregate snapshot for the selected authorized location." spin />
         : state.kind === "ready" ? <Status icon={ShieldCheck} title="Connected" message="The selected location is ready for a protected on-demand snapshot." />
+          : state.kind === "empty" ? <Status icon={ShieldCheck} title="No completed snapshot available" message="Refresh manually when you are ready to create the first protected aggregate snapshot for this location." />
           : state.kind === "refreshing" ? <Status icon={Loader2} title="Refreshing" message="Reading bounded aggregate metrics through the protected server route." spin />
             : state.kind === "error" ? <Status icon={AlertCircle} title={state.title} message={state.message} error />
               : <LocationSnapshotView snapshot={state.snapshot} />}

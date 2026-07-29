@@ -20,10 +20,12 @@ import {
   consumeOAuthState,
   persistAuditEvent,
   persistOAuthState,
+  readLatestCompletedSnapshot,
   readLatestSnapshotHistory,
 } from "./db/runtimePersistence";
 import {
   safeGhlConnectionStatus,
+  maskGhlLocationId,
   storeGhlConnectionToken,
   verifyGhlLocationIdentity,
 } from "./ghl-token-store";
@@ -663,6 +665,68 @@ export function registerGhlOAuthRoutes(app: Express) {
         .set("Cache-Control", "no-store")
         .status(200)
         .json({ success: true, ...verification });
+    } catch (error) {
+      sendOAuthStartError(res, error);
+    }
+  });
+
+  app.get("/api/ghl/operations-snapshot/latest", async (req: Request, res: Response) => {
+    try {
+      const requestedLocation = getQueryParam(req, "locationId");
+      const context = await resolveGhlConnectSessionContext(req, requestedLocation);
+      const requestedProvider = getQueryParam(req, "provider");
+      if (requestedProvider && requestedProvider !== "gohighlevel") {
+        throw new GhlOAuthRequestError(403, "The requested provider is not authorized for this snapshot route.");
+      }
+      const stored = await readLatestCompletedSnapshot(
+        context.organizationId,
+        context.locationId,
+        "gohighlevel",
+      );
+      const location = {
+        name: context.locationName,
+        maskedProviderLocationId: maskGhlLocationId(context.locationId),
+      };
+      res
+        .set("Cache-Control", "private, no-store, max-age=0")
+        .set("Pragma", "no-cache")
+        .status(200)
+        .json(stored
+          ? {
+              status: "available",
+              snapshot: {
+                organizationId: context.organizationId,
+                organizationName: context.organizationName,
+                location,
+                provider: "gohighlevel",
+                connection: { connected: true, healthy: true },
+                contacts: {
+                  total: stored.aggregate.contacts.total,
+                  createdLast7Days: stored.aggregate.contacts.createdLast7Days,
+                  createdLast30Days: stored.aggregate.contacts.createdLast30Days,
+                },
+                opportunities: {
+                  openTotal: stored.aggregate.opportunities.openTotal,
+                  createdLast7Days: stored.aggregate.opportunities.createdLast7Days,
+                  createdLast30Days: stored.aggregate.opportunities.createdLast30Days,
+                  byStage: stored.aggregate.opportunities.byStage.map((stage) => ({
+                    pipelineIdentifier: stage.pipelineIdentifier,
+                    pipelineName: stage.pipelineName,
+                    stageIdentifier: stage.stageIdentifier,
+                    stageName: stage.stageName,
+                    count: stage.count,
+                  })),
+                },
+                generatedAt: stored.generatedAt,
+                partial: false,
+              },
+            }
+          : {
+              status: "not_available",
+              provider: "gohighlevel",
+              location,
+              message: "No completed snapshot available",
+            });
     } catch (error) {
       sendOAuthStartError(res, error);
     }
