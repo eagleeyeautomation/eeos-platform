@@ -9,6 +9,12 @@ import {
   confirmInstallation,
   hasInstallationConfirmation,
 } from "@/lib/gohighlevel-marketplace";
+import {
+  loadManagedLocations,
+  selectManagedLocation,
+  SELECTED_LOCATION_STORAGE_KEY,
+  type ManagedLocation,
+} from "@/lib/location-management";
 
 export default function GoHighLevelIntegration() {
   return (
@@ -99,6 +105,13 @@ export default function GoHighLevelIntegration() {
       <Footer />
     </div>
   );
+}
+
+export function resolveSelectedOwnerLocation(
+  locations: ManagedLocation[],
+  storedSelection: string | null,
+) {
+  return selectManagedLocation(locations, storedSelection);
 }
 
 type OwnerSessionContext = {
@@ -354,12 +367,17 @@ function SafeOAuthPreflight() {
       }
 
       if (!active) return;
+      const managedLocations = await loadManagedLocations();
+      const selectedLocation = resolveSelectedOwnerLocation(
+        managedLocations,
+        window.localStorage.getItem(SELECTED_LOCATION_STORAGE_KEY),
+      );
       const context = {
-        organizationId: session.organization.id,
-        organization: session.organization.name ?? "Organization verified",
+        organizationId: selectedLocation?.organization.id ?? session.organization.id,
+        organization: selectedLocation?.organization.name ?? session.organization.name ?? "Organization verified",
         role: session.user?.role ?? "ORGANIZATION_OWNER",
-        location: session.location.name ?? "Authorized location verified",
-        locationId: session.location.id,
+        location: selectedLocation?.location.name ?? session.location.name ?? "Authorized location verified",
+        locationId: selectedLocation?.location.id ?? session.location.id,
         csrfToken: session.csrfToken,
       };
       setSessionContext(context);

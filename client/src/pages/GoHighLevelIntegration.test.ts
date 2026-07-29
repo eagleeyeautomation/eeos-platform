@@ -3,12 +3,37 @@ import {
   getGhlConnectionPresentation,
   loadGhlOperationsSnapshot,
   loadGhlConnectionStatus,
+  resolveSelectedOwnerLocation,
   verifyGhlLocation,
 } from "./GoHighLevelIntegration";
 
 describe("GoHighLevel owner connection status", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("uses the explicitly selected authorized location for the OAuth connection flow", () => {
+    const locations = [
+      {
+        organization: { id: "1", name: "PRN Staffers Inc." },
+        provider: "gohighlevel",
+        location: { id: "loc-sc", name: "South Carolina" },
+        connection: { connected: true, lastVerifiedAt: null },
+        snapshot: { status: "complete" as const, generatedAt: null },
+      },
+      {
+        organization: { id: "1", name: "PRN Staffers Inc." },
+        provider: "gohighlevel",
+        location: { id: "loc-de", name: "Delaware" },
+        connection: { connected: false, lastVerifiedAt: null },
+        snapshot: { status: "not_available" as const, generatedAt: null },
+      },
+    ];
+
+    expect(resolveSelectedOwnerLocation(
+      locations,
+      "1:gohighlevel:loc-de",
+    )?.location).toEqual({ id: "loc-de", name: "Delaware" });
   });
 
   it("loads the exact organization and South Carolina status with session credentials and no cache", async () => {
