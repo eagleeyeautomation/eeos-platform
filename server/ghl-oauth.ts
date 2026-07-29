@@ -12,8 +12,16 @@ import type { Express, Request, Response } from "express";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./_core/env";
 import { sdk } from "./_core/sdk";
-import { resolveOrganizationAuthorizationContext } from "./authorization";
-import { consumeOAuthState, persistAuditEvent, persistOAuthState } from "./db/runtimePersistence";
+import {
+  listOwnerOrganizationLocations,
+  resolveOrganizationAuthorizationContext,
+} from "./authorization";
+import {
+  consumeOAuthState,
+  persistAuditEvent,
+  persistOAuthState,
+  readLatestSnapshotHistory,
+} from "./db/runtimePersistence";
 import {
   safeGhlConnectionStatus,
   storeGhlConnectionToken,
@@ -31,8 +39,6 @@ const GHL_TOKEN_URL = "https://services.leadconnectorhq.com/oauth/token";
 const APPROVED_GHL_CALLBACK_PATH = "/api/integrations/eea/oauth/callback";
 const APPROVED_GHL_CALLBACK_URL = "https://eeos-platform-production.up.railway.app/api/integrations/eea/oauth/callback";
 const EEOS_CSRF_COOKIE = "eeos_csrf";
-const CERTIFIED_SNAPSHOT_ORGANIZATION_ID = "1";
-const CERTIFIED_SNAPSHOT_LOCATION_ID = "rJH8XytyAfEQSoOTQeuZ";
 
 type GhlConnectSessionContext = {
   userId: number;
@@ -295,6 +301,62 @@ function escapeHtml(value: string) {
 
 /** Register GHL OAuth routes on the Express app */
 export function registerGhlOAuthRoutes(app: Express) {
+  app.get("/api/location-management/locations", async (req: Request, res: Response) => {
+    try {
+      let user: Awaited<ReturnType<typeof sdk.authenticateRequest>>;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        throw new GhlOAuthRequestError(401, "Authentication is required.");
+      }
+
+      const locations = await listOwnerOrganizationLocations(user);
+      if (locations.length === 0) {
+        throw new GhlOAuthRequestError(403, "An active organization-owner location membership is required.");
+      }
+      const [statuses, snapshotHistory] = await Promise.all([
+        Promise.all(locations.map((location) =>
+          safeGhlConnectionStatus(location.organizationId, location.locationId)
+        )),
+        readLatestSnapshotHistory(locations),
+      ]);
+
+      res
+        .set("Cache-Control", "private, no-store, max-age=0")
+        .set("Pragma", "no-cache")
+        .status(200)
+        .json({
+          locations: locations.map((location, index) => {
+            const connection = statuses[index];
+            const snapshot = snapshotHistory.get(`${location.organizationId}:${location.locationId}`);
+            return {
+              organization: {
+                id: location.organizationId,
+                name: location.organizationName,
+              },
+              provider: "gohighlevel",
+              location: {
+                id: location.locationId,
+                name: location.locationName,
+              },
+              connection: {
+                connected: connection.connected,
+                lastVerifiedAt: connection.lastVerifiedAt,
+              },
+              snapshot: snapshot
+                ? {
+                    status: snapshot.partial ? "partial" : "complete",
+                    generatedAt: snapshot.generatedAt,
+                  }
+                : { status: "not_available", generatedAt: null },
+            };
+          }),
+        });
+    } catch (error) {
+      sendOAuthStartError(res, error);
+    }
+  });
+
   app.get("/api/integrations/gohighlevel/session-context", async (req: Request, res: Response) => {
     try {
       const context = await resolveGhlConnectSessionContext(req, getQueryParam(req, "locationId"));
@@ -622,11 +684,9 @@ export function registerGhlOAuthRoutes(app: Express) {
       if (requestedOrganization && requestedOrganization !== context.organizationId) {
         throw new GhlOAuthRequestError(403, "The requested organization is not authorized.");
       }
-      if (
-        context.organizationId !== CERTIFIED_SNAPSHOT_ORGANIZATION_ID
-        || context.locationId !== CERTIFIED_SNAPSHOT_LOCATION_ID
-      ) {
-        throw new GhlOAuthRequestError(403, "This snapshot is restricted to the certified South Carolina location.");
+      const requestedProvider = getQueryParam(req, "provider");
+      if (requestedProvider && requestedProvider !== "gohighlevel") {
+        throw new GhlOAuthRequestError(403, "The requested provider is not authorized for this snapshot route.");
       }
 
       const snapshot = await buildGhlOperationsSnapshot({
@@ -645,6 +705,16 @@ export function registerGhlOAuthRoutes(app: Express) {
           role: context.userRole,
           partial: snapshot.partial,
           provider: snapshot.provider,
+          generatedAt: snapshot.generatedAt,
+          aggregate: {
+            contacts: snapshot.contacts,
+            opportunities: {
+              openTotal: snapshot.opportunities.openTotal,
+              createdLast7Days: snapshot.opportunities.createdLast7Days,
+              createdLast30Days: snapshot.opportunities.createdLast30Days,
+              byStage: snapshot.opportunities.byStage,
+            },
+          },
         },
       });
       res

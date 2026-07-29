@@ -175,3 +175,20 @@ export async function listAuthorizedLocationsForMembership(membershipId: string 
     name: subaccount.name,
   }));
 }
+
+export async function listOwnerOrganizationLocations(user: User) {
+  const subaccounts = await getUserSubaccounts(user.id);
+  const resolved = await Promise.all(subaccounts.map(async (subaccount) => {
+    const context = await resolveOrganizationAuthorizationContext(user, subaccount.ghlLocationId);
+    if (!context || context.role !== "ORGANIZATION_OWNER") return null;
+    return {
+      organizationId: context.organizationId!,
+      organizationName: context.organizationName!,
+      membershipId: context.membershipId!,
+      locationId: subaccount.ghlLocationId,
+      locationName: subaccount.name,
+    };
+  }));
+
+  return resolved.filter((location): location is NonNullable<typeof location> => location !== null);
+}

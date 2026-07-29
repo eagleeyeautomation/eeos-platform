@@ -27,6 +27,7 @@ export const AVAILABLE_NAV_ROUTES = new Set([
   "/integrations/gohighlevel",
   "/connect-ghl",
   "/dashboard",
+  "/location-management",
   "/oauth-success",
   "/oauth-failure",
   "/integration-health",
@@ -103,6 +104,7 @@ export const OWNER_NAV_LINKS: NavItem[] = [
     href: "#",
     children: [
       { label: "Integration Status", href: "/integration-status" },
+      { label: "Location Management", href: "/location-management" },
       { label: "System Health", href: "/system-health" },
       { label: "Account", href: "/connect-ghl" },
     ],

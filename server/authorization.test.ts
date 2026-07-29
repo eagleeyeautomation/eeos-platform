@@ -14,6 +14,7 @@ vi.mock("./db", () => dbMocks);
 
 const {
   listPlatformOrganizations,
+  listOwnerOrganizationLocations,
   requireAuthorizedLocation,
   requirePlatformAdmin,
   requireWritableOrganizationRole,
@@ -80,6 +81,28 @@ describe("EEOS authorization helpers", () => {
       role: "PLATFORM_ADMIN",
       organizationId: null,
     });
+  });
+
+  it("lists owner locations across multiple organizations without merging their scopes", async () => {
+    dbMocks.getUserSubaccounts.mockResolvedValue([
+      { membershipId: 100, orgName: "PRN Staffers", ghlLocationId: "loc-a", name: "South Carolina" },
+      { membershipId: 200, orgName: "Another Customer", ghlLocationId: "loc-c", name: "Florida" },
+    ]);
+    dbMocks.getMembershipById.mockImplementation(async (id: number) =>
+      id === 100
+        ? { id: 100, organizationId: 10, status: "active" }
+        : { id: 200, organizationId: 20, status: "active" }
+    );
+    dbMocks.getOrganizationById.mockImplementation(async (id: number) =>
+      id === 10
+        ? { id: 10, name: "PRN Staffers", isActive: true }
+        : { id: 20, name: "Another Customer", isActive: true }
+    );
+
+    await expect(listOwnerOrganizationLocations(user("admin"))).resolves.toEqual([
+      expect.objectContaining({ organizationId: "10", locationId: "loc-a" }),
+      expect.objectContaining({ organizationId: "20", locationId: "loc-c" }),
+    ]);
   });
 
   it("does not resolve inactive memberships or out-of-scope locations", async () => {

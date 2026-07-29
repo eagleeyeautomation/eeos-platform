@@ -253,6 +253,52 @@ export async function persistAuditEvent(event: RuntimeAuditEvent) {
   });
 }
 
+export async function readLatestSnapshotHistory(
+  locations: Array<{ organizationId: string; locationId: string }>,
+) {
+  if (locations.length === 0) return new Map<string, {
+    generatedAt: string;
+    partial: boolean;
+  }>();
+
+  return withDatabase(async (client) => {
+    const organizationIds = locations.map((location) => location.organizationId);
+    const locationIds = locations.map((location) => location.locationId);
+    const result = await client.query<{
+      organization_id: string;
+      location_id: string;
+      metadata: Record<string, unknown>;
+      created_at: Date | string;
+    }>(
+      `
+        select distinct on (organization_id, location_id)
+          organization_id,
+          location_id,
+          metadata,
+          created_at
+        from eeos_audit_events
+        where event_type = 'operations.snapshot.read'
+          and organization_id = any($1::text[])
+          and location_id = any($2::text[])
+        order by organization_id, location_id, created_at desc
+      `,
+      [organizationIds, locationIds],
+    );
+
+    return new Map(result.rows
+      .filter((row) => locations.some(
+        (location) => location.organizationId === row.organization_id && location.locationId === row.location_id,
+      ))
+      .map((row) => [
+        `${row.organization_id}:${row.location_id}`,
+        {
+          generatedAt: new Date(row.created_at).toISOString(),
+          partial: row.metadata?.partial === true,
+        },
+      ]));
+  });
+}
+
 export async function disconnectGhlConnection(organizationId: string) {
   await withDatabase(async (client) => {
     await client.query(

@@ -3,24 +3,33 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import {
   buildSnapshotRequest,
-  loadCertifiedOwnerContext,
+  loadSelectedOwnerContext,
   requestCertifiedSnapshot,
-  SouthCarolinaSnapshotView,
-  type SouthCarolinaSnapshot,
-  validateCertifiedContext,
-  validateSnapshot,
-} from "./SouthCarolinaOperations";
+  LocationSnapshotView,
+  type LocationOperationsSnapshot,
+  validateSnapshotBinding,
+} from "./LocationOperations";
+import type { ManagedLocation } from "@/lib/location-management";
 
 const context = {
   organizationId: "1",
   organizationName: "PRN Staffers Inc.",
   locationId: "rJH8XytyAfEQSoOTQeuZ",
   locationName: "PRN Staffers CSC",
+  provider: "gohighlevel",
   role: "ORGANIZATION_OWNER",
   csrfToken: "csrf-test-only",
 };
 
-const snapshot: SouthCarolinaSnapshot = {
+const selected: ManagedLocation = {
+  organization: { id: "1", name: "PRN Staffers Inc." },
+  provider: "gohighlevel",
+  location: { id: "rJH8XytyAfEQSoOTQeuZ", name: "PRN Staffers CSC" },
+  connection: { connected: true, lastVerifiedAt: null },
+  snapshot: { status: "complete", generatedAt: "2026-07-29T12:00:00.000Z" },
+};
+
+const snapshot: LocationOperationsSnapshot = {
   organizationId: "1",
   organizationName: "PRN Staffers Inc.",
   location: { name: "PRN Staffers CSC", maskedProviderLocationId: "rJH8…QeuZ" },
@@ -59,11 +68,11 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-describe("South Carolina Executive Dashboard operations view", () => {
+describe("multi-location Executive Dashboard operations view", () => {
   it("uses only the protected certified snapshot route with POST, CSRF, and no-store", () => {
     const request = buildSnapshotRequest(context);
     expect(request.url).toBe(
-      "/api/ghl/operations-snapshot?organizationId=1&locationId=rJH8XytyAfEQSoOTQeuZ",
+      "/api/ghl/operations-snapshot?organizationId=1&locationId=rJH8XytyAfEQSoOTQeuZ&provider=gohighlevel",
     );
     expect(request.init).toMatchObject({
       method: "POST",
@@ -84,28 +93,35 @@ describe("South Carolina Executive Dashboard operations view", () => {
       location: { id: "rJH8XytyAfEQSoOTQeuZ", name: "PRN Staffers CSC" },
       csrfToken: "csrf-test-only",
     }));
-    await expect(loadCertifiedOwnerContext(fetchMock as typeof fetch)).resolves.toEqual(context);
+    await expect(loadSelectedOwnerContext(selected, fetchMock as typeof fetch)).resolves.toEqual(context);
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/integrations/gohighlevel/session-context",
+      "/api/integrations/gohighlevel/session-context?locationId=rJH8XytyAfEQSoOTQeuZ",
       expect.objectContaining({ credentials: "include", cache: "no-store" }),
     );
   });
 
   it("rejects unauthenticated, unauthorized, cross-organization, and wrong-location contexts", async () => {
-    await expect(loadCertifiedOwnerContext(
+    await expect(loadSelectedOwnerContext(selected,
       vi.fn().mockResolvedValue(jsonResponse({}, 401)) as typeof fetch,
     )).rejects.toThrow("Authentication");
-    expect(() => validateCertifiedContext({ ...context, role: "STAFF" })).toThrow("Permission denied");
-    expect(() => validateCertifiedContext({ ...context, organizationId: "2" })).toThrow("certified organization");
-    expect(() => validateCertifiedContext({ ...context, locationId: "loc_other" })).toThrow("South Carolina");
+    const response = (overrides: Record<string, unknown>) => vi.fn().mockResolvedValue(jsonResponse({
+      user: { role: "ORGANIZATION_OWNER" },
+      organization: { id: "1", name: "PRN Staffers Inc." },
+      location: { id: "rJH8XytyAfEQSoOTQeuZ", name: "PRN Staffers CSC" },
+      csrfToken: "csrf-test-only",
+      ...overrides,
+    })) as typeof fetch;
+    await expect(loadSelectedOwnerContext(selected, response({ user: { role: "STAFF" } }))).rejects.toThrow("not authorized");
+    await expect(loadSelectedOwnerContext(selected, response({ organization: { id: "2" } }))).rejects.toThrow("not authorized");
+    await expect(loadSelectedOwnerContext(selected, response({ location: { id: "loc_other" } }))).rejects.toThrow("not authorized");
   });
 
   it("rejects a wrong provider or cross-location snapshot response", () => {
-    expect(() => validateSnapshot({ ...snapshot, provider: "other" as "gohighlevel" })).toThrow("provider binding");
-    expect(() => validateSnapshot({
+    expect(() => validateSnapshotBinding({ ...snapshot, provider: "other" as "gohighlevel" }, context)).toThrow("selected organization");
+    expect(() => validateSnapshotBinding({
       ...snapshot,
-      location: { ...snapshot.location, maskedProviderLocationId: "other" },
-    })).toThrow("provider binding");
+      organizationId: "2",
+    }, context)).toThrow("selected organization");
   });
 
   it("requests and returns the certified aggregate snapshot without provider writes", async () => {
@@ -117,7 +133,7 @@ describe("South Carolina Executive Dashboard operations view", () => {
   });
 
   it("renders every certified metric, dynamic stages, timestamp, and Complete status", () => {
-    const html = renderToStaticMarkup(createElement(SouthCarolinaSnapshotView, { snapshot }));
+    const html = renderToStaticMarkup(createElement(LocationSnapshotView, { snapshot }));
     for (const text of [
       "Connection Health",
       "Total Contacts",
@@ -140,7 +156,7 @@ describe("South Carolina Executive Dashboard operations view", () => {
   });
 
   it("renders Partial result without personal data, tokens, or a full provider location ID", () => {
-    const html = renderToStaticMarkup(createElement(SouthCarolinaSnapshotView, {
+    const html = renderToStaticMarkup(createElement(LocationSnapshotView, {
       snapshot: { ...snapshot, partial: true },
     }));
     expect(html).toContain("Partial result");

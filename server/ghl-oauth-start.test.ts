@@ -3,7 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerGhlOAuthRoutes } from "./ghl-oauth";
 import { sdk } from "./_core/sdk";
 import { getMembershipById, getMembershipUser, getOrganizationById, getUserSubaccounts } from "./db";
-import { consumeOAuthState, persistAuditEvent, persistOAuthState } from "./db/runtimePersistence";
+import {
+  consumeOAuthState,
+  persistAuditEvent,
+  persistOAuthState,
+  readLatestSnapshotHistory,
+} from "./db/runtimePersistence";
 import {
   safeGhlConnectionStatus,
   storeGhlConnectionToken,
@@ -30,6 +35,7 @@ vi.mock("./db/runtimePersistence", () => ({
   consumeOAuthState: vi.fn(),
   persistAuditEvent: vi.fn(),
   persistOAuthState: vi.fn(),
+  readLatestSnapshotHistory: vi.fn(),
 }));
 vi.mock("./ghl-token-store", () => ({
   safeGhlConnectionStatus: vi.fn(),
@@ -54,6 +60,7 @@ const getOrganizationByIdMock = vi.mocked(getOrganizationById);
 const consumeOAuthStateMock = vi.mocked(consumeOAuthState);
 const persistAuditEventMock = vi.mocked(persistAuditEvent);
 const persistOAuthStateMock = vi.mocked(persistOAuthState);
+const readLatestSnapshotHistoryMock = vi.mocked(readLatestSnapshotHistory);
 
 type RegisteredHandler = (req: Record<string, any>, res: FakeResponse) => void | Promise<void>;
 
@@ -193,6 +200,7 @@ describe("GoHighLevel production OAuth security", () => {
       generatedAt: "2026-07-29T00:00:00.000Z",
       partial: false,
     });
+    readLatestSnapshotHistoryMock.mockResolvedValue(new Map());
   });
 
   afterEach(() => {
@@ -583,10 +591,10 @@ describe("GoHighLevel production OAuth security", () => {
     expect(verifyGhlLocationIdentityMock).not.toHaveBeenCalled();
   });
 
-  it("allows an authenticated owner to request the exact certified snapshot with CSRF", async () => {
+  it("allows an authenticated owner to request an authorized location snapshot with CSRF", async () => {
     certifiedSnapshotOrganization();
     const result = await invoke("POST", "/api/ghl/operations-snapshot", {
-      query: { organizationId: "1", locationId: "rJH8XytyAfEQSoOTQeuZ" },
+      query: { organizationId: "1", locationId: "rJH8XytyAfEQSoOTQeuZ", provider: "gohighlevel" },
       ...csrf,
     });
     expect(result.status).toBe(200);
@@ -628,21 +636,72 @@ describe("GoHighLevel production OAuth security", () => {
     expect(buildGhlOperationsSnapshotMock).not.toHaveBeenCalled();
   });
 
-  it("rejects wrong organization, wrong location, and GET snapshot triggers", async () => {
+  it("rejects wrong organization, wrong location, wrong provider, and GET snapshot triggers", async () => {
     certifiedSnapshotOrganization();
     expect((await invoke("POST", "/api/ghl/operations-snapshot", {
       query: { organizationId: "999", locationId: "rJH8XytyAfEQSoOTQeuZ" },
       ...csrf,
     })).status).toBe(403);
 
-    organization();
+    certifiedSnapshotOrganization();
     expect((await invoke("POST", "/api/ghl/operations-snapshot", {
-      query: { organizationId: "100", locationId: "loc_sc" },
+      query: { organizationId: "1", locationId: "loc_other" },
+      ...csrf,
+    })).status).toBe(403);
+
+    certifiedSnapshotOrganization();
+    expect((await invoke("POST", "/api/ghl/operations-snapshot", {
+      query: { organizationId: "1", locationId: "rJH8XytyAfEQSoOTQeuZ", provider: "other" },
       ...csrf,
     })).status).toBe(403);
 
     const getResult = await invoke("GET", "/api/ghl/operations-snapshot");
     expect(getResult.status).toBe(405);
     expect(getResult.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("lists only active owner locations with isolated connection and snapshot status", async () => {
+    getUserSubaccountsMock.mockResolvedValue([
+      { membershipId: 7, orgName: "PRN Staffers", ghlLocationId: "loc_sc", name: "South Carolina" },
+      { membershipId: 7, orgName: "PRN Staffers", ghlLocationId: "loc_al", name: "Alabama" },
+    ] as never);
+    getMembershipByIdMock.mockResolvedValue({ id: 7, organizationId: 100, status: "active" } as never);
+    getMembershipUserMock.mockResolvedValue({ role: "owner", isActive: true } as never);
+    getOrganizationByIdMock.mockResolvedValue({ id: 100, name: "PRN Staffers", isActive: true } as never);
+    safeGhlConnectionStatusMock
+      .mockResolvedValueOnce({ connected: true, provider: "gohighlevel", organizationId: "100", maskedLocationId: "***", tokenExpiresAt: null, tokenExpired: false, refreshAvailable: true, connectedAt: null, lastVerifiedAt: "2026-07-29T00:00:00.000Z" })
+      .mockResolvedValueOnce({ connected: false, provider: "gohighlevel", organizationId: "100", maskedLocationId: "***", tokenExpiresAt: null, tokenExpired: false, refreshAvailable: false, connectedAt: null, lastVerifiedAt: null });
+    readLatestSnapshotHistoryMock.mockResolvedValue(new Map([
+      ["100:loc_sc", { generatedAt: "2026-07-29T00:00:00.000Z", partial: false }],
+    ]));
+
+    const result = await invoke("GET", "/api/location-management/locations");
+    expect(result.status).toBe(200);
+    expect(result.headers.get("cache-control")).toContain("no-store");
+    expect(result.body.locations).toEqual([
+      expect.objectContaining({
+        organization: { id: "100", name: "PRN Staffers" },
+        provider: "gohighlevel",
+        location: { id: "loc_sc", name: "South Carolina" },
+        connection: expect.objectContaining({ connected: true }),
+        snapshot: { status: "complete", generatedAt: "2026-07-29T00:00:00.000Z" },
+      }),
+      expect.objectContaining({
+        location: { id: "loc_al", name: "Alabama" },
+        connection: expect.objectContaining({ connected: false }),
+        snapshot: { status: "not_available", generatedAt: null },
+      }),
+    ]);
+    expect(JSON.stringify(result.body)).not.toMatch(/accessToken|refreshToken|encrypted|secret/i);
+  });
+
+  it("rejects unauthenticated and non-owner location-management requests", async () => {
+    authenticateRequestMock.mockRejectedValueOnce(new Error("No session"));
+    expect((await invoke("GET", "/api/location-management/locations")).status).toBe(401);
+
+    authenticatedUser();
+    organization("executive");
+    expect((await invoke("GET", "/api/location-management/locations")).status).toBe(403);
+    expect(safeGhlConnectionStatusMock).not.toHaveBeenCalled();
   });
 });
