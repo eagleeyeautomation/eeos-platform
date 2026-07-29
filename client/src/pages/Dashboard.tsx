@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import SouthCarolinaOperations from "@/components/SouthCarolinaOperations";
 
 export type GhlConnection = {
   locationId: string;
@@ -164,6 +165,8 @@ export default function Dashboard() {
           <SummaryCard icon={CheckCircle2} label="Active Connections" value={`${summary.active}`} detail="Current active GoHighLevel records" />
           <SummaryCard icon={Database} label="Source of Truth" value="Backend" detail="No location IDs are owned by the frontend" />
         </section>
+
+        <SouthCarolinaOperations />
 
         <section className="mt-6 rounded-3xl border border-[rgba(201,162,39,0.12)] bg-[rgba(7,20,38,0.82)] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.22)] sm:p-6">
           <div className="flex flex-col gap-3 border-b border-[rgba(201,162,39,0.08)] pb-5 sm:flex-row sm:items-center sm:justify-between">
