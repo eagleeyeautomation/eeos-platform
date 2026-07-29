@@ -1,5 +1,13 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ADMIN_NAV_LINKS, AVAILABLE_NAV_ROUTES, NAV_LINKS, OWNER_NAV_LINKS, buildDropdownRouteInventory } from "./Navigation";
+import {
+  ADMIN_NAV_LINKS,
+  AUTHENTICATED_HEADER_LOGO_SRC,
+  AVAILABLE_NAV_ROUTES,
+  NAV_LINKS,
+  OWNER_NAV_LINKS,
+  buildDropdownRouteInventory,
+} from "./Navigation";
 
 describe("Navigation dropdown route inventory", () => {
   const inventory = buildDropdownRouteInventory();
@@ -62,5 +70,18 @@ describe("Navigation dropdown route inventory", () => {
     const dropdownChildren = [...NAV_LINKS, ...OWNER_NAV_LINKS, ...ADMIN_NAV_LINKS].flatMap((item) => item.children ?? []);
 
     expect(dropdownChildren.every((child) => AVAILABLE_NAV_ROUTES.has(child.href))).toBe(true);
+  });
+
+  it("uses the approved proportional authenticated header brand without duplicate wording", () => {
+    const source = readFileSync("client/src/components/Navigation.tsx", "utf8");
+    const asset = readFileSync(`client/public${AUTHENTICATED_HEADER_LOGO_SRC}`);
+
+    expect(AUTHENTICATED_HEADER_LOGO_SRC).toBe("/eeos-assets/approved/eeos-authenticated-header-brand.png");
+    expect(asset.byteLength).toBeGreaterThan(0);
+    expect(source).not.toContain('src="/eeos-assets/eeos-logo-mark.svg"');
+    expect(source).toContain('alt="EEOS Eagle Eye Operating System"');
+    expect(source).toContain('className="h-14 w-auto max-w-[112px] object-contain"');
+    expect(source).toContain('className="flex items-center justify-between h-16"');
+    expect(source).toContain('aria-label="Toggle menu"');
   });
 });

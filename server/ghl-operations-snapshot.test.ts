@@ -302,7 +302,7 @@ describe("controlled GoHighLevel operations snapshot", () => {
     )).rejects.toThrow("Unsupported");
     expect(fetchMock).not.toHaveBeenCalled();
     expect(GHL_SNAPSHOT_OPERATION_CONTRACTS["opportunities-search"].allowedQuery)
-      .toEqual(new Set(["locationId", "status", "limit", "page", "startAfter", "startAfterId"]));
+      .toEqual(new Set(["locationId", "status", "limit", "startAfter", "startAfterId"]));
     expect(GHL_SNAPSHOT_OPERATION_CONTRACTS["opportunities-search"].allowedQuery)
       .not.toContain("location_id");
   });
@@ -335,6 +335,81 @@ describe("controlled GoHighLevel operations snapshot", () => {
       .map(([path]) => path)
       .find((path) => path.includes("startAfter="));
     expect(paginatedPath).not.toMatch(/[?&](?:q|location_id|pipeline_id)=/);
+  });
+
+  it("does not mix page pagination into an established cursor contract", async () => {
+    const providerGet = vi.fn(async (path: string) => {
+      if (path.startsWith("/opportunities/pipelines")) return { pipelines: [] };
+      if (path.startsWith("/contacts/")) return { contacts: [] };
+      if (path.includes("startAfter=")) {
+        return {
+          opportunities: [],
+          meta: { nextPage: 2, total: GHL_SNAPSHOT_LIMITS.pageSize },
+        };
+      }
+      return {
+        opportunities: Array.from({ length: GHL_SNAPSHOT_LIMITS.pageSize }, (_, index) => ({
+          id: `opportunity-${index}`,
+          locationId: input.locationId,
+          status: "open",
+        })),
+        meta: { startAfter: 123, startAfterId: "cursor-id", nextPage: 2, total: GHL_SNAPSHOT_LIMITS.pageSize },
+      };
+    });
+    const result = await buildGhlOperationsSnapshot(input, {
+      getToken: vi.fn().mockResolvedValue(token),
+      providerGet,
+    });
+    expect(providerGet.mock.calls.map(([path]) => path).some((path) => /[?&]page=/.test(path))).toBe(false);
+    expect(result.partial).toBe(false);
+  });
+
+  it("deduplicates opportunity records and stops safely on a repeated cursor", async () => {
+    const infoSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const providerGet = vi.fn(async (path: string) => {
+      if (path.startsWith("/opportunities/pipelines")) {
+        return {
+          pipelines: [{
+            id: "pipeline-private-id",
+            name: "Recruiting",
+            locationId: input.locationId,
+            stages: [{ id: "stage-private-id", name: "New" }],
+          }],
+        };
+      }
+      if (path.startsWith("/contacts/")) return { contacts: [] };
+      return {
+        opportunities: [{
+          id: "opaque-opportunity-id",
+          locationId: input.locationId,
+          status: "open",
+          pipelineId: "pipeline-private-id",
+          pipelineStageId: "stage-private-id",
+          createdAt: "2026-07-28T00:00:00.000Z",
+        }],
+        meta: { total: 1, startAfter: 123, startAfterId: "cursor-id" },
+      };
+    });
+    const result = await buildGhlOperationsSnapshot(input, {
+      getToken: vi.fn().mockResolvedValue(token),
+      providerGet,
+      now: () => new Date("2026-07-29T00:00:00.000Z"),
+    });
+    expect(result.opportunities).toMatchObject({
+      openTotal: 1,
+      createdLast7Days: 1,
+      createdLast30Days: 1,
+      byStage: [expect.objectContaining({ count: 1 })],
+    });
+    expect(result.partial).toBe(true);
+    const entries = infoSpy.mock.calls.map(([entry]) => JSON.parse(String(entry)));
+    expect(entries).toContainEqual(expect.objectContaining({
+      operation: "opportunities-search",
+      terminationReason: "repeated_continuation",
+      duplicateRecordsDiscarded: 1,
+    }));
+    const logs = JSON.stringify(entries);
+    expect(logs).not.toMatch(/opaque-opportunity-id|cursor-id/);
   });
 
   it("redacts opaque contacts pagination identifiers from diagnostics", async () => {

@@ -25,7 +25,7 @@ const OPERATION_CONTRACTS: Record<SnapshotOperation, {
   "opportunities-search": {
     path: "/opportunities/search",
     version: "v3",
-    allowedQuery: new Set(["locationId", "status", "limit", "page", "startAfter", "startAfterId"]),
+    allowedQuery: new Set(["locationId", "status", "limit", "startAfter", "startAfterId"]),
   },
   "pipelines-list": {
     path: "/opportunities/pipelines",
@@ -289,8 +289,7 @@ function nextContactsPath(payload: JsonRecord, locationId: string) {
   return `/contacts/?${query}`;
 }
 
-function nextOpportunityPath(payload: JsonRecord, locationId: string, page: number) {
-  const opportunities = array(payload.opportunities);
+function nextOpportunityPath(payload: JsonRecord, locationId: string) {
   const meta = object(payload.meta);
   const providerNext = text(meta.nextPageUrl);
   let startAfter = number(meta.startAfter);
@@ -316,15 +315,7 @@ function nextOpportunityPath(payload: JsonRecord, locationId: string, page: numb
       startAfterId,
     })}`;
   }
-  const nextPage = number(meta.nextPage);
-  if (opportunities.length < PAGE_SIZE && nextPage === undefined) return null;
-  const query = new URLSearchParams({
-    locationId,
-    status: "open",
-    limit: String(PAGE_SIZE),
-    page: String(nextPage ?? page + 1),
-  });
-  return `/opportunities/search?${query}`;
+  return null;
 }
 
 function safeProviderNextPath(value: string, locationId: string) {
@@ -347,25 +338,81 @@ async function collectPages(input: {
   listKey: "contacts" | "opportunities";
   get: ProviderGet;
   next: (payload: JsonRecord, locationId: string, page: number) => string | null;
+  deduplicateById?: boolean;
 }) {
   const records: JsonRecord[] = [];
+  const seenRecordIds = new Set<string>();
+  const seenContinuations = new Set<string>();
   let path: string | null = input.firstPath;
   let providerTotal: number | undefined;
   let pages = 0;
+  let duplicateRecordsDiscarded = 0;
+  let repeatedContinuation = false;
+  let terminationReason = "provider_exhausted";
+  seenContinuations.add(normalizeContinuation(input.firstPath));
   while (path && pages < MAX_PAGES) {
     const payload = await input.get(input.operation, path);
     const page = array(payload[input.listKey]);
     assertLocation(page, input.locationId);
-    records.push(...page);
+    for (const record of page) {
+      const recordId = text(record.id);
+      if (input.deduplicateById && recordId) {
+        if (seenRecordIds.has(recordId)) {
+          duplicateRecordsDiscarded += 1;
+          continue;
+        }
+        seenRecordIds.add(recordId);
+      }
+      records.push(record);
+    }
     providerTotal ??= number(payload.count) ?? number(object(payload.meta).total);
     pages += 1;
-    path = input.next(payload, input.locationId, pages);
+    const nextPath = input.next(payload, input.locationId, pages);
+    if (!nextPath) {
+      path = null;
+      break;
+    }
+    const normalized = normalizeContinuation(nextPath);
+    if (seenContinuations.has(normalized)) {
+      repeatedContinuation = true;
+      terminationReason = "repeated_continuation";
+      path = null;
+      break;
+    }
+    seenContinuations.add(normalized);
+    path = nextPath;
   }
+  if (path && pages >= MAX_PAGES) terminationReason = "safety_bound";
+  const totalMismatch = providerTotal !== undefined && records.length !== providerTotal;
+  const partial = terminationReason !== "provider_exhausted" || totalMismatch;
+  console.log(JSON.stringify({
+    level: "info",
+    component: "ghl_operations_snapshot",
+    event: "pagination.complete",
+    operation: input.operation,
+    pagesProcessed: pages,
+    terminationReason,
+    repeatedContinuation,
+    duplicateRecordsDiscarded,
+    partial,
+  }));
   return {
     records,
     total: providerTotal ?? records.length,
-    partial: Boolean(path) || (providerTotal !== undefined && records.length < providerTotal),
+    partial,
+    pages,
+    terminationReason,
+    repeatedContinuation,
+    duplicateRecordsDiscarded,
   };
+}
+
+function normalizeContinuation(path: string) {
+  const url = new URL(path, GHL_API_ORIGIN);
+  const query = Array.from(url.searchParams.entries())
+    .sort(([leftName, leftValue], [rightName, rightValue]) =>
+      leftName.localeCompare(rightName) || leftValue.localeCompare(rightValue));
+  return `${url.pathname}?${new URLSearchParams(query)}`;
 }
 
 export async function buildGhlOperationsSnapshot(
@@ -446,6 +493,7 @@ export async function buildGhlOperationsSnapshot(
       listKey: "opportunities",
       get,
       next: nextOpportunityPath,
+      deduplicateById: true,
     });
 
     const now = (dependencies.now ?? (() => new Date()))();
