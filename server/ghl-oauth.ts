@@ -7,14 +7,18 @@
  * Every token stored here feeds the IE pipeline with accurate, fresh data.
  */
 
-import { createCipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import type { Express, Request, Response } from "express";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./_core/env";
 import { sdk } from "./_core/sdk";
 import { resolveOrganizationAuthorizationContext } from "./authorization";
-import { upsertGhlToken, getGhlToken } from "./db";
-import { consumeOAuthState, persistAuditEvent, persistOAuthState, upsertGhlTokenRecord } from "./db/runtimePersistence";
+import { consumeOAuthState, persistAuditEvent, persistOAuthState } from "./db/runtimePersistence";
+import {
+  safeGhlConnectionStatus,
+  storeGhlConnectionToken,
+  verifyGhlLocationIdentity,
+} from "./ghl-token-store";
 
 const GHL_AUTH_URL = "https://marketplace.gohighlevel.com/oauth/chooselocation";
 const EEOS_OAUTH_PREFLIGHT_HEADER = "x-eeos-oauth-preflight";
@@ -172,27 +176,6 @@ function readTokenUserType(tokenData: Awaited<ReturnType<typeof exchangeCodeForT
   return tokenData.userType || tokenData.user_type || "Location";
 }
 
-function encryptTokenPayload(payload: Record<string, unknown>) {
-  const keyMaterial = process.env.EEOS_TOKEN_VAULT_KEY;
-
-  if (!keyMaterial) {
-    throw new Error("EEOS_TOKEN_VAULT_KEY is required to store GoHighLevel OAuth tokens.");
-  }
-
-  const key = createHash("sha256").update(keyMaterial).digest();
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", key, iv);
-  const ciphertext = Buffer.concat([cipher.update(JSON.stringify(payload), "utf8"), cipher.final()]);
-
-  return JSON.stringify({
-    version: 1,
-    algorithm: "aes-256-gcm",
-    iv: iv.toString("base64url"),
-    tag: cipher.getAuthTag().toString("base64url"),
-    ciphertext: ciphertext.toString("base64url"),
-  });
-}
-
 function tryDecodeEeosStatePayload(state: string) {
   const stateBody = state.includes(".") ? state.slice(0, state.indexOf(".")) : state;
 
@@ -304,68 +287,6 @@ function escapeHtml(value: string) {
   })[char] || char);
 }
 
-/** Refresh an expired GHL access token */
-export async function refreshGhlToken(tenantId: string): Promise<boolean> {
-  const token = await getGhlToken(tenantId);
-  if (!token) return false;
-
-  try {
-    const body = new URLSearchParams({
-      client_id: getGhlClientId(),
-      client_secret: getGhlClientSecret(),
-      grant_type: "refresh_token",
-      refresh_token: token.refreshToken,
-      user_type: "Location",
-    });
-
-    const response = await fetch(GHL_TOKEN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: body.toString(),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[GHL] Token refresh failed for ${tenantId}: ${response.status} ${errorText}`);
-      await upsertGhlToken({
-        tenantId,
-        accessToken: token.accessToken,
-        refreshToken: token.refreshToken,
-        expiresAt: token.expiresAt,
-        refreshFailCount: (token.refreshFailCount ?? 0) + 1,
-      });
-      return false;
-    }
-
-    const data = await response.json() as {
-      access_token: string;
-      refresh_token: string;
-      expires_in: number;
-      token_type?: string;
-      scope?: string;
-    };
-
-    const expiresAt = new Date(Date.now() + (data.expires_in - 300) * 1000); // 5 min buffer
-
-    await upsertGhlToken({
-      tenantId,
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      tokenType: data.token_type ?? "Bearer",
-      scope: data.scope,
-      expiresAt,
-      lastRefreshedAt: new Date(),
-      refreshFailCount: 0,
-    });
-
-    console.log(`[GHL] Token refreshed successfully for tenant ${tenantId}`);
-    return true;
-  } catch (error) {
-    console.error(`[GHL] Token refresh error for ${tenantId}:`, error);
-    return false;
-  }
-}
-
 /** Register GHL OAuth routes on the Express app */
 export function registerGhlOAuthRoutes(app: Express) {
   app.get("/api/integrations/gohighlevel/session-context", async (req: Request, res: Response) => {
@@ -421,8 +342,8 @@ export function registerGhlOAuthRoutes(app: Express) {
         return;
       }
 
-      const existingToken = await getGhlToken(context.organizationId);
-      if (existingToken?.isActive && existingToken.locationId === context.locationId) {
+      const existingConnection = await safeGhlConnectionStatus(context.organizationId, context.locationId);
+      if (existingConnection.connected) {
         throw new GhlOAuthRequestError(409, "This GoHighLevel location is already connected.");
       }
 
@@ -600,11 +521,11 @@ export function registerGhlOAuthRoutes(app: Express) {
       }
 
       logGhlOAuth("token_storage_started", { tenantId, locationId });
-      await upsertGhlTokenRecord({
-        membershipId: tenantId,
+      await storeGhlConnectionToken({
+        organizationId: tenantId,
         operationalDivisionId: locationId,
         locationId,
-        encryptedPayload: encryptTokenPayload({
+        payload: {
           accessToken: tokenData.access_token,
           refreshToken: tokenData.refresh_token,
           tokenType: tokenData.token_type || "Bearer",
@@ -613,9 +534,7 @@ export function registerGhlOAuthRoutes(app: Express) {
           locationId,
           companyId,
           userType,
-        }),
-        expiresAt: expiresAt.toISOString(),
-        scopes,
+        },
       });
       logGhlOAuth("token_storage_succeeded", { tenantId, locationId });
 
@@ -654,26 +573,22 @@ export function registerGhlOAuthRoutes(app: Express) {
         throw new GhlOAuthRequestError(403, "The requested organization is not authorized.");
       }
 
-      const token = await getGhlToken(context.organizationId);
-      if (!token || !token.isActive || token.locationId !== context.locationId) {
-        res.status(200).json({
-          connected: false,
-          provider: "gohighlevel",
-          locationId: context.locationId,
-          revoked: Boolean(token && !token.isActive),
-        });
-        return;
-      }
+      res.status(200).json(await safeGhlConnectionStatus(context.organizationId, context.locationId));
+    } catch (error) {
+      sendOAuthStartError(res, error);
+    }
+  });
 
-      res.status(200).json({
-        connected: true,
-        provider: "gohighlevel",
-        locationId: context.locationId,
-        connectedAt: token.connectedAt,
-        expiresAt: token.expiresAt,
-        revoked: false,
-        scopes: token.scope?.split(/[,\s]+/).filter(Boolean) ?? [],
-      });
+  app.get("/api/ghl/verify-location", async (req: Request, res: Response) => {
+    try {
+      const requestedLocation = getQueryParam(req, "locationId");
+      const context = await resolveGhlConnectSessionContext(req, requestedLocation);
+      const requestedTenant = getQueryParam(req, "tenantId");
+      if (requestedTenant && requestedTenant !== context.organizationId) {
+        throw new GhlOAuthRequestError(403, "The requested organization is not authorized.");
+      }
+      const verification = await verifyGhlLocationIdentity(context.organizationId, context.locationId);
+      res.status(200).json({ success: true, ...verification });
     } catch (error) {
       sendOAuthStartError(res, error);
     }

@@ -10,6 +10,18 @@ export type GhlStoredTokenRecord = {
   scopes: string[];
 };
 
+export type GhlConnectionRecord = {
+  organizationId: string;
+  provider: string;
+  operationalDivisionId: string;
+  locationId: string;
+  encryptedTokenPayload: string;
+  tokenExpiresAt: string | null;
+  scopes: string[];
+  connectedAt: string;
+  updatedAt: string;
+};
+
 export type RuntimeAuditEvent = {
   organizationId: string;
   eventType: string;
@@ -73,6 +85,61 @@ export async function readGhlTokenRecord(membershipId: string) {
     );
 
     return result.rows[0]?.encrypted_token_payload ?? null;
+  });
+}
+
+export async function readGhlConnectionRecord(
+  organizationId: string,
+  provider: string,
+  locationId: string,
+) {
+  return withDatabase(async (client) => {
+    const result = await client.query<{
+      organization_id: string;
+      provider: string;
+      operational_division_id: string;
+      location_id: string;
+      encrypted_token_payload: string;
+      token_expires_at: Date | string | null;
+      scopes: string[];
+      connected_at: Date | string;
+      updated_at: Date | string;
+    }>(
+      `
+        select
+          organization_id,
+          provider,
+          operational_division_id,
+          location_id,
+          encrypted_token_payload,
+          token_expires_at,
+          scopes,
+          connected_at,
+          updated_at
+        from eeos_integration_connections
+        where organization_id = $1
+          and provider = $2
+          and location_id = $3
+          and disconnected_at is null
+        limit 1
+      `,
+      [organizationId, provider, locationId],
+    );
+
+    const row = result.rows[0];
+    if (!row) return null;
+
+    return {
+      organizationId: row.organization_id,
+      provider: row.provider,
+      operationalDivisionId: row.operational_division_id,
+      locationId: row.location_id,
+      encryptedTokenPayload: row.encrypted_token_payload,
+      tokenExpiresAt: row.token_expires_at ? new Date(row.token_expires_at).toISOString() : null,
+      scopes: Array.isArray(row.scopes) ? row.scopes : [],
+      connectedAt: new Date(row.connected_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString(),
+    } satisfies GhlConnectionRecord;
   });
 }
 

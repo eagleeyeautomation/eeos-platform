@@ -2,8 +2,13 @@ import { createHmac } from "crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerGhlOAuthRoutes } from "./ghl-oauth";
 import { sdk } from "./_core/sdk";
-import { getGhlToken, getMembershipById, getMembershipUser, getOrganizationById, getUserSubaccounts } from "./db";
+import { getMembershipById, getMembershipUser, getOrganizationById, getUserSubaccounts } from "./db";
 import { consumeOAuthState, persistAuditEvent, persistOAuthState } from "./db/runtimePersistence";
+import {
+  safeGhlConnectionStatus,
+  storeGhlConnectionToken,
+  verifyGhlLocationIdentity,
+} from "./ghl-token-store";
 
 vi.mock("./_core/env", () => ({
   ENV: {
@@ -15,23 +20,27 @@ vi.mock("./_core/env", () => ({
 
 vi.mock("./_core/sdk", () => ({ sdk: { authenticateRequest: vi.fn(), readSessionToken: vi.fn() } }));
 vi.mock("./db", () => ({
-  getGhlToken: vi.fn(),
   getMembershipById: vi.fn(),
   getMembershipUser: vi.fn(),
   getOrganizationById: vi.fn(),
   getUserSubaccounts: vi.fn(),
-  upsertGhlToken: vi.fn(),
 }));
 vi.mock("./db/runtimePersistence", () => ({
   consumeOAuthState: vi.fn(),
   persistAuditEvent: vi.fn(),
   persistOAuthState: vi.fn(),
-  upsertGhlTokenRecord: vi.fn(),
+}));
+vi.mock("./ghl-token-store", () => ({
+  safeGhlConnectionStatus: vi.fn(),
+  storeGhlConnectionToken: vi.fn(),
+  verifyGhlLocationIdentity: vi.fn(),
 }));
 
 const authenticateRequestMock = vi.mocked(sdk.authenticateRequest);
 const readSessionTokenMock = vi.mocked(sdk.readSessionToken);
-const getGhlTokenMock = vi.mocked(getGhlToken);
+const safeGhlConnectionStatusMock = vi.mocked(safeGhlConnectionStatus);
+const storeGhlConnectionTokenMock = vi.mocked(storeGhlConnectionToken);
+const verifyGhlLocationIdentityMock = vi.mocked(verifyGhlLocationIdentity);
 const getUserSubaccountsMock = vi.mocked(getUserSubaccounts);
 const getMembershipByIdMock = vi.mocked(getMembershipById);
 const getMembershipUserMock = vi.mocked(getMembershipUser);
@@ -141,7 +150,17 @@ describe("GoHighLevel production OAuth security", () => {
     process.env.GHL_REDIRECT_URI = "https://app.geteeos.com/api/integrations/eea/oauth/callback";
     process.env.JWT_SECRET = testJwtSecret;
     readSessionTokenMock.mockReturnValue(testSessionToken);
-    getGhlTokenMock.mockResolvedValue(undefined);
+    safeGhlConnectionStatusMock.mockResolvedValue({
+      connected: false,
+      provider: "gohighlevel",
+      organizationId: "100",
+      maskedLocationId: "***",
+      tokenExpiresAt: null,
+      tokenExpired: false,
+      refreshAvailable: false,
+      connectedAt: null,
+      lastVerifiedAt: null,
+    });
     authenticatedUser();
     organization();
   });
@@ -192,11 +211,17 @@ describe("GoHighLevel production OAuth security", () => {
   });
 
   it("prevents a duplicate active connection before creating OAuth state", async () => {
-    getGhlTokenMock.mockResolvedValue({
-      tenantId: "100",
-      locationId: "loc_sc",
-      isActive: true,
-    } as never);
+    safeGhlConnectionStatusMock.mockResolvedValue({
+      connected: true,
+      provider: "gohighlevel",
+      organizationId: "100",
+      maskedLocationId: "***",
+      tokenExpiresAt: "2027-01-01T00:00:00.000Z",
+      tokenExpired: false,
+      refreshAvailable: true,
+      connectedAt: "2026-01-01T00:00:00.000Z",
+      lastVerifiedAt: "2026-01-01T00:00:00.000Z",
+    });
     const result = await invoke("POST", "/api/integrations/gohighlevel/oauth/start", {
       query: { locationId: "loc_sc", organizationId: "100" },
       ...csrf,
@@ -405,6 +430,47 @@ describe("GoHighLevel production OAuth security", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("persists a successful callback through the shared PostgreSQL token store", async () => {
+    consumeOAuthStateMock.mockResolvedValue({
+      organizationId: "100",
+      payload: {
+        provider: "gohighlevel",
+        tenantId: "100",
+        locationId: "loc_sc",
+        membershipId: "7",
+        userId: "42",
+      },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access_token: "provider-access-token",
+        refresh_token: "provider-refresh-token",
+        token_type: "Bearer",
+        expires_in: 3600,
+        scope: "locations.readonly",
+        locationId: "loc_sc",
+        companyId: "company-id",
+        userType: "Location",
+      }),
+    }));
+    const result = await invoke("GET", "/api/integrations/eea/oauth/callback", {
+      query: { code: "authorization-code", state: encodedState() },
+    });
+    expect(result.status).toBe(200);
+    expect(storeGhlConnectionTokenMock).toHaveBeenCalledWith({
+      organizationId: "100",
+      operationalDivisionId: "loc_sc",
+      locationId: "loc_sc",
+      payload: expect.objectContaining({
+        accessToken: "provider-access-token",
+        refreshToken: "provider-refresh-token",
+        locationId: "loc_sc",
+        scopes: ["locations.readonly"],
+      }),
+    });
+  });
+
   it("rejects mismatched persisted organization or location before token exchange", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
@@ -431,25 +497,57 @@ describe("GoHighLevel production OAuth security", () => {
   });
 
   it("returns only safe connection status fields", async () => {
-    getGhlTokenMock.mockResolvedValue({
-      tenantId: "100",
-      accessToken: "must-not-leak",
-      refreshToken: "must-not-leak",
-      locationId: "loc_sc",
-      scope: "contacts.readonly opportunities.readonly",
-      isActive: true,
-      expiresAt: new Date("2027-01-01T00:00:00.000Z"),
-      connectedAt: new Date("2026-01-01T00:00:00.000Z"),
-    } as never);
+    safeGhlConnectionStatusMock.mockResolvedValue({
+      connected: true,
+      provider: "gohighlevel",
+      organizationId: "100",
+      maskedLocationId: "loc_…c_sc",
+      tokenExpiresAt: "2027-01-01T00:00:00.000Z",
+      tokenExpired: false,
+      refreshAvailable: true,
+      connectedAt: "2026-01-01T00:00:00.000Z",
+      lastVerifiedAt: "2026-01-01T00:00:00.000Z",
+    });
     const result = await invoke("GET", "/api/ghl/status", { query: { locationId: "loc_sc" } });
     expect(result.status).toBe(200);
     expect(result.body).toMatchObject({
       connected: true,
       provider: "gohighlevel",
-      locationId: "loc_sc",
-      revoked: false,
-      scopes: ["contacts.readonly", "opportunities.readonly"],
+      organizationId: "100",
+      maskedLocationId: "loc_…c_sc",
+      refreshAvailable: true,
     });
     expect(JSON.stringify(result.body)).not.toMatch(/accessToken|refreshToken|secret|must-not-leak/i);
+  });
+
+  it("performs only an owner-authorized minimal location identity read", async () => {
+    verifyGhlLocationIdentityMock.mockResolvedValue({
+      provider: "gohighlevel",
+      organizationId: "100",
+      maskedLocationId: "loc_…c_sc",
+      locationName: "South Carolina",
+      accountContext: "location",
+      verifiedAt: "2026-07-29T00:00:00.000Z",
+    });
+    const result = await invoke("GET", "/api/ghl/verify-location", {
+      query: { tenantId: "100", locationId: "loc_sc" },
+    });
+    expect(result.status).toBe(200);
+    expect(result.body).toMatchObject({
+      success: true,
+      provider: "gohighlevel",
+      organizationId: "100",
+      locationName: "South Carolina",
+    });
+    expect(verifyGhlLocationIdentityMock).toHaveBeenCalledWith("100", "loc_sc");
+  });
+
+  it("denies location verification to non-owner roles", async () => {
+    organization("executive");
+    const result = await invoke("GET", "/api/ghl/verify-location", {
+      query: { tenantId: "100", locationId: "loc_sc" },
+    });
+    expect(result.status).toBe(403);
+    expect(verifyGhlLocationIdentityMock).not.toHaveBeenCalled();
   });
 });
