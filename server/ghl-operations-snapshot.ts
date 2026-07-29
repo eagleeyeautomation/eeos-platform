@@ -25,7 +25,7 @@ const OPERATION_CONTRACTS: Record<SnapshotOperation, {
   "opportunities-search": {
     path: "/opportunities/search",
     version: "v3",
-    allowedQuery: new Set(["location_id", "status", "limit", "page"]),
+    allowedQuery: new Set(["locationId", "status", "limit", "page"]),
   },
   "pipelines-list": {
     path: "/opportunities/pipelines",
@@ -238,6 +238,8 @@ function safeQuery(url: URL, locationId: string) {
     name,
     value: name === "locationId" || name === "location_id"
       ? maskGhlLocationId(locationId)
+      : name === "startAfterId" || name === "startAfter"
+        ? "[redacted-pagination]"
       : value,
   }));
 }
@@ -295,7 +297,7 @@ function nextOpportunityPath(payload: JsonRecord, locationId: string, page: numb
   const nextPage = number(meta.nextPage);
   if (opportunities.length < PAGE_SIZE && nextPage === undefined) return null;
   const query = new URLSearchParams({
-    location_id: locationId,
+    locationId,
     status: "open",
     limit: String(PAGE_SIZE),
     page: String(nextPage ?? page + 1),
@@ -414,7 +416,7 @@ export async function buildGhlOperationsSnapshot(
     const opportunities = await collectPages({
       operation: "opportunities-search",
       firstPath: `/opportunities/search?${new URLSearchParams({
-        location_id: input.locationId,
+        locationId: input.locationId,
         status: "open",
         limit: String(PAGE_SIZE),
       })}`,

@@ -245,7 +245,7 @@ describe("controlled GoHighLevel operations snapshot", () => {
     );
     await snapshotProviderGet(
       "opportunities-search",
-      "/opportunities/search?location_id=location-safe&status=open&limit=20",
+      "/opportunities/search?locationId=location-safe&status=open&limit=20",
       "provider-secret",
       fetchMock,
     );
@@ -271,7 +271,7 @@ describe("controlled GoHighLevel operations snapshot", () => {
       },
       {
         path: "/opportunities/search",
-        query: "?location_id=location-safe&status=open&limit=20",
+        query: "?locationId=location-safe&status=open&limit=20",
         version: "v3",
         authorization: "Bearer provider-secret",
         method: "GET",
@@ -302,7 +302,28 @@ describe("controlled GoHighLevel operations snapshot", () => {
     )).rejects.toThrow("Unsupported");
     expect(fetchMock).not.toHaveBeenCalled();
     expect(GHL_SNAPSHOT_OPERATION_CONTRACTS["opportunities-search"].allowedQuery)
-      .toEqual(new Set(["location_id", "status", "limit", "page"]));
+      .toEqual(new Set(["locationId", "status", "limit", "page"]));
+    expect(GHL_SNAPSHOT_OPERATION_CONTRACTS["opportunities-search"].allowedQuery)
+      .not.toContain("location_id");
+  });
+
+  it("redacts opaque contacts pagination identifiers from diagnostics", async () => {
+    const infoSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({}),
+    });
+    await snapshotProviderGet(
+      "contacts-list",
+      "/contacts/?locationId=location-safe&limit=20&startAfter=123456&startAfterId=opaque-contact-id",
+      "provider-secret",
+      fetchMock,
+    );
+    const log = JSON.stringify(infoSpy.mock.calls);
+    expect(log).toContain("[redacted-pagination]");
+    expect(log).not.toMatch(/123456|opaque-contact-id|provider-secret/);
   });
 
   it("identifies and redacts a pipelines HTTP 400 without retrying", async () => {
