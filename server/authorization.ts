@@ -113,6 +113,8 @@ export async function requireOrganizationMembership(user: User | null | undefine
   const authenticatedUser = requireAuthenticatedUser(user);
   const context = await resolveAuthorizationContext(authenticatedUser);
   if (context.role === "PLATFORM_ADMIN") {
+    const organizationContext = await resolveOrganizationAuthorizationContext(authenticatedUser);
+    if (organizationContext?.role === "ORGANIZATION_OWNER") return organizationContext;
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Platform administrators must enter an audited support scope before viewing customer owner data.",
@@ -151,7 +153,10 @@ export async function requirePlatformAdmin(user: User | null | undefined): Promi
 
 export async function listAuthorizedSubaccounts(user: User) {
   const context = await resolveAuthorizationContext(user);
-  if (context.role === "PLATFORM_ADMIN") return [];
+  if (context.role === "PLATFORM_ADMIN") {
+    const organizationContext = await resolveOrganizationAuthorizationContext(user);
+    if (organizationContext?.role !== "ORGANIZATION_OWNER") return [];
+  }
   return getUserSubaccounts(user.id);
 }
 

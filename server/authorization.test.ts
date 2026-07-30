@@ -15,6 +15,8 @@ vi.mock("./db", () => dbMocks);
 const {
   listPlatformOrganizations,
   listOwnerOrganizationLocations,
+  listAuthorizedSubaccounts,
+  requireOrganizationMembership,
   requireAuthorizedLocation,
   requirePlatformAdmin,
   requireWritableOrganizationRole,
@@ -81,6 +83,21 @@ describe("EEOS authorization helpers", () => {
       role: "PLATFORM_ADMIN",
       organizationId: null,
     });
+  });
+
+  it("allows a dual-role platform admin to use only their active owner membership", async () => {
+    await expect(requireOrganizationMembership(user("admin"))).resolves.toMatchObject({
+      role: "ORGANIZATION_OWNER",
+      organizationId: "10",
+      authorizedLocationIds: ["loc-a", "loc-b"],
+    });
+    await expect(listAuthorizedSubaccounts(user("admin"))).resolves.toHaveLength(2);
+  });
+
+  it("keeps a platform admin out of customer data without an active owner membership", async () => {
+    dbMocks.getMembershipUser.mockResolvedValue({ role: "owner", isActive: false });
+    await expect(requireOrganizationMembership(user("admin"))).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(listAuthorizedSubaccounts(user("admin"))).resolves.toEqual([]);
   });
 
   it("lists owner locations across multiple organizations without merging their scopes", async () => {
