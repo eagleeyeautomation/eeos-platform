@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { withDatabase } from "./postgres";
+import { withDatabase, withTransaction } from "./postgres";
 
 export type GhlStoredTokenRecord = {
   membershipId: string;
@@ -64,6 +64,46 @@ export async function upsertGhlTokenRecord(record: GhlStoredTokenRecord) {
         record.encryptedPayload,
         record.expiresAt,
         JSON.stringify(record.scopes),
+      ],
+    );
+  });
+}
+
+export async function upsertGhlTokenRecordWithAudit(
+  record: GhlStoredTokenRecord,
+  event: RuntimeAuditEvent,
+) {
+  await withTransaction(async (client) => {
+    await client.query(
+      `
+        insert into eeos_integration_connections (
+          organization_id, provider, operational_division_id, location_id,
+          encrypted_token_payload, token_expires_at, scopes, connected_at, updated_at
+        )
+        values ($1, 'gohighlevel', $2, $3, $4, $5, $6::jsonb, now(), now())
+        on conflict (organization_id, provider, operational_division_id)
+        do update set location_id = excluded.location_id,
+          encrypted_token_payload = excluded.encrypted_token_payload,
+          token_expires_at = excluded.token_expires_at, scopes = excluded.scopes,
+          updated_at = now(), disconnected_at = null
+      `,
+      [
+        record.membershipId, record.operationalDivisionId, record.locationId,
+        record.encryptedPayload, record.expiresAt, JSON.stringify(record.scopes),
+      ],
+    );
+    await client.query(
+      `
+        insert into eeos_audit_events (
+          organization_id, source, event_type, location_id, correlation_id,
+          payload_fingerprint, metadata, created_at
+        )
+        values ($1, $2, $3, $4, $5, $6, $7::jsonb, now())
+      `,
+      [
+        event.organizationId, event.source, event.eventType, event.locationId ?? null,
+        event.correlationId ?? null, event.payloadFingerprint ?? null,
+        JSON.stringify(event.metadata),
       ],
     );
   });

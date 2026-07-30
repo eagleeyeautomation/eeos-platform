@@ -16,7 +16,12 @@ import {
   listOwnerOrganizationLocations,
   resolveOrganizationAuthorizationContext,
 } from "./authorization";
-import { createMetadataOnlySubaccount } from "./db";
+import {
+  createVerifiedGhlSubaccount,
+  deleteVerifiedGhlSubaccount,
+  getAllSubaccountsByMembership,
+  getSubaccountByGhlLocationId,
+} from "./db";
 import {
   consumeOAuthState,
   persistAuditEvent,
@@ -28,7 +33,9 @@ import {
   safeGhlConnectionStatus,
   maskGhlLocationId,
   storeGhlConnectionToken,
+  storeGhlConnectionTokenWithAudit,
   verifyGhlLocationIdentity,
+  verifyGhlLocationWithAccessToken,
 } from "./ghl-token-store";
 import {
   buildGhlOperationsSnapshot,
@@ -214,6 +221,23 @@ async function validateRequiredOAuthState(state: string | undefined) {
     throw new GhlOAuthRequestError(400, "GoHighLevel OAuth state is required.");
   }
 
+  if (state.startsWith("eeos_onboarding_")) {
+    const consumed = await consumeOAuthState(state);
+    if (
+      !consumed
+      || consumed.payload.mode !== "new_location"
+      || consumed.payload.provider !== "gohighlevel"
+      || consumed.payload.tenantId !== consumed.organizationId
+    ) {
+      throw new GhlOAuthRequestError(400, "GoHighLevel OAuth state is expired, missing, or already used.");
+    }
+    return {
+      tenantId: consumed.organizationId,
+      locationId: "",
+      onboarding: consumed.payload as Record<string, string>,
+    };
+  }
+
   const payload = tryDecodeEeosStatePayload(state);
 
   if (!payload) {
@@ -235,7 +259,7 @@ async function validateRequiredOAuthState(state: string | undefined) {
     throw new GhlOAuthRequestError(400, "GoHighLevel OAuth state does not match the authorized organization and location.");
   }
 
-  return payload;
+  return { ...payload, onboarding: null };
 }
 
 function buildProviderErrorMessage(error: string, errorDescription: string | undefined) {
@@ -372,7 +396,7 @@ export function registerGhlOAuthRoutes(app: Express) {
       }
       validateCsrf(req);
 
-      const body = parseMetadataOnlyLocationBody(req.body);
+      const body = parseNewLocationOnboardingBody(req.body);
       const ownerLocations = await listOwnerOrganizationLocations(user);
       const authorizedOrganizationLocations = ownerLocations.filter(
         (location) => location.organizationId === body.organizationId,
@@ -392,21 +416,36 @@ export function registerGhlOAuthRoutes(app: Express) {
       if (!Number.isSafeInteger(membershipId) || membershipId <= 0) {
         throw new GhlOAuthRequestError(403, "The organization membership is invalid.");
       }
-      const result = await createMetadataOnlySubaccount({
-        membershipId,
-        providerLocationId: body.providerLocationId,
+      const existingLocations = await getAllSubaccountsByMembership(membershipId);
+      if (existingLocations.some((location) =>
+        location.name === body.name && location.city === body.city && location.state === body.state
+      )) {
+        throw new GhlOAuthRequestError(409, "This operational location already exists.");
+      }
+
+      const state = `eeos_onboarding_${randomBytes(32).toString("base64url")}`;
+      const stateExpiresAt = new Date(Date.now() + 10 * 60_000);
+      await persistOAuthState(state, {
+        mode: "new_location",
+        provider: "gohighlevel",
+        tenantId: body.organizationId,
+        membershipId: String(membershipId),
+        userId: String(user.id),
         name: body.name,
         city: body.city,
         state: body.state,
+      }, stateExpiresAt);
+      await persistAuditEvent({
+        organizationId: body.organizationId,
+        source: "gohighlevel",
+        eventType: "oauth.onboarding.start.allowed",
+        metadata: { userId: String(user.id), membershipId: String(membershipId) },
       });
-      if (!result.created) {
-        throw new GhlOAuthRequestError(409, "This operational location already exists.");
-      }
 
       res
         .set("Cache-Control", "private, no-store, max-age=0")
         .set("Pragma", "no-cache")
-        .status(201)
+        .status(200)
         .json({
           success: true,
           organization: {
@@ -414,13 +453,9 @@ export function registerGhlOAuthRoutes(app: Express) {
             name: authorizedOrganizationLocations[0].organizationName,
           },
           provider: "gohighlevel",
-          location: {
-            name: body.name,
-            city: body.city,
-            state: body.state,
-            maskedProviderBinding: maskGhlLocationId(body.providerLocationId),
-          },
-          connection: { connected: false, status: "Not Connected" },
+          location: { name: body.name, city: body.city, state: body.state },
+          authorizationUrl: buildGhlAuthUrl(state),
+          state: { expiresAt: stateExpiresAt.toISOString() },
         });
     } catch (error) {
       sendOAuthStartError(res, error);
@@ -654,36 +689,82 @@ export function registerGhlOAuthRoutes(app: Express) {
       if (!locationId) {
         throw new Error("GoHighLevel token response did not include a location ID.");
       }
-      if (locationId !== stateValidation.locationId) {
+      if (!stateValidation.onboarding && locationId !== stateValidation.locationId) {
         throw new Error("GoHighLevel OAuth location does not match the authorized state.");
       }
 
-      logGhlOAuth("token_storage_started", { tenantId, locationId });
-      await storeGhlConnectionToken({
-        organizationId: tenantId,
-        operationalDivisionId: locationId,
-        locationId,
-        payload: {
-          accessToken: tokenData.access_token,
-          refreshToken: tokenData.refresh_token,
-          tokenType: tokenData.token_type || "Bearer",
-          expiresAt: expiresAt.toISOString(),
-          scopes,
-          locationId,
-          companyId,
-          userType,
-        },
-      });
-      logGhlOAuth("token_storage_succeeded", { tenantId, locationId });
+      let createdSubaccountId: number | null = null;
+      if (stateValidation.onboarding) {
+        const onboarding = stateValidation.onboarding;
+        const membershipId = Number(onboarding.membershipId);
+        if (!Number.isSafeInteger(membershipId) || membershipId <= 0) {
+          throw new Error("GoHighLevel onboarding membership binding is invalid.");
+        }
+        const [existingBinding, existingLocations, verifiedLocation] = await Promise.all([
+          getSubaccountByGhlLocationId(locationId),
+          getAllSubaccountsByMembership(membershipId),
+          verifyGhlLocationWithAccessToken(locationId, tokenData.access_token),
+        ]);
+        if (existingBinding) {
+          throw new GhlOAuthRequestError(409, "This GoHighLevel location is already bound.");
+        }
+        if (existingLocations.some((existing) =>
+          existing.name === onboarding.name
+          && existing.city === onboarding.city
+          && existing.state === onboarding.state
+        )) {
+          throw new GhlOAuthRequestError(409, "This operational location already exists.");
+        }
+        const created = await createVerifiedGhlSubaccount({
+          membershipId,
+          providerLocationId: verifiedLocation.id,
+          name: onboarding.name,
+          city: onboarding.city,
+          state: onboarding.state,
+        });
+        if (!created.created) {
+          throw new GhlOAuthRequestError(409, "This GoHighLevel location is already bound.");
+        }
+        createdSubaccountId = created.id;
+      }
 
-      logGhlOAuth("audit_event_started", { tenantId, locationId });
-      await persistAuditEvent({
-        organizationId: tenantId,
-        source: "gohighlevel",
-        eventType: "oauth.connected",
-        locationId: locationId || null,
-        metadata: { companyId, userType, scopes },
-      });
+      logGhlOAuth("token_storage_started", { tenantId, locationId });
+      try {
+        const tokenInput = {
+          organizationId: tenantId,
+          operationalDivisionId: locationId,
+          locationId,
+          payload: {
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token,
+            tokenType: tokenData.token_type || "Bearer",
+            expiresAt: expiresAt.toISOString(),
+            scopes,
+            locationId,
+            companyId,
+            userType,
+          },
+        };
+        const connectedAudit = {
+          organizationId: tenantId,
+          source: "gohighlevel",
+          eventType: "oauth.connected",
+          locationId,
+          metadata: { companyId, userType, scopes, createdSubaccountId },
+        };
+        if (createdSubaccountId !== null) {
+          await storeGhlConnectionTokenWithAudit(tokenInput, connectedAudit);
+        } else {
+          await storeGhlConnectionToken(tokenInput);
+          await persistAuditEvent(connectedAudit);
+        }
+        logGhlOAuth("token_storage_succeeded", { tenantId, locationId });
+      } catch (storageError) {
+        if (createdSubaccountId !== null) {
+          await deleteVerifiedGhlSubaccount(createdSubaccountId, locationId);
+        }
+        throw storageError;
+      }
       logGhlOAuth("audit_event_succeeded", { tenantId, locationId });
 
       logGhlOAuth("callback_success_page_started", { tenantId, locationId });
@@ -941,7 +1022,7 @@ class GhlOAuthRequestError extends Error {
   }
 }
 
-function parseMetadataOnlyLocationBody(body: unknown) {
+function parseNewLocationOnboardingBody(body: unknown) {
   if (!body || typeof body !== "object") {
     throw new GhlOAuthRequestError(400, "Valid operational-location metadata is required.");
   }
@@ -956,18 +1037,24 @@ function parseMetadataOnlyLocationBody(body: unknown) {
     throw new GhlOAuthRequestError(400, "A valid organizationId is required.");
   }
 
-  const providerLocationId = parseRequiredMetadataField(record.providerLocationId, "providerLocationId", 128);
-  if (!/^[A-Za-z0-9_-]{4,128}$/.test(providerLocationId)) {
-    throw new GhlOAuthRequestError(400, "A valid providerLocationId is required.");
+  if ("providerLocationId" in record || "locationId" in record) {
+    throw new GhlOAuthRequestError(400, "Provider location IDs are supplied and verified by GoHighLevel.");
   }
 
-  return {
+  const metadata = {
     organizationId,
-    providerLocationId,
     name: parseRequiredMetadataField(record.name, "name", 256),
     city: parseRequiredMetadataField(record.city, "city", 128),
     state: parseRequiredMetadataField(record.state, "state", 64),
   };
+  if (
+    metadata.name !== "PRN Staffers FL"
+    || metadata.city !== "Greensboro"
+    || metadata.state !== "Florida"
+  ) {
+    throw new GhlOAuthRequestError(400, "Only the approved PRN Staffers Florida location may be onboarded.");
+  }
+  return metadata;
 }
 
 function parseRequiredMetadataField(value: unknown, field: string, maxLength: number) {
