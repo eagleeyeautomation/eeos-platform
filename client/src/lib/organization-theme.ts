@@ -26,6 +26,13 @@ const WORKSPACE_PATHS = [
   "/connect-ghl",
   "/dashboard",
   "/c2b-intelligence",
+  "/c2c-intelligence",
+  "/b2b-intelligence",
+  "/operations",
+  "/marketing",
+  "/financial",
+  "/reports",
+  "/settings",
 ] as const;
 
 function normalize(value: string | undefined) {

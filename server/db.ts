@@ -1369,10 +1369,24 @@ async function ensureC2bSchema() {
       KEY idx_c2b_audit_org (organizationId, createdAt)
     )
   `));
+  const connectorColumns = await db.execute(sql.raw(`
+    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'c2b_connectors' AND COLUMN_NAME = 'intelligenceDomain'
+  `));
+  if (!(connectorColumns as any)[0]?.length) {
+    await db.execute(sql.raw(`ALTER TABLE c2b_connectors ADD COLUMN intelligenceDomain enum('c2c','c2b','b2b') NOT NULL DEFAULT 'c2b' AFTER organizationId`));
+  }
+  const opportunityColumns = await db.execute(sql.raw(`
+    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'c2b_opportunities' AND COLUMN_NAME = 'intelligenceDomain'
+  `));
+  if (!(opportunityColumns as any)[0]?.length) {
+    await db.execute(sql.raw(`ALTER TABLE c2b_opportunities ADD COLUMN intelligenceDomain enum('c2c','c2b','b2b') NOT NULL DEFAULT 'c2b' AFTER tenantId`));
+  }
   c2bSchemaReady = true;
 }
 
-export async function listC2bOpportunities(organizationId: number, tenantIds: string[]) {
+export async function listC2bOpportunities(organizationId: number, tenantIds: string[], intelligenceDomain: "c2c" | "c2b" | "b2b" = "c2b") {
   const db = await getDb();
   if (!db || tenantIds.length === 0) return [];
   await ensureC2bSchema();
@@ -1380,17 +1394,30 @@ export async function listC2bOpportunities(organizationId: number, tenantIds: st
     .where(and(
       eq(c2bOpportunities.organizationId, organizationId),
       inArray(c2bOpportunities.tenantId, tenantIds),
+      eq(c2bOpportunities.intelligenceDomain, intelligenceDomain),
     ))
     .orderBy(desc(c2bOpportunities.createdAt));
 }
 
-export async function listC2bConnectors(organizationId: number) {
+export async function listC2bConnectors(organizationId: number, intelligenceDomain: "c2c" | "c2b" | "b2b" = "c2b") {
   const db = await getDb();
   if (!db) return [];
   await ensureC2bSchema();
   return db.select().from(c2bConnectors)
-    .where(eq(c2bConnectors.organizationId, organizationId))
+    .where(and(
+      eq(c2bConnectors.organizationId, organizationId),
+      eq(c2bConnectors.intelligenceDomain, intelligenceDomain),
+    ))
     .orderBy(c2bConnectors.displayName);
+}
+
+export async function listGlobalIntelligenceOpportunities(intelligenceDomain: "c2c" | "c2b" | "b2b") {
+  const db = await getDb();
+  if (!db) return [];
+  await ensureC2bSchema();
+  return db.select().from(c2bOpportunities)
+    .where(eq(c2bOpportunities.intelligenceDomain, intelligenceDomain))
+    .orderBy(desc(c2bOpportunities.createdAt));
 }
 
 export async function getC2bOpportunity(id: number) {

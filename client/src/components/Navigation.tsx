@@ -47,6 +47,13 @@ export const AVAILABLE_NAV_ROUTES = new Set([
   "/knowledge-graph",
   "/executive-dashboard",
   "/c2b-intelligence",
+  "/c2c-intelligence",
+  "/b2b-intelligence",
+  "/operations",
+  "/marketing",
+  "/financial",
+  "/reports",
+  "/settings",
   "/admin",
   "/admin/organizations",
   "/admin/onboarding",
@@ -55,6 +62,14 @@ export const AVAILABLE_NAV_ROUTES = new Set([
   "/admin/audit",
   "/admin/support",
   "/admin/ai-operations",
+  "/admin/global-c2c",
+  "/admin/global-c2b",
+  "/admin/global-b2b",
+  "/admin/platform-analytics",
+  "/admin/connector-administration",
+  "/admin/executive-intelligence",
+  "/admin/ai-recommendations",
+  "/admin/marketplace",
   "/access-denied",
   "/404",
 ]);
@@ -91,16 +106,22 @@ export const NAV_LINKS: NavItem[] = [
 export const OWNER_NAV_LINKS: NavItem[] = [
   { label: "Executive Home", href: "/executive-home" },
   {
-    label: "C2B Intelligence",
-    href: "/c2b-intelligence",
+    label: "Command Center",
+    href: "#",
     children: [
-      { label: "Client Acquisition", href: "/c2b-intelligence" },
-      { label: "Referral Intelligence", href: "/c2b-intelligence", disabled: true },
-      { label: "Market Intelligence", href: "/c2b-intelligence", disabled: true },
-      { label: "Competitor Intelligence", href: "/c2b-intelligence", disabled: true },
-      { label: "Community Intelligence", href: "/c2b-intelligence", disabled: true },
+      { label: "Dashboard", href: "/executive-home" },
+      { label: "Executive Intelligence", href: "/ai-recommendations" },
+      { label: "Operations", href: "/operations" },
+      { label: "Marketing", href: "/marketing" },
+      { label: "Financial", href: "/financial" },
+      { label: "Reports", href: "/reports" },
+      { label: "Integrations", href: "/integration-status" },
+      { label: "Settings", href: "/settings" },
     ],
   },
+  { label: "C2C Intelligence", href: "/c2c-intelligence" },
+  { label: "C2B Intelligence", href: "/c2b-intelligence" },
+  { label: "B2B Intelligence", href: "/b2b-intelligence" },
   { label: "Business Health", href: "/business-health" },
   { label: "AI Recommendations", href: "/ai-recommendations" },
   { label: "Live Signals", href: "/live-signals" },
@@ -131,6 +152,20 @@ export const ADMIN_NAV_LINKS: NavItem[] = [
   { label: "Customer Onboarding", href: "/admin/onboarding" },
   { label: "Global Integrations", href: "/admin/integrations" },
   { label: "Platform Health", href: "/admin/platform-health" },
+  { label: "Platform Analytics", href: "/admin/platform-analytics" },
+  { label: "Connector Administration", href: "/admin/connector-administration" },
+  { label: "Executive Intelligence", href: "/admin/executive-intelligence" },
+  { label: "AI Recommendations", href: "/admin/ai-recommendations" },
+  { label: "Marketplace", href: "/admin/marketplace" },
+  {
+    label: "Global Intelligence",
+    href: "#",
+    children: [
+      { label: "Global C2C", href: "/admin/global-c2c" },
+      { label: "Global C2B", href: "/admin/global-c2b" },
+      { label: "Global B2B", href: "/admin/global-b2b" },
+    ],
+  },
   {
     label: "Operations",
     href: "#",
@@ -188,6 +223,13 @@ export default function Navigation() {
     || location.startsWith("/connect-ghl")
     || location.startsWith("/dashboard")
     || location.startsWith("/c2b-intelligence")
+    || location.startsWith("/c2c-intelligence")
+    || location.startsWith("/b2b-intelligence")
+    || location.startsWith("/operations")
+    || location.startsWith("/marketing")
+    || location.startsWith("/financial")
+    || location.startsWith("/reports")
+    || location.startsWith("/settings")
     || isCustomerRole(session.role));
   const activeLinks = isAdminExperience ? ADMIN_NAV_LINKS : isOwnerExperience ? OWNER_NAV_LINKS : NAV_LINKS;
   const dropdownInventory = useMemo(() => buildDropdownRouteInventory(activeLinks), [activeLinks]);

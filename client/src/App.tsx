@@ -38,6 +38,7 @@ import AccessDenied from "./pages/AccessDenied";
 import PlatformAdmin from "./pages/PlatformAdmin";
 import OwnerCommandCenter, { type OwnerCommandCenterProps } from "./pages/OwnerCommandCenter";
 import C2bIntelligence from "./pages/C2bIntelligence";
+import GlobalIntelligence from "./pages/GlobalIntelligence";
 
 function owner(component: ComponentType) {
   const Component = component;
@@ -212,7 +213,17 @@ function Router() {
           emptyMessage: "This section will populate after verified dashboard data is available from connected systems.",
         })}
       />
-      <Route path="/c2b-intelligence" component={owner(C2bIntelligence)} />
+      <Route path="/c2c-intelligence" component={owner(() => <C2bIntelligence domain="c2c" />)} />
+      <Route path="/c2b-intelligence" component={owner(() => <C2bIntelligence domain="c2b" />)} />
+      <Route path="/b2b-intelligence" component={owner(() => <C2bIntelligence domain="b2b" />)} />
+      <Route path="/operations" component={ownerReview({ eyebrow: "Operations", title: "Operations", description: "Organization-scoped operating intelligence and verified connected-system activity.", emptyTitle: "No operations records available yet", emptyMessage: "Verified operational records will appear as approved sources become available." })} />
+      <Route path="/marketing" component={ownerReview({ eyebrow: "Marketing", title: "Marketing", description: "Organization-scoped marketing performance and attributed campaign intelligence.", emptyTitle: "No marketing records available yet", emptyMessage: "Attributed marketing records will appear after approved connector ingestion." })} />
+      <Route path="/financial" component={ownerReview({ eyebrow: "Financial", title: "Financial", description: "Organization-scoped financial signals and verified business performance.", emptyTitle: "No financial records available yet", emptyMessage: "Verified financial records will appear after an approved source is connected." })} />
+      <Route path="/reports" component={ownerReview({ eyebrow: "Reports", title: "Reports", description: "Organization-scoped executive reports built from verified system records.", emptyTitle: "No reports available yet", emptyMessage: "Reports will appear after verified data is available." })} />
+      <Route path="/settings" component={ownerReview({ eyebrow: "Settings", title: "Settings", description: "Organization and workspace settings remain governed by existing roles and permissions.", emptyTitle: "No configurable settings available here yet", emptyMessage: "Additional organization settings will appear as they are approved." })} />
+      <Route path="/admin/global-c2c" component={admin(() => <GlobalIntelligence domain="c2c" />)} />
+      <Route path="/admin/global-c2b" component={admin(() => <GlobalIntelligence domain="c2b" />)} />
+      <Route path="/admin/global-b2b" component={admin(() => <GlobalIntelligence domain="b2b" />)} />
       <Route path="/admin" component={admin(PlatformAdmin)} />
       <Route path="/admin/organizations" component={admin(PlatformAdmin)} />
       <Route path="/admin/organizations/:organizationId" component={admin(PlatformAdmin)} />
@@ -222,6 +233,11 @@ function Router() {
       <Route path="/admin/audit" component={admin(PlatformAdmin)} />
       <Route path="/admin/support" component={admin(PlatformAdmin)} />
       <Route path="/admin/ai-operations" component={admin(PlatformAdmin)} />
+      <Route path="/admin/platform-analytics" component={admin(PlatformAdmin)} />
+      <Route path="/admin/connector-administration" component={admin(PlatformAdmin)} />
+      <Route path="/admin/executive-intelligence" component={admin(PlatformAdmin)} />
+      <Route path="/admin/ai-recommendations" component={admin(PlatformAdmin)} />
+      <Route path="/admin/marketplace" component={admin(PlatformAdmin)} />
       <Route path="/access-denied" component={AccessDenied} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

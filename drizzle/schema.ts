@@ -480,6 +480,7 @@ export type Recommendation = typeof recommendations.$inferSelect;
 export const c2bConnectors = mysqlTable("c2b_connectors", {
   id: int("id").autoincrement().primaryKey(),
   organizationId: int("organizationId").notNull(),
+  intelligenceDomain: mysqlEnum("intelligenceDomain", ["c2c", "c2b", "b2b"]).default("c2b").notNull(),
   connectorKey: varchar("connectorKey", { length: 64 }).notNull(),
   displayName: varchar("displayName", { length: 128 }).notNull(),
   connectorType: mysqlEnum("connectorType", [
@@ -501,6 +502,7 @@ export const c2bOpportunities = mysqlTable("c2b_opportunities", {
   opportunityId: varchar("opportunityId", { length: 64 }).notNull().unique(),
   organizationId: int("organizationId").notNull(),
   tenantId: varchar("tenantId", { length: 128 }).notNull(),
+  intelligenceDomain: mysqlEnum("intelligenceDomain", ["c2c", "c2b", "b2b"]).default("c2b").notNull(),
   type: varchar("type", { length: 64 }).notNull(),
   name: varchar("name", { length: 256 }).notNull(),
   businessName: varchar("businessName", { length: 256 }),

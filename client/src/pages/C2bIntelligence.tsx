@@ -30,8 +30,10 @@ function currency(value: number) {
   }).format(value);
 }
 
-export default function C2bIntelligence() {
-  const dashboard = trpc.c2b.dashboard.useQuery();
+export type IntelligenceDomain = "c2c" | "c2b" | "b2b";
+
+export default function C2bIntelligence({ domain = "c2b" }: { domain?: IntelligenceDomain }) {
+  const dashboard = trpc.c2b.dashboard.useQuery({ domain });
   const utils = trpc.useUtils();
   const opportunityAction = trpc.c2b.act.useMutation({
     onSuccess: () => utils.c2b.dashboard.invalidate(),
@@ -57,10 +59,14 @@ export default function C2bIntelligence() {
         <section className="rounded-3xl border border-white/10 bg-[#141414] p-6 sm:p-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#C9A227]">C2B Intelligence</p>
-              <h1 className="mt-3 text-4xl font-bold tracking-tight">Client Acquisition Center</h1>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#C9A227]">
+                {dashboard.data?.config.label ?? domain.toUpperCase() + " Intelligence"}
+              </p>
+              <h1 className="mt-3 text-4xl font-bold tracking-tight">
+                {dashboard.data?.config.title ?? "Intelligence Center"}
+              </h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-white/60">
-                Discover, qualify, prioritize, and review attributed customer opportunities. Every downstream action remains human controlled.
+                {dashboard.data?.config.purpose ?? "Loading organization intelligence..."} Every downstream action remains human controlled.
               </p>
             </div>
             <span className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-400/25 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-300">

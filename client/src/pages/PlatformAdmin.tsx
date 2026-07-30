@@ -1,4 +1,4 @@
-import { Activity, Brain, Building2, ClipboardList, FileClock, LifeBuoy, ShieldCheck } from "lucide-react";
+import { Activity, Brain, Building2, ClipboardList, FileClock, LifeBuoy, Network, ShieldCheck } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { trpc } from "@/lib/trpc";
@@ -14,6 +14,14 @@ const ADMIN_MODULES = [
   { label: "Audit Activity", href: "/admin/audit", icon: FileClock },
   { label: "Support", href: "/admin/support", icon: LifeBuoy },
   { label: "AI Operations", href: "/admin/ai-operations", icon: Brain },
+  { label: "Global C2C Intelligence", href: "/admin/global-c2c", icon: Network },
+  { label: "Global C2B Intelligence", href: "/admin/global-c2b", icon: Network },
+  { label: "Global B2B Intelligence", href: "/admin/global-b2b", icon: Network },
+  { label: "Platform Analytics", href: "/admin/platform-analytics", icon: Activity },
+  { label: "Connector Administration", href: "/admin/connector-administration", icon: Activity },
+  { label: "Executive Intelligence", href: "/admin/executive-intelligence", icon: Brain },
+  { label: "AI Recommendations", href: "/admin/ai-recommendations", icon: Brain },
+  { label: "Marketplace", href: "/admin/marketplace", icon: Building2 },
 ];
 
 const ADMIN_SCREENS = {
@@ -64,6 +72,36 @@ const ADMIN_SCREENS = {
     title: "AI Operations",
     description: "Monitor the AI operating layer, knowledge health, and decision-support readiness.",
     sectionTitle: "AI Operations",
+  },
+  "/admin/platform-analytics": {
+    eyebrow: "Platform Intelligence",
+    title: "Platform Analytics",
+    description: "Review verified organization growth, adoption, industry, and connector metrics without exposing customer records.",
+    sectionTitle: "Platform Analytics",
+  },
+  "/admin/connector-administration": {
+    eyebrow: "Platform Connections",
+    title: "Connector Administration",
+    description: "Govern connector availability and approval policy across EEOS organizations.",
+    sectionTitle: "Connector Administration",
+  },
+  "/admin/executive-intelligence": {
+    eyebrow: "Platform Intelligence",
+    title: "Executive Intelligence",
+    description: "Review attributed platform-wide trends and leadership decision support.",
+    sectionTitle: "Executive Intelligence",
+  },
+  "/admin/ai-recommendations": {
+    eyebrow: "Platform Intelligence",
+    title: "AI Recommendations",
+    description: "Review explainable platform recommendations backed by source evidence and confidence.",
+    sectionTitle: "AI Recommendations",
+  },
+  "/admin/marketplace": {
+    eyebrow: "Platform Ecosystem",
+    title: "Marketplace",
+    description: "Review approved intelligence and connector capabilities available to EEOS organizations.",
+    sectionTitle: "Marketplace",
   },
 } as const;
 

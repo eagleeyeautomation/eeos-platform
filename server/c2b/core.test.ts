@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   C2B_ACTION_TRANSITIONS,
   C2B_CONNECTOR_CATALOG,
+  INTELLIGENCE_DOMAINS,
+  connectorsForDomain,
   summarizeC2bOpportunities,
   validateC2bScoring,
 } from "./core";
@@ -11,6 +13,14 @@ describe("C2B intelligence foundation", () => {
     expect(C2B_CONNECTOR_CATALOG.map((item) => item.key)).toContain("gohighlevel");
     expect(C2B_CONNECTOR_CATALOG.map((item) => item.key)).toContain("csv-import");
     expect(C2B_CONNECTOR_CATALOG.every((item) => !("enabled" in item))).toBe(true);
+  });
+
+  it("provides a permanent connector framework for every intelligence domain", () => {
+    expect(INTELLIGENCE_DOMAINS).toEqual(["c2c", "c2b", "b2b"]);
+    for (const domain of INTELLIGENCE_DOMAINS) {
+      expect(connectorsForDomain(domain).length).toBeGreaterThan(0);
+      expect(connectorsForDomain(domain).every((item) => item.key.startsWith(`${domain}:`))).toBe(true);
+    }
   });
 
   it("rejects unexplained or unsupported scores", () => {

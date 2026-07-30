@@ -33,6 +33,7 @@ import {
   getC2bOpportunity,
   listC2bConnectors,
   listC2bOpportunities,
+  listGlobalIntelligenceOpportunities,
   updateC2bOpportunity,
 } from "./db";
 import { runIntelligenceEngine } from "./intelligence-engine";
@@ -47,7 +48,8 @@ import {
 } from "./authorization";
 import {
   C2B_ACTION_TRANSITIONS,
-  C2B_CONNECTOR_CATALOG,
+  connectorsForDomain,
+  INTELLIGENCE_DOMAIN_CONFIG,
   summarizeC2bOpportunities,
   type C2bScoring,
 } from "./c2b/core";
@@ -399,18 +401,21 @@ export const appRouter = router({
   // C2B Intelligence — attributed discovery and human-governed decisions
   // ─────────────────────────────────────────────────────────────────────────
   c2b: router({
-    dashboard: protectedProcedure.query(async ({ ctx }) => {
+    dashboard: protectedProcedure
+      .input(z.object({ domain: z.enum(["c2c", "c2b", "b2b"]).default("c2b") }).optional())
+      .query(async ({ ctx, input }) => {
+      const domain = input?.domain ?? "c2b";
       const authorization = await resolveOrganizationAuthorizationContext(ctx.user);
       if (!authorization?.organizationId) {
         throw new Error("An active organization context is required.");
       }
       const organizationId = Number(authorization.organizationId);
       const [opportunities, storedConnectors] = await Promise.all([
-        listC2bOpportunities(organizationId, authorization.authorizedLocationIds),
-        listC2bConnectors(organizationId),
+        listC2bOpportunities(organizationId, authorization.authorizedLocationIds, domain),
+        listC2bConnectors(organizationId, domain),
       ]);
       const connectorState = new Map(storedConnectors.map((item) => [item.connectorKey, item]));
-      const connectors = C2B_CONNECTOR_CATALOG.map((connector) => ({
+      const connectors = connectorsForDomain(domain).map((connector) => ({
         ...connector,
         enabled: connectorState.get(connector.key)?.enabled ?? false,
         approvalStatus: connectorState.get(connector.key)?.approvalStatus ?? "draft",
@@ -433,7 +438,7 @@ export const appRouter = router({
             supportingData: scoring.confidence?.evidence ?? [],
           };
         });
-      return { summary, opportunities, connectors, recommendations };
+      return { domain, config: INTELLIGENCE_DOMAIN_CONFIG[domain], summary, opportunities, connectors, recommendations };
     }),
 
     act: protectedProcedure
@@ -477,6 +482,31 @@ export const appRouter = router({
   }),
 
   admin: router({
+    globalIntelligence: protectedProcedure
+      .input(z.object({ domain: z.enum(["c2c", "c2b", "b2b"]) }))
+      .query(async ({ ctx, input }) => {
+        await requirePlatformAdmin(ctx.user);
+        const opportunities = await listGlobalIntelligenceOpportunities(input.domain);
+        return {
+          domain: input.domain,
+          config: INTELLIGENCE_DOMAIN_CONFIG[input.domain],
+          summary: summarizeC2bOpportunities(opportunities),
+          organizationCount: new Set(opportunities.map((item) => item.organizationId)).size,
+          recommendations: opportunities
+            .filter((item) => ["high_priority", "pending_review"].includes(item.status))
+            .map((item) => ({
+              opportunityId: item.opportunityId,
+              organizationId: item.organizationId,
+              title: item.businessName || item.name,
+              source: item.source,
+              evidence: (item.scoring as C2bScoring).confidence?.evidence ?? [],
+              confidence: (item.scoring as C2bScoring).confidence?.value ?? 0,
+              reason: item.reasonRelevant,
+              priority: item.status,
+              supportingData: (item.scoring as C2bScoring).priority?.evidence ?? [],
+            })),
+        };
+      }),
     overview: publicProcedure.query(async ({ ctx }) => {
       await requirePlatformAdmin(ctx.user);
       return getPlatformAdminOverview();

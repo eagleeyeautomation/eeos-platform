@@ -9,6 +9,42 @@ export const C2B_CONNECTOR_CATALOG = [
   { key: "government-public-data", name: "Government Public Data", type: "government" },
 ] as const;
 
+export const INTELLIGENCE_DOMAINS = ["c2c", "c2b", "b2b"] as const;
+export type IntelligenceDomain = typeof INTELLIGENCE_DOMAINS[number];
+
+export const INTELLIGENCE_DOMAIN_CONFIG = {
+  c2c: {
+    label: "C2C Intelligence",
+    title: "Community Intelligence Center",
+    purpose: "Consumer-to-consumer referrals, community relationships, events, support networks, and human-reviewed opportunities.",
+    connectorKeys: ["referral-partners", "csv-import", "website-leads", "public-directory"],
+  },
+  c2b: {
+    label: "C2B Intelligence",
+    title: "Client Acquisition Center",
+    purpose: "Attributed client acquisition, qualification, prioritization, assignment, and human-approved conversion.",
+    connectorKeys: C2B_CONNECTOR_CATALOG.map((connector) => connector.key),
+  },
+  b2b: {
+    label: "B2B Intelligence",
+    title: "Partnership Intelligence Center",
+    purpose: "Strategic partnerships, institutions, agencies, associations, vendors, and referral relationships.",
+    connectorKeys: ["google-business-profile", "bing-search", "csv-import", "public-directory", "referral-partners", "government-public-data"],
+  },
+} satisfies Record<IntelligenceDomain, {
+  label: string;
+  title: string;
+  purpose: string;
+  connectorKeys: readonly string[];
+}>;
+
+export function connectorsForDomain(domain: IntelligenceDomain) {
+  const keys = new Set<string>(INTELLIGENCE_DOMAIN_CONFIG[domain].connectorKeys);
+  return C2B_CONNECTOR_CATALOG
+    .filter((connector) => keys.has(connector.key))
+    .map((connector) => ({ ...connector, key: `${domain}:${connector.key}` }));
+}
+
 export type C2bScoreName =
   | "location"
   | "service"
