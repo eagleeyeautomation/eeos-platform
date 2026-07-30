@@ -36,6 +36,10 @@ const runtimePersistenceMocks = vi.hoisted(() => ({
   reconcileRuntimeGhlBinding: vi.fn(),
 }));
 
+const ghlTokenStoreMocks = vi.hoisted(() => ({
+  storeGhlConnectionTokenWithAudit: vi.fn(),
+}));
+
 const authorizationMocks = vi.hoisted(() => ({
   listAuthorizedLocationsForMembership: vi.fn(),
   requirePlatformAdmin: vi.fn(),
@@ -50,6 +54,7 @@ const passwordResetEmailMocks = vi.hoisted(() => ({
 
 vi.mock("../db", () => dbMocks);
 vi.mock("../db/runtimePersistence", () => runtimePersistenceMocks);
+vi.mock("../ghl-token-store", () => ghlTokenStoreMocks);
 vi.mock("../authorization", () => authorizationMocks);
 vi.mock("./passwordResetEmail", () => passwordResetEmailMocks);
 
@@ -110,18 +115,13 @@ describe("EEOS first-party authentication", () => {
       subaccount: null,
     });
     runtimePersistenceMocks.inspectRuntimeGhlBinding.mockResolvedValue({
-      connections: [{
-        id: "17",
-        organization_id: "legacy-florida",
-        operational_division_id: "cNQAsS4J15aPtGtOqgM0",
-        location_id: "cNQAsS4J15aPtGtOqgM0",
-        disconnected_at: null,
-      }],
+      connections: [],
       auditHistory: [],
       onboardingStates: [],
       snapshotHistory: [],
     });
     runtimePersistenceMocks.reconcileRuntimeGhlBinding.mockResolvedValue(undefined);
+    ghlTokenStoreMocks.storeGhlConnectionTokenWithAudit.mockResolvedValue(undefined);
     dbMocks.markAuthInvitationAccepted.mockResolvedValue(undefined);
     dbMocks.markPasswordResetTokenUsed.mockResolvedValue(undefined);
     dbMocks.revokeAuthSession.mockResolvedValue(undefined);
@@ -504,7 +504,7 @@ describe("EEOS first-party authentication", () => {
     });
   });
 
-  it("inspects and reconciles the exact legacy Florida binding without creating a token", async () => {
+  it("inspects and migrates the exact legacy Florida binding without OAuth or a provider call", async () => {
     const account = user({ role: "admin" });
     const token = "opaque-session-token-for-florida-reconciliation";
     dbMocks.getAuthSessionByTokenHash.mockResolvedValue({
@@ -519,6 +519,17 @@ describe("EEOS first-party authentication", () => {
       userAgent: null,
     });
     dbMocks.getUserById.mockResolvedValue(account);
+    dbMocks.getGhlToken.mockResolvedValue({
+      tenantId: "cNQAsS4J15aPtGtOqgM0",
+      locationId: "cNQAsS4J15aPtGtOqgM0",
+      accessToken: "legacy-access-token",
+      refreshToken: "legacy-refresh-token",
+      tokenType: "Bearer",
+      scope: "private_integration",
+      expiresAt: new Date("2026-08-01T00:00:00.000Z"),
+      companyId: null,
+      isActive: true,
+    });
     authorizationMocks.resolveOrganizationAuthorizationContext.mockResolvedValue({
       userId: String(account.id),
       role: "ORGANIZATION_OWNER",
@@ -538,7 +549,7 @@ describe("EEOS first-party authentication", () => {
       await expect(inspection.json()).resolves.toMatchObject({
         providerLocationId: "cNQAsS4J15aPtGtOqgM0",
         legacy: { connection: { id: 3 }, subaccount: null },
-        runtime: { connections: [{ id: "17" }] },
+        runtime: { connections: [] },
       });
 
       const sessionResponse = await fetch(`${baseUrl}/api/auth/session`, {
@@ -560,12 +571,15 @@ describe("EEOS first-party authentication", () => {
         city: "Greensboro",
         state: "Florida",
       });
-      expect(runtimePersistenceMocks.reconcileRuntimeGhlBinding).toHaveBeenCalledWith(expect.objectContaining({
-        connectionId: "17",
+      expect(ghlTokenStoreMocks.storeGhlConnectionTokenWithAudit).toHaveBeenCalledWith(expect.objectContaining({
         organizationId: "10",
         locationId: "cNQAsS4J15aPtGtOqgM0",
-        subaccountId: 301,
+        operationalDivisionId: "cNQAsS4J15aPtGtOqgM0",
+      }), expect.objectContaining({
+        eventType: "binding.legacy_migrated",
+        metadata: expect.objectContaining({ legacyConnectionId: 3, subaccountId: 301 }),
       }));
+      expect(runtimePersistenceMocks.reconcileRuntimeGhlBinding).not.toHaveBeenCalled();
       expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({
         action: "gohighlevel.binding.reconciled",
       }));
