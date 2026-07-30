@@ -4,6 +4,8 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import {
   createAuthInvitation,
+  createVerifiedGhlSubaccount,
+  deleteVerifiedGhlSubaccount,
   createPasswordResetToken,
   getAuthInvitationByTokenHash,
   getGhlToken,
@@ -12,12 +14,17 @@ import {
   getUserByEmail,
   getUserById,
   insertAuthAuditEvent,
+  inspectLegacyGhlBinding,
   markAuthInvitationAccepted,
   markPasswordResetTokenUsed,
   revokeUserAuthSessions,
   upsertMembershipUser,
   upsertUser,
 } from "../db";
+import {
+  inspectRuntimeGhlBinding,
+  reconcileRuntimeGhlBinding,
+} from "../db/runtimePersistence";
 import {
   listAuthorizedLocationsForMembership,
   requirePlatformAdmin,
@@ -221,6 +228,107 @@ export function registerFirstPartyAuthRoutes(app: Express) {
     } catch (error) {
       const status = error instanceof Error && error.message.includes("Authentication") ? 401 : 403;
       res.status(status).json({ success: false, error: status === 401 ? "Authentication is required." : "Platform administrator access is required." });
+    }
+  });
+
+  app.get("/api/admin/integrations/gohighlevel/florida-binding", async (req: Request, res: Response) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      await requirePlatformAdmin(user);
+      const providerLocationId = "cNQAsS4J15aPtGtOqgM0";
+      const [legacy, runtime] = await Promise.all([
+        inspectLegacyGhlBinding(providerLocationId),
+        inspectRuntimeGhlBinding(providerLocationId),
+      ]);
+      res
+        .set("Cache-Control", "private, no-store, max-age=0")
+        .status(200)
+        .json({ provider: "gohighlevel", providerLocationId, legacy, runtime });
+    } catch {
+      res.status(403).json({ success: false, error: "Platform administrator access is required." });
+    }
+  });
+
+  app.post("/api/admin/integrations/gohighlevel/florida-binding/reconcile", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) {
+      res.status(403).json({ success: false, error: "A valid EEOS CSRF token is required." });
+      return;
+    }
+
+    const providerLocationId = "cNQAsS4J15aPtGtOqgM0";
+    let createdSubaccount: { id: number } | null = null;
+    try {
+      const user = await sdk.authenticateRequest(req);
+      await requirePlatformAdmin(user);
+      const ownerContext = await resolveOrganizationAuthorizationContext(user);
+      if (
+        ownerContext?.role !== "ORGANIZATION_OWNER"
+        || ownerContext.organizationName !== "PRN Staffers Inc."
+        || !ownerContext.membershipId
+        || !ownerContext.organizationId
+      ) {
+        res.status(403).json({ success: false, error: "An active PRN Staffers owner membership is required." });
+        return;
+      }
+
+      const [legacy, runtime] = await Promise.all([
+        inspectLegacyGhlBinding(providerLocationId),
+        inspectRuntimeGhlBinding(providerLocationId),
+      ]);
+      if (!legacy.connection?.active || legacy.connection.providerLocationId !== providerLocationId) {
+        res.status(409).json({ success: false, error: "The legacy Florida provider binding is not active or does not match." });
+        return;
+      }
+      if (legacy.subaccount) {
+        res.status(409).json({ success: false, error: "The Florida provider binding is already linked to a subaccount." });
+        return;
+      }
+      const activeRuntime = runtime.connections.filter((connection) => !connection.disconnected_at);
+      if (activeRuntime.length !== 1) {
+        res.status(409).json({ success: false, error: "Exactly one active runtime Florida provider binding is required for reconciliation." });
+        return;
+      }
+
+      const created = await createVerifiedGhlSubaccount({
+        membershipId: Number(ownerContext.membershipId),
+        providerLocationId,
+        name: "PRN Staffers FL",
+        city: "Greensboro",
+        state: "Florida",
+      });
+      if (!created.created) {
+        res.status(409).json({ success: false, error: `Florida reconciliation stopped: ${created.reason}.` });
+        return;
+      }
+      createdSubaccount = { id: created.id };
+
+      await reconcileRuntimeGhlBinding({
+        connectionId: activeRuntime[0].id,
+        locationId: providerLocationId,
+        currentOrganizationId: activeRuntime[0].organization_id,
+        organizationId: ownerContext.organizationId,
+        actorUserId: String(user.id),
+        subaccountId: created.id,
+      });
+      await audit({
+        actorUserId: user.id,
+        organizationId: Number(ownerContext.organizationId),
+        action: "gohighlevel.binding.reconciled",
+        targetType: "operational_location",
+        targetId: providerLocationId,
+        metadata: { subaccountId: created.id, provider: "gohighlevel" },
+      });
+      res.status(200).json({
+        success: true,
+        organization: { id: ownerContext.organizationId, name: ownerContext.organizationName },
+        subaccount: { id: created.id, name: "PRN Staffers FL", city: "Greensboro", state: "Florida" },
+        provider: "gohighlevel",
+      });
+    } catch {
+      if (createdSubaccount) {
+        await deleteVerifiedGhlSubaccount(createdSubaccount.id, providerLocationId).catch(() => undefined);
+      }
+      res.status(500).json({ success: false, error: "Florida provider binding reconciliation failed safely." });
     }
   });
 

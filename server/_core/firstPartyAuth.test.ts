@@ -9,6 +9,8 @@ import { hashOpaqueToken } from "./sessionTokens";
 
 const dbMocks = vi.hoisted(() => ({
   createAuthInvitation: vi.fn(),
+  createVerifiedGhlSubaccount: vi.fn(),
+  deleteVerifiedGhlSubaccount: vi.fn(),
   createAuthSession: vi.fn(),
   createPasswordResetToken: vi.fn(),
   getAuthInvitationByTokenHash: vi.fn(),
@@ -19,6 +21,7 @@ const dbMocks = vi.hoisted(() => ({
   getUserByEmail: vi.fn(),
   getUserById: vi.fn(),
   insertAuthAuditEvent: vi.fn(),
+  inspectLegacyGhlBinding: vi.fn(),
   markAuthInvitationAccepted: vi.fn(),
   markPasswordResetTokenUsed: vi.fn(),
   revokeAuthSession: vi.fn(),
@@ -26,6 +29,11 @@ const dbMocks = vi.hoisted(() => ({
   touchAuthSession: vi.fn(),
   upsertMembershipUser: vi.fn(),
   upsertUser: vi.fn(),
+}));
+
+const runtimePersistenceMocks = vi.hoisted(() => ({
+  inspectRuntimeGhlBinding: vi.fn(),
+  reconcileRuntimeGhlBinding: vi.fn(),
 }));
 
 const authorizationMocks = vi.hoisted(() => ({
@@ -41,6 +49,7 @@ const passwordResetEmailMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../db", () => dbMocks);
+vi.mock("../db/runtimePersistence", () => runtimePersistenceMocks);
 vi.mock("../authorization", () => authorizationMocks);
 vi.mock("./passwordResetEmail", () => passwordResetEmailMocks);
 
@@ -86,9 +95,33 @@ describe("EEOS first-party authentication", () => {
     dbMocks.createAuthSession.mockResolvedValue(undefined);
     dbMocks.createPasswordResetToken.mockResolvedValue(undefined);
     dbMocks.createAuthInvitation.mockResolvedValue(undefined);
+    dbMocks.createVerifiedGhlSubaccount.mockResolvedValue({ created: true, id: 301 });
+    dbMocks.deleteVerifiedGhlSubaccount.mockResolvedValue(undefined);
     dbMocks.getGhlToken.mockResolvedValue({ isActive: true, scope: "private_integration" });
     dbMocks.getMembershipById.mockResolvedValue({ id: 100, organizationId: 10 });
     dbMocks.insertAuthAuditEvent.mockResolvedValue(undefined);
+    dbMocks.inspectLegacyGhlBinding.mockResolvedValue({
+      connection: {
+        id: 3,
+        providerLocationId: "cNQAsS4J15aPtGtOqgM0",
+        tokenType: "private_integration",
+        active: true,
+      },
+      subaccount: null,
+    });
+    runtimePersistenceMocks.inspectRuntimeGhlBinding.mockResolvedValue({
+      connections: [{
+        id: "17",
+        organization_id: "legacy-florida",
+        operational_division_id: "cNQAsS4J15aPtGtOqgM0",
+        location_id: "cNQAsS4J15aPtGtOqgM0",
+        disconnected_at: null,
+      }],
+      auditHistory: [],
+      onboardingStates: [],
+      snapshotHistory: [],
+    });
+    runtimePersistenceMocks.reconcileRuntimeGhlBinding.mockResolvedValue(undefined);
     dbMocks.markAuthInvitationAccepted.mockResolvedValue(undefined);
     dbMocks.markPasswordResetTokenUsed.mockResolvedValue(undefined);
     dbMocks.revokeAuthSession.mockResolvedValue(undefined);
@@ -468,6 +501,108 @@ describe("EEOS first-party authentication", () => {
       const response = await fetch(`${baseUrl}/api/admin/organizations/10/enter`, { method: "POST" });
       expect(response.status).toBe(403);
       expect(authorizationMocks.requirePlatformAdmin).not.toHaveBeenCalled();
+    });
+  });
+
+  it("inspects and reconciles the exact legacy Florida binding without creating a token", async () => {
+    const account = user({ role: "admin" });
+    const token = "opaque-session-token-for-florida-reconciliation";
+    dbMocks.getAuthSessionByTokenHash.mockResolvedValue({
+      id: 23,
+      userId: account.id,
+      tokenHash: hashOpaqueToken(token),
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null,
+      createdAt: now,
+      lastSeenAt: now,
+      ipAddress: null,
+      userAgent: null,
+    });
+    dbMocks.getUserById.mockResolvedValue(account);
+    authorizationMocks.resolveOrganizationAuthorizationContext.mockResolvedValue({
+      userId: String(account.id),
+      role: "ORGANIZATION_OWNER",
+      organizationId: "10",
+      organizationName: "PRN Staffers Inc.",
+      membershipId: "100",
+      authorizedLocationIds: ["loc-sc"],
+      selectedLocationId: "loc-sc",
+      selectedLocationName: "South Carolina",
+    });
+
+    await withServer(async (baseUrl) => {
+      const inspection = await fetch(`${baseUrl}/api/admin/integrations/gohighlevel/florida-binding`, {
+        headers: { Cookie: `${COOKIE_NAME}=${token}` },
+      });
+      expect(inspection.status).toBe(200);
+      await expect(inspection.json()).resolves.toMatchObject({
+        providerLocationId: "cNQAsS4J15aPtGtOqgM0",
+        legacy: { connection: { id: 3 }, subaccount: null },
+        runtime: { connections: [{ id: "17" }] },
+      });
+
+      const sessionResponse = await fetch(`${baseUrl}/api/auth/session`, {
+        headers: { Cookie: `${COOKIE_NAME}=${token}` },
+      });
+      const session = await sessionResponse.json();
+      const response = await fetch(`${baseUrl}/api/admin/integrations/gohighlevel/florida-binding/reconcile`, {
+        method: "POST",
+        headers: {
+          Cookie: `${COOKIE_NAME}=${token}`,
+          "x-eeos-csrf-token": session.csrfToken,
+        },
+      });
+      expect(response.status).toBe(200);
+      expect(dbMocks.createVerifiedGhlSubaccount).toHaveBeenCalledWith({
+        membershipId: 100,
+        providerLocationId: "cNQAsS4J15aPtGtOqgM0",
+        name: "PRN Staffers FL",
+        city: "Greensboro",
+        state: "Florida",
+      });
+      expect(runtimePersistenceMocks.reconcileRuntimeGhlBinding).toHaveBeenCalledWith(expect.objectContaining({
+        connectionId: "17",
+        organizationId: "10",
+        locationId: "cNQAsS4J15aPtGtOqgM0",
+        subaccountId: 301,
+      }));
+      expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({
+        action: "gohighlevel.binding.reconciled",
+      }));
+    });
+  });
+
+  it("stops Florida reconciliation when the binding is already linked or ambiguous", async () => {
+    const account = user({ role: "admin" });
+    const token = "opaque-session-token-for-florida-stop";
+    dbMocks.getAuthSessionByTokenHash.mockResolvedValue({
+      id: 24, userId: account.id, tokenHash: hashOpaqueToken(token),
+      expiresAt: new Date(Date.now() + 60_000), revokedAt: null,
+      createdAt: now, lastSeenAt: now, ipAddress: null, userAgent: null,
+    });
+    dbMocks.getUserById.mockResolvedValue(account);
+    authorizationMocks.resolveOrganizationAuthorizationContext.mockResolvedValue({
+      userId: String(account.id), role: "ORGANIZATION_OWNER",
+      organizationId: "10", organizationName: "PRN Staffers Inc.", membershipId: "100",
+      authorizedLocationIds: ["loc-sc"], selectedLocationId: "loc-sc", selectedLocationName: "South Carolina",
+    });
+    dbMocks.inspectLegacyGhlBinding.mockResolvedValueOnce({
+      connection: { id: 3, providerLocationId: "cNQAsS4J15aPtGtOqgM0", active: true },
+      subaccount: { id: 301 },
+    });
+
+    await withServer(async (baseUrl) => {
+      const sessionResponse = await fetch(`${baseUrl}/api/auth/session`, {
+        headers: { Cookie: `${COOKIE_NAME}=${token}` },
+      });
+      const session = await sessionResponse.json();
+      const response = await fetch(`${baseUrl}/api/admin/integrations/gohighlevel/florida-binding/reconcile`, {
+        method: "POST",
+        headers: { Cookie: `${COOKIE_NAME}=${token}`, "x-eeos-csrf-token": session.csrfToken },
+      });
+      expect(response.status).toBe(409);
+      expect(dbMocks.createVerifiedGhlSubaccount).not.toHaveBeenCalled();
+      expect(runtimePersistenceMocks.reconcileRuntimeGhlBinding).not.toHaveBeenCalled();
     });
   });
 

@@ -285,6 +285,39 @@ export async function getAllGhlTokens(): Promise<GhlToken[]> {
   return db.select().from(ghlTokens);
 }
 
+export async function inspectLegacyGhlBinding(locationId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [tokens, linkedSubaccounts] = await Promise.all([
+    db.select().from(ghlTokens).where(eq(ghlTokens.tenantId, locationId)).limit(1),
+    db.select().from(subaccounts).where(eq(subaccounts.ghlLocationId, locationId)).limit(1),
+  ]);
+  const token = tokens[0];
+  const subaccount = linkedSubaccounts[0];
+  return {
+    connection: token ? {
+      id: token.id,
+      providerLocationId: token.locationId ?? token.tenantId,
+      tenantId: token.tenantId,
+      tokenType: token.scope === "private_integration" ? "private_integration" : (token.tokenType ?? "unknown"),
+      active: Boolean(token.isActive),
+      expiresAt: toIso(token.expiresAt),
+      lastRefreshedAt: toIso(token.lastRefreshedAt),
+      refreshFailCount: token.refreshFailCount ?? 0,
+      connectedAt: toIso(token.connectedAt),
+      updatedAt: toIso(token.updatedAt),
+    } : null,
+    subaccount: subaccount ? {
+      id: subaccount.id,
+      membershipId: subaccount.membershipId,
+      name: subaccount.name,
+      city: subaccount.city,
+      state: subaccount.state,
+      active: Boolean(subaccount.isActive),
+    } : null,
+  };
+}
+
 export async function getTokensNeedingRefresh(): Promise<GhlToken[]> {
   const db = await getDb();
   if (!db) return [];
