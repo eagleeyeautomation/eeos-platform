@@ -62,6 +62,11 @@ import {
   diagnoseIntelligenceHealth,
   validateLearningEvent,
 } from "./intelligence-evolution/core";
+import {
+  buildExecutiveBriefing,
+  calculateExecutiveReadiness,
+  healthLabel,
+} from "./mission-control/core";
 
 export const appRouter = router({
   system: systemRouter,
@@ -556,6 +561,93 @@ export const appRouter = router({
         await computeAndStoreIeMetrics(input.tenantId);
         return { success: true, profile, autonomousDataWritePerformed: false };
       }),
+  }),
+
+  missionControl: router({
+    dashboard: protectedProcedure.query(async ({ ctx }) => {
+      const authorization = await resolveOrganizationAuthorizationContext(ctx.user);
+      if (!authorization?.organizationId) throw new Error("An active organization context is required.");
+      const organizationId = Number(authorization.organizationId);
+      const tenantIds = authorization.authorizedLocationIds;
+      const [memories, recommendationSets, tokens, c2c, c2b, b2b, evolution] = await Promise.all([
+        Promise.all(tenantIds.map((tenantId) => getBusinessMemory(tenantId))),
+        Promise.all(tenantIds.map((tenantId) => getActiveRecommendations(tenantId))),
+        Promise.all(tenantIds.map((tenantId) => getGhlToken(tenantId))),
+        listC2bOpportunities(organizationId, tenantIds, "c2c"),
+        listC2bOpportunities(organizationId, tenantIds, "c2b"),
+        listC2bOpportunities(organizationId, tenantIds, "b2b"),
+        getIntelligenceEvolution(organizationId, tenantIds),
+      ]);
+      const availableMemories = memories.filter((item): item is NonNullable<typeof item> => Boolean(item));
+      const recommendations = recommendationSets.flat();
+      const average = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+      const operations = average(availableMemories.map((item) => item.healthScore ?? 0));
+      const won = availableMemories.reduce((sum, item) => sum + (item.wonOpportunitiesLast30d ?? 0), 0);
+      const lost = availableMemories.reduce((sum, item) => sum + (item.lostOpportunitiesLast30d ?? 0), 0);
+      const revenue = won + lost ? (won / (won + lost)) * 100 : null;
+      const contacts7 = availableMemories.reduce((sum, item) => sum + (item.newContactsLast7d ?? 0), 0);
+      const contacts30 = availableMemories.reduce((sum, item) => sum + (item.newContactsLast30d ?? 0), 0);
+      const weeklyBaseline = contacts30 / 4.3;
+      const growth = contacts30 ? Math.max(0, Math.min(100, 50 + ((contacts7 - weeklyBaseline) / Math.max(1, weeklyBaseline)) * 50)) : null;
+      const cancellationRates = availableMemories
+        .map((item) => item.appointmentCancellationRate)
+        .filter((value): value is number => typeof value === "number");
+      const customerExperience = cancellationRates.length ? 100 - average(cancellationRates)! * 100 : null;
+      const risk = customerExperience;
+      const activeTokens = tokens.filter((token) => token?.isActive);
+      const connectorHealth = tenantIds.length ? (activeTokens.length / tenantIds.length) * 100 : null;
+      const aiConfidence = recommendations.length
+        ? average(recommendations.map((item) => item.confidenceScore))
+        : evolution.profiles.length ? average(evolution.profiles.map((item) => item.accuracyRate)) : null;
+      const readiness = calculateExecutiveReadiness({
+        operations, revenue, growth, risk, customerExperience,
+        staffing: null, connectorHealth, aiConfidence,
+      }, null);
+      const trendBalance = availableMemories.reduce((sum, item) =>
+        sum + (item.healthScoreTrend === "up" ? 1 : item.healthScoreTrend === "down" ? -1 : 0), 0);
+      const readinessWithTrend = {
+        ...readiness,
+        trend: readiness.score === null ? "unavailable" as const
+          : trendBalance > 0 ? "up" as const
+            : trendBalance < 0 ? "down" as const
+              : "stable" as const,
+      };
+      const briefing = buildExecutiveBriefing(recommendations);
+      const now = Date.now();
+      const withinDays = (days: number) => recommendations.filter((item) => now - new Date(item.createdAt).getTime() <= days * 86400000);
+      const domainSummary = (items: typeof c2c) => summarizeC2bOpportunities(items);
+      const health = (score: number | null) => ({ score: score === null ? null : Math.round(score), label: healthLabel(score) });
+      return {
+        readiness: readinessWithTrend,
+        health: {
+          business: health(operations),
+          financial: health(revenue),
+          marketing: health(growth),
+          operations: health(operations),
+          customer: health(customerExperience),
+        },
+        intelligence: {
+          c2c: domainSummary(c2c),
+          c2b: domainSummary(c2b),
+          b2b: domainSummary(b2b),
+        },
+        briefing,
+        criticalAlerts: recommendations.filter((item) => item.priority === "critical"),
+        upcomingRisks: recommendations.filter((item) => item.category === "risk"),
+        growthOpportunities: briefing.growthOpportunities,
+        periods: {
+          today: withinDays(1),
+          thisWeek: withinDays(7),
+          thisMonth: withinDays(30),
+        },
+        evidence: {
+          authorizedLocations: tenantIds.length,
+          businessMemorySnapshots: availableMemories.length,
+          connectedLocations: activeTokens.length,
+          attributedRecommendations: briefing.topPriorities.length,
+        },
+      };
+    }),
   }),
 
   admin: router({

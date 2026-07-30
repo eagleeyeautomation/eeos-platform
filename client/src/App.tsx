@@ -40,6 +40,7 @@ import OwnerCommandCenter, { type OwnerCommandCenterProps } from "./pages/OwnerC
 import C2bIntelligence from "./pages/C2bIntelligence";
 import GlobalIntelligence from "./pages/GlobalIntelligence";
 import IntelligenceEvolution from "./pages/IntelligenceEvolution";
+import ExecutiveMissionControl from "./pages/ExecutiveMissionControl";
 
 function owner(component: ComponentType) {
   const Component = component;
@@ -126,7 +127,7 @@ function Router() {
       <Route path="/prn-onboarding" component={ownerOnboarding(PRNOnboarding)} />
       <Route
         path="/executive-home"
-        component={ownerCommandCenter({ mode: "overview" })}
+        component={owner(ExecutiveMissionControl)}
       />
       <Route
         path="/live-status"
