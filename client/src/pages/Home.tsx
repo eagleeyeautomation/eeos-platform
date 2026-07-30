@@ -95,13 +95,13 @@ export default function Home() {
                 </p>
               </div>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Link
-                  href="/connect-ghl"
+                <a
+                  href="https://app.geteeos.com/login"
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#C9A227] px-6 py-3 text-sm font-bold text-[#0B0B0B] transition hover:bg-[#D8B84A]"
                 >
                   <Zap className="h-4 w-4" />
                   Start Private Beta
-                </Link>
+                </a>
                 <Link
                   href="/demo"
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#C9A227]/40 px-6 py-3 text-sm font-semibold text-[#C9A227] transition hover:bg-[#C9A227]/10"
@@ -109,13 +109,13 @@ export default function Home() {
                   <Play className="h-4 w-4" />
                   Request Demo
                 </Link>
-                <Link
-                  href="/onboarding"
+                <a
+                  href="https://app.geteeos.com/login"
                   className="inline-flex min-h-12 items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-[#FFFFFF]/72 transition hover:text-[#FFFFFF]"
                 >
                   Connect Your Business
                   <ArrowRight className="h-4 w-4" />
-                </Link>
+                </a>
               </div>
               <div className="mt-10 flex flex-wrap gap-x-6 gap-y-3">
                 {["SOC 2 Type II", "ISO 27001", "FedRAMP Ready", "Service Business Specialists"].map((indicator) => (
