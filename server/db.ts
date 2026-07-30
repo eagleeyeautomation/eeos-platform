@@ -22,6 +22,7 @@ import {
   authInvitations,
   authAuditEvents,
   recommendations, Recommendation,
+  recommendationHistory,
   recommendationFeedback,
   ieMetrics,
   c2bConnectors,
@@ -494,11 +495,88 @@ export async function insertAuditEntry(entry: InsertAuditEntry): Promise<void> {
 
 export type InsertRecommendation = typeof recommendations.$inferInsert;
 
-export async function insertRecommendation(rec: InsertRecommendation): Promise<number> {
+export type RecommendationIntelligenceContract = {
+  source: string;
+  evidence: unknown[];
+  strategicPriorityScore: number;
+  expectedImpact: string;
+  supportingMetrics: unknown[];
+  assumptions: string[];
+  predictive: boolean;
+  confidenceAnatomy: Record<string, number>;
+};
+
+let recommendationHistorySchemaReady = false;
+async function ensureRecommendationHistorySchema() {
+  if (recommendationHistorySchemaReady) return;
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql.raw(`
+    CREATE TABLE IF NOT EXISTS recommendation_history (
+      id bigint AUTO_INCREMENT PRIMARY KEY, recommendationId int NOT NULL, tenantId varchar(128) NOT NULL,
+      eventType enum('generated','accepted','rejected','outcome','calibrated','expired','superseded') NOT NULL,
+      source varchar(128) NOT NULL, evidence json NOT NULL, confidence int NOT NULL, priority varchar(32) NOT NULL,
+      strategicPriorityScore int NOT NULL, expectedImpact text NOT NULL, businessReason text NOT NULL,
+      supportingMetrics json NOT NULL, assumptions json NOT NULL, predictive boolean NOT NULL DEFAULT false,
+      metadata json, occurredAt timestamp NOT NULL, createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_recommendation_history_tenant (tenantId,occurredAt),
+      KEY idx_recommendation_history_rec (recommendationId,occurredAt)
+    )
+  `));
+  recommendationHistorySchemaReady = true;
+}
+
+export async function insertRecommendation(
+  rec: InsertRecommendation,
+  contract: RecommendationIntelligenceContract,
+): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(recommendations).values({ ...rec, createdAt: new Date(), updatedAt: new Date() });
-  return Number(result[0].insertId);
+  await ensureRecommendationHistorySchema();
+  return db.transaction(async (tx) => {
+    const now = new Date();
+    const result = await tx.insert(recommendations).values({ ...rec, createdAt: now, updatedAt: now });
+    const recommendationId = Number(result[0].insertId);
+    await tx.insert(recommendationHistory).values({
+      recommendationId, tenantId: rec.tenantId, eventType: "generated",
+      source: contract.source, evidence: contract.evidence, confidence: rec.confidenceScore,
+      priority: rec.priority, strategicPriorityScore: contract.strategicPriorityScore,
+      expectedImpact: contract.expectedImpact, businessReason: rec.why,
+      supportingMetrics: contract.supportingMetrics, assumptions: contract.assumptions,
+      predictive: contract.predictive, metadata: { confidenceAnatomy: contract.confidenceAnatomy },
+      occurredAt: now,
+    });
+    await tx.insert(timelineEvents).values({
+      tenantId: rec.tenantId, eventType: "intelligence.recommendation_generated",
+      title: rec.title, description: rec.why, entityType: "recommendation",
+      entityId: String(recommendationId), significance: rec.priority,
+      businessImpact: contract.expectedImpact,
+      metadata: {
+        source: contract.source, confidence: rec.confidenceScore,
+        strategicPriorityScore: contract.strategicPriorityScore,
+        predictive: contract.predictive,
+      },
+      occurredAt: now, createdAt: now,
+    });
+    return recommendationId;
+  });
+}
+
+export async function getRecommendationHistory(tenantIds: string[]) {
+  const db = await getDb();
+  if (!db || !tenantIds.length) return [];
+  await ensureRecommendationHistorySchema();
+  return db.select().from(recommendationHistory)
+    .where(inArray(recommendationHistory.tenantId, tenantIds))
+    .orderBy(desc(recommendationHistory.occurredAt)).limit(100);
+}
+
+export async function getLearningProfilesForTenant(tenantId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  await ensureIntelligenceEvolutionSchema();
+  return db.select().from(intelligenceLearningProfiles)
+    .where(eq(intelligenceLearningProfiles.tenantId, tenantId));
 }
 
 export async function getActiveRecommendations(tenantId: string): Promise<Recommendation[]> {
@@ -515,7 +593,18 @@ export async function updateRecommendationStatus(
 ): Promise<void> {
   const db = await getDb();
   if (!db) return;
+  await ensureRecommendationHistorySchema();
+  const recommendation = (await db.select().from(recommendations).where(eq(recommendations.id, id)).limit(1))[0];
   await db.update(recommendations).set({ status, updatedAt: new Date() }).where(eq(recommendations.id, id));
+  const latest = (await db.select().from(recommendationHistory)
+    .where(eq(recommendationHistory.recommendationId, id))
+    .orderBy(desc(recommendationHistory.occurredAt)).limit(1))[0];
+  if (recommendation && latest && ["accepted", "rejected", "expired", "superseded"].includes(status)) {
+    await db.insert(recommendationHistory).values({
+      ...latest, id: undefined, eventType: status as "accepted" | "rejected" | "expired" | "superseded",
+      occurredAt: new Date(), createdAt: new Date(),
+    });
+  }
 }
 
 export async function expireOldRecommendations(tenantId: string): Promise<void> {
@@ -1551,6 +1640,7 @@ export async function recordIntelligenceOutcome(input: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await ensureIntelligenceEvolutionSchema();
+  await ensureRecommendationHistorySchema();
   await db.transaction(async (tx) => {
     await tx.insert(intelligenceOutcomes).values({
       organizationId: input.organizationId, tenantId: input.tenantId,
@@ -1567,6 +1657,25 @@ export async function recordIntelligenceOutcome(input: {
       eventType: "recommendation.outcome_recorded", normalizedEvidence: input.evidence,
       modelArea: input.modelArea,
     });
+    const latestHistory = (await tx.select().from(recommendationHistory)
+      .where(and(
+        eq(recommendationHistory.recommendationId, input.recommendationId),
+        eq(recommendationHistory.tenantId, input.tenantId),
+      )).orderBy(desc(recommendationHistory.occurredAt)).limit(1))[0];
+    if (latestHistory) {
+      await tx.insert(recommendationHistory).values({
+        ...latestHistory, id: undefined, eventType: "outcome",
+        metadata: {
+          ...(latestHistory.metadata as Record<string, unknown> ?? {}),
+          outcomeType: input.outcomeType,
+          revenueImpact: input.revenueImpact ?? null,
+          operationalImpact: input.operationalImpact ?? null,
+          timeSavedMinutes: input.timeSavedMinutes ?? null,
+          conversionImprovement: input.conversionImprovement ?? null,
+        },
+        occurredAt: input.measuredAt, createdAt: new Date(),
+      });
+    }
   });
   const outcomes = await db.select().from(intelligenceOutcomes).where(and(
     eq(intelligenceOutcomes.organizationId, input.organizationId),

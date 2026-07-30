@@ -38,6 +38,7 @@ import {
   getIntelligenceEvolution,
   getAnonymousPlatformLearningEvents,
   recordIntelligenceOutcome,
+  getRecommendationHistory,
 } from "./db";
 import { runIntelligenceEngine } from "./intelligence-engine";
 import {
@@ -497,10 +498,12 @@ export const appRouter = router({
         Number(authorization.organizationId),
         authorization.authorizedLocationIds,
       );
+      const recommendationHistory = await getRecommendationHistory(authorization.authorizedLocationIds);
       const verifiedOutcomes = memory.outcomes.filter((item) => Array.isArray(item.evidence) && item.evidence.length > 0);
       const successful = verifiedOutcomes.filter((item) => item.outcomeType === "positive").length;
       return {
         events: memory.events,
+        recommendationHistory,
         profiles: memory.profiles,
         metrics: {
           approvedLearningEvents: memory.events.length,

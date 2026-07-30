@@ -471,6 +471,29 @@ export const recommendations = mysqlTable("recommendations", {
 
 export type Recommendation = typeof recommendations.$inferSelect;
 
+export const recommendationHistory = mysqlTable("recommendation_history", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  recommendationId: int("recommendationId").notNull(),
+  tenantId: varchar("tenantId", { length: 128 }).notNull(),
+  eventType: mysqlEnum("eventType", ["generated", "accepted", "rejected", "outcome", "calibrated", "expired", "superseded"]).notNull(),
+  source: varchar("source", { length: 128 }).notNull(),
+  evidence: json("evidence").notNull(),
+  confidence: int("confidence").notNull(),
+  priority: varchar("priority", { length: 32 }).notNull(),
+  strategicPriorityScore: int("strategicPriorityScore").notNull(),
+  expectedImpact: text("expectedImpact").notNull(),
+  businessReason: text("businessReason").notNull(),
+  supportingMetrics: json("supportingMetrics").notNull(),
+  assumptions: json("assumptions").notNull(),
+  predictive: boolean("predictive").default(false).notNull(),
+  metadata: json("metadata"),
+  occurredAt: timestamp("occurredAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => [
+  index("idx_recommendation_history_tenant").on(t.tenantId, t.occurredAt),
+  index("idx_recommendation_history_rec").on(t.recommendationId, t.occurredAt),
+]);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // C2B INTELLIGENCE ENGINE — Human-governed acquisition opportunities
 // Every record retains its source attribution and explainable score anatomy.

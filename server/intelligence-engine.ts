@@ -20,8 +20,13 @@ import { invokeLLM } from "./_core/llm";
 import {
   getRecentSignals, getBusinessMemory, getKnowledgeGraph,
   getActiveRecommendations, insertRecommendation, expireOldRecommendations,
-  updateRecommendationStatus, insertAuditEntry,
+  updateRecommendationStatus, insertAuditEntry, getLearningProfilesForTenant,
 } from "./db";
+import {
+  calculateStrategicPriority,
+  validateExplainableRecommendation,
+  validatePredictiveInsight,
+} from "./intelligence-evolution/core";
 
 // IE Model Version — increment when prompt or scoring changes
 const IE_MODEL_VERSION = "1.0";
@@ -49,6 +54,15 @@ interface RecommendationOutput {
   confidenceFactors: Array<{ factor: string; impact: "positive" | "negative"; weight: number }>;
   category: "revenue" | "pipeline" | "retention" | "operations" | "growth" | "risk" | "team";
   priority: "low" | "medium" | "high" | "critical";
+  source: string;
+  expectedImpact: string;
+  supportingMetrics: string[];
+  assumptions: string[];
+  predictive: boolean;
+  priorityFactors: {
+    urgency: number; strategicValue: number; financialImpact: number; operationalImpact: number;
+    customerImpact: number; riskExposure: number; resourceAvailability: number; executiveAlignment: number;
+  };
 }
 
 /** JSON schema for structured LLM output */
@@ -97,11 +111,31 @@ const RECOMMENDATION_SCHEMA = {
             },
             category: { type: "string", enum: ["revenue", "pipeline", "retention", "operations", "growth", "risk", "team"] },
             priority: { type: "string", enum: ["low", "medium", "high", "critical"] },
+            source: { type: "string", description: "Approved organizational data source used for this recommendation" },
+            expectedImpact: { type: "string", description: "Evidence-supported expected impact without guarantees" },
+            supportingMetrics: { type: "array", items: { type: "string" } },
+            assumptions: { type: "array", items: { type: "string" } },
+            predictive: { type: "boolean" },
+            priorityFactors: {
+              type: "object",
+              properties: {
+                urgency: { type: "number", minimum: 0, maximum: 100 },
+                strategicValue: { type: "number", minimum: 0, maximum: 100 },
+                financialImpact: { type: "number", minimum: 0, maximum: 100 },
+                operationalImpact: { type: "number", minimum: 0, maximum: 100 },
+                customerImpact: { type: "number", minimum: 0, maximum: 100 },
+                riskExposure: { type: "number", minimum: 0, maximum: 100 },
+                resourceAvailability: { type: "number", minimum: 0, maximum: 100 },
+                executiveAlignment: { type: "number", minimum: 0, maximum: 100 },
+              },
+              required: ["urgency", "strategicValue", "financialImpact", "operationalImpact", "customerImpact", "riskExposure", "resourceAvailability", "executiveAlignment"],
+            },
           },
           required: [
             "title", "why", "whyNow", "evidence", "businessImpact",
             "riskLevel", "recommendedAction", "measurementPlan",
             "confidenceScore", "confidenceFactors", "category", "priority",
+            "source", "expectedImpact", "supportingMetrics", "assumptions", "predictive", "priorityFactors",
           ],
         },
         maxItems: 5,
@@ -128,6 +162,10 @@ Every recommendation you generate MUST:
 5. Provide a SPECIFIC, EXECUTABLE action (not "consider improving")
 6. Include a MEASUREMENT PLAN with concrete KPIs and timeline
 7. Assign a CONFIDENCE SCORE (0-100) based on signal quality and volume
+8. Identify the approved SOURCE and SUPPORTING METRICS
+9. State EXPECTED IMPACT without guaranteeing an outcome
+10. State all ASSUMPTIONS, especially for predictive insights
+11. Score strategic priority factors from 0-100
 
 Confidence scoring guidelines:
 - 80-100: Multiple corroborating signals, high signal weight, clear trend
@@ -235,6 +273,7 @@ export async function runIntelligenceEngine(tenantId: string): Promise<{
       getRecentSignals(tenantId, 24),
       getActiveRecommendations(tenantId),
     ]);
+    const learningProfiles = await getLearningProfilesForTenant(tenantId);
 
     // Don't run IE if we already have max recommendations
     if (existingRecs.length >= MAX_ACTIVE_RECOMMENDATIONS) {
@@ -286,11 +325,49 @@ export async function runIntelligenceEngine(tenantId: string): Promise<{
     // 6. Store each recommendation
     for (const rec of recommendations) {
       // Apply confidence calibration
-      const calibratedConfidence = calibrateConfidence(
+      const baseConfidence = calibrateConfidence(
         rec.confidenceScore,
         recentSignals.length,
         1 // 24h window
       );
+      const learnedAdjustment = learningProfiles.length
+        ? learningProfiles.reduce((sum, profile) => sum + profile.adjustment, 0) / learningProfiles.length
+        : 0;
+      const calibratedConfidence = Math.max(0, Math.min(100, Math.round(baseConfidence + learnedAdjustment)));
+      const historicalAccuracy = learningProfiles.length
+        ? learningProfiles.reduce((sum, profile) => sum + profile.accuracyRate, 0) / learningProfiles.length
+        : 0;
+      const confidenceAnatomy = {
+        overall: calibratedConfidence,
+        evidenceStrength: Math.min(100, rec.evidence.length * 20),
+        dataFreshness: recentSignals.length ? 100 : 0,
+        predictionReliability: rec.predictive ? calibratedConfidence : 100,
+        historicalAccuracy,
+        recommendationAgeDays: 0,
+      };
+      const strategicPriorityScore = calculateStrategicPriority(rec.priorityFactors);
+      const explanationValidation = validateExplainableRecommendation({
+        why: rec.why,
+        evidence: rec.evidence.map((item) => item.description),
+        confidence: calibratedConfidence,
+        priority: strategicPriorityScore,
+        businessImpact: rec.businessImpact,
+        expectedOutcome: rec.expectedImpact,
+        recommendedAction: rec.recommendedAction,
+        noActionConsequence: rec.whyNow,
+        assumptions: rec.assumptions,
+        confidenceAnatomy,
+      });
+      const predictiveValidation = validatePredictiveInsight({
+        predictive: rec.predictive,
+        evidence: rec.evidence,
+        assumptions: rec.assumptions,
+        confidence: calibratedConfidence,
+      });
+      if (!explanationValidation.valid || !predictiveValidation.valid) {
+        errors.push(`Recommendation rejected by governance: ${[...explanationValidation.errors, ...predictiveValidation.errors].join(" ")}`);
+        continue;
+      }
 
       // Skip low-confidence recommendations
       if (calibratedConfidence < MIN_CONFIDENCE_THRESHOLD) {
@@ -321,6 +398,15 @@ export async function runIntelligenceEngine(tenantId: string): Promise<{
         rawLlmResponse: typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent),
         status: "active",
         expiresAt,
+      }, {
+        source: rec.source,
+        evidence: rec.evidence,
+        strategicPriorityScore,
+        expectedImpact: rec.expectedImpact,
+        supportingMetrics: rec.supportingMetrics,
+        assumptions: rec.assumptions,
+        predictive: rec.predictive,
+        confidenceAnatomy,
       });
 
       generated++;

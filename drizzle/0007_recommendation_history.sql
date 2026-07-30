@@ -1,0 +1,21 @@
+CREATE TABLE `recommendation_history` (
+  `id` bigint AUTO_INCREMENT PRIMARY KEY,
+  `recommendationId` int NOT NULL,
+  `tenantId` varchar(128) NOT NULL,
+  `eventType` enum('generated','accepted','rejected','outcome','calibrated','expired','superseded') NOT NULL,
+  `source` varchar(128) NOT NULL,
+  `evidence` json NOT NULL,
+  `confidence` int NOT NULL,
+  `priority` varchar(32) NOT NULL,
+  `strategicPriorityScore` int NOT NULL,
+  `expectedImpact` text NOT NULL,
+  `businessReason` text NOT NULL,
+  `supportingMetrics` json NOT NULL,
+  `assumptions` json NOT NULL,
+  `predictive` boolean NOT NULL DEFAULT false,
+  `metadata` json,
+  `occurredAt` timestamp NOT NULL,
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY `idx_recommendation_history_tenant` (`tenantId`,`occurredAt`),
+  KEY `idx_recommendation_history_rec` (`recommendationId`,`occurredAt`)
+);

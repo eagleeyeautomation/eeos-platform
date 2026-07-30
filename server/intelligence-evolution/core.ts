@@ -84,6 +84,44 @@ export function diagnoseIntelligenceHealth(input: {
   };
 }
 
+export function calculateStrategicPriority(input: {
+  urgency: number;
+  strategicValue: number;
+  financialImpact: number;
+  operationalImpact: number;
+  customerImpact: number;
+  riskExposure: number;
+  resourceAvailability: number;
+  executiveAlignment: number;
+}) {
+  const clamp = (value: number) => Math.max(0, Math.min(100, value));
+  const score = (
+    clamp(input.urgency) * 0.18
+    + clamp(input.strategicValue) * 0.18
+    + clamp(input.financialImpact) * 0.16
+    + clamp(input.operationalImpact) * 0.12
+    + clamp(input.customerImpact) * 0.12
+    + clamp(input.riskExposure) * 0.12
+    + clamp(input.resourceAvailability) * 0.05
+    + clamp(input.executiveAlignment) * 0.07
+  );
+  return Math.round(score);
+}
+
+export function validatePredictiveInsight(input: {
+  predictive: boolean;
+  evidence: unknown[];
+  assumptions: string[];
+  confidence: number;
+}) {
+  if (!input.predictive) return { valid: true, errors: [] as string[] };
+  const errors: string[] = [];
+  if (input.evidence.length < 2) errors.push("Predictive insight requires at least two supporting evidence points.");
+  if (!input.assumptions.length || input.assumptions.some((item) => !item.trim())) errors.push("Predictive insight requires explicit assumptions.");
+  if (input.confidence < 50) errors.push("Predictive insight confidence is below the supported threshold.");
+  return { valid: errors.length === 0, errors };
+}
+
 export function calculateLearningProfile(outcomes: Array<{ outcomeType: string; evidence: unknown }>) {
   const verified = outcomes.filter((outcome) => Array.isArray(outcome.evidence) && outcome.evidence.length > 0);
   const successful = verified.filter((outcome) => outcome.outcomeType === "positive").length;

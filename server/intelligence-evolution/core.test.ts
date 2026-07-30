@@ -3,6 +3,8 @@ import {
   anonymizePlatformLearning,
   calculateLearningProfile,
   diagnoseIntelligenceHealth,
+  calculateStrategicPriority,
+  validatePredictiveInsight,
   validateExplainableRecommendation,
   validateLearningEvent,
 } from "./core";
@@ -10,6 +12,17 @@ import {
 describe("continuous intelligence evolution", () => {
   it("rejects unauthorized or unattributed learning", () => {
     expect(validateLearningEvent({ sourceType: "private_other_customer", sourceReference: "", approved: false, evidence: [] }).valid).toBe(false);
+  });
+
+  it("calculates strategic priority from bounded executive factors", () => {
+    expect(calculateStrategicPriority({
+      urgency: 100, strategicValue: 100, financialImpact: 100, operationalImpact: 100,
+      customerImpact: 100, riskExposure: 100, resourceAvailability: 100, executiveAlignment: 100,
+    })).toBe(100);
+  });
+
+  it("rejects unsupported predictive insights", () => {
+    expect(validatePredictiveInsight({ predictive: true, evidence: ["one"], assumptions: [], confidence: 40 }).valid).toBe(false);
   });
 
   it("requires every explanation field", () => {

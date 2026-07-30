@@ -72,6 +72,34 @@ export default function IntelligenceEvolution() {
             </p>
           )}
         </section>
+        <section className="mt-6 rounded-3xl border border-white/10 bg-[#141414] p-6">
+          <h2 className="text-xl font-semibold">Recommendation History</h2>
+          <p className="mt-1 text-sm text-white/50">Source, evidence, confidence, priority, expected impact, supporting metrics, and lifecycle timestamps remain durable.</p>
+          {data?.recommendationHistory.length ? (
+            <div className="mt-5 space-y-3">
+              {data.recommendationHistory.map((item) => (
+                <article key={item.id} className="rounded-xl border border-white/10 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="font-semibold capitalize">{item.eventType}</p>
+                    <p className="text-xs text-white/40">{new Date(item.occurredAt).toLocaleString()}</p>
+                  </div>
+                  <p className="mt-2 text-sm text-white/60">{item.businessReason}</p>
+                  <div className="mt-3 grid gap-2 text-xs text-white/45 sm:grid-cols-4">
+                    <span>Source: {item.source}</span>
+                    <span>Confidence: {item.confidence}%</span>
+                    <span>Priority: {item.priority}</span>
+                    <span>Strategic score: {item.strategicPriorityScore}</span>
+                  </div>
+                  {item.predictive ? <p className="mt-3 text-xs text-[#C9A227]">Predictive insight — assumptions recorded</p> : null}
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-5 rounded-xl border border-dashed border-white/15 py-10 text-center text-sm text-white/50">
+              No Phase 3 recommendation lifecycle history exists yet. Nothing has been fabricated.
+            </p>
+          )}
+        </section>
       </main>
       <Footer hideConnectionLinks />
     </div>
