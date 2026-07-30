@@ -1374,14 +1374,28 @@ async function ensureC2bSchema() {
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'c2b_connectors' AND COLUMN_NAME = 'intelligenceDomain'
   `));
   if (!(connectorColumns as any)[0]?.length) {
-    await db.execute(sql.raw(`ALTER TABLE c2b_connectors ADD COLUMN intelligenceDomain enum('c2c','c2b','b2b') NOT NULL DEFAULT 'c2b' AFTER organizationId`));
+    try {
+      await db.execute(sql.raw(`ALTER TABLE c2b_connectors ADD COLUMN intelligenceDomain enum('c2c','c2b','b2b') NOT NULL DEFAULT 'c2b' AFTER organizationId`));
+    } catch (error) {
+      const databaseError = error as { code?: string; cause?: { code?: string }; message?: string };
+      if (databaseError.code !== "ER_DUP_FIELDNAME"
+        && databaseError.cause?.code !== "ER_DUP_FIELDNAME"
+        && !databaseError.message?.includes("Duplicate column")) throw error;
+    }
   }
   const opportunityColumns = await db.execute(sql.raw(`
     SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'c2b_opportunities' AND COLUMN_NAME = 'intelligenceDomain'
   `));
   if (!(opportunityColumns as any)[0]?.length) {
-    await db.execute(sql.raw(`ALTER TABLE c2b_opportunities ADD COLUMN intelligenceDomain enum('c2c','c2b','b2b') NOT NULL DEFAULT 'c2b' AFTER tenantId`));
+    try {
+      await db.execute(sql.raw(`ALTER TABLE c2b_opportunities ADD COLUMN intelligenceDomain enum('c2c','c2b','b2b') NOT NULL DEFAULT 'c2b' AFTER tenantId`));
+    } catch (error) {
+      const databaseError = error as { code?: string; cause?: { code?: string }; message?: string };
+      if (databaseError.code !== "ER_DUP_FIELDNAME"
+        && databaseError.cause?.code !== "ER_DUP_FIELDNAME"
+        && !databaseError.message?.includes("Duplicate column")) throw error;
+    }
   }
   c2bSchemaReady = true;
 }
