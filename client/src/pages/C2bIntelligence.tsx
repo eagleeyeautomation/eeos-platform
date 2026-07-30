@@ -32,6 +32,10 @@ function currency(value: number) {
 
 export default function C2bIntelligence() {
   const dashboard = trpc.c2b.dashboard.useQuery();
+  const utils = trpc.useUtils();
+  const opportunityAction = trpc.c2b.act.useMutation({
+    onSuccess: () => utils.c2b.dashboard.invalidate(),
+  });
   const summary = dashboard.data?.summary;
   const metrics = [
     ["New Opportunities", number(summary?.newOpportunities ?? 0), Target],
@@ -82,6 +86,61 @@ export default function C2bIntelligence() {
         <section className="mt-6 grid gap-6 lg:grid-cols-2">
           <Breakdown title="Opportunities by State" icon={MapPinned} items={summary?.byState ?? []} />
           <Breakdown title="Opportunities by Source" icon={Database} items={summary?.bySource ?? []} />
+        </section>
+
+        <section className="mt-6 rounded-3xl border border-white/10 bg-[#141414] p-6">
+          <div className="flex items-center gap-3">
+            <UserCheck className="h-5 w-5 text-[#C9A227]" />
+            <div>
+              <h2 className="text-xl font-semibold">Opportunity Review</h2>
+              <p className="text-sm text-white/50">Human decisions are organization-scoped and recorded in the audit trail.</p>
+            </div>
+          </div>
+          {dashboard.data?.opportunities.length ? (
+            <div className="mt-5 grid gap-4">
+              {dashboard.data.opportunities.map((opportunity) => (
+                <article key={opportunity.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-semibold">{opportunity.businessName || opportunity.name}</h3>
+                      <p className="mt-1 text-xs text-white/45">
+                        {[opportunity.city, opportunity.state].filter(Boolean).join(", ")} · {opportunity.source}
+                      </p>
+                    </div>
+                    <span className="rounded-full border border-white/15 px-3 py-1 text-xs uppercase tracking-wide">
+                      {opportunity.status.replaceAll("_", " ")}
+                    </span>
+                  </div>
+                  <p className="mt-4 text-sm text-white/65">{opportunity.summary}</p>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {([
+                      ["approve", "Approve"],
+                      ["reject", "Reject"],
+                      ["assign", "Assign to me"],
+                      ["research", "Research"],
+                      ["create_task", "Create Task"],
+                      ["convert_to_ghl", "Convert to GHL"],
+                    ] as const).map(([action, label]) => (
+                      <button
+                        key={action}
+                        type="button"
+                        disabled={opportunityAction.isPending || (action === "convert_to_ghl" && opportunity.status !== "approved")}
+                        onClick={() => opportunityAction.mutate({ opportunityId: opportunity.id, action })}
+                        className="rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold transition hover:border-[#C9A227] hover:text-[#C9A227] disabled:cursor-not-allowed disabled:opacity-35"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              title="No opportunities awaiting review"
+              message="Approved connectors remain disabled until an administrator explicitly configures and enables them."
+            />
+          )}
         </section>
 
         <section className="mt-6 rounded-3xl border border-white/10 bg-[#141414] p-6">

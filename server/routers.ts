@@ -453,9 +453,6 @@ export const appRouter = router({
         if (input.action === "convert_to_ghl" && opportunity.status !== "approved") {
           throw new Error("Human approval is required before GoHighLevel conversion.");
         }
-        if (input.action === "assign" && !input.assignedUserId) {
-          throw new Error("An assigned user is required.");
-        }
         const transition = C2B_ACTION_TRANSITIONS[input.action];
         await updateC2bOpportunity({
           id: opportunity.id,
@@ -464,7 +461,9 @@ export const appRouter = router({
           action: input.action,
           status: transition.status,
           ghlStatus: transition.ghlStatus,
-          assignedUserId: input.assignedUserId,
+          assignedUserId: input.action === "assign"
+            ? input.assignedUserId ?? ctx.user.id
+            : input.assignedUserId,
         });
         return {
           success: true,
