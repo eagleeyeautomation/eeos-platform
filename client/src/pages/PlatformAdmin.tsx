@@ -335,6 +335,7 @@ function FloridaBindingReconciliation() {
   const [inspection, setInspection] = useState<FloridaBindingInspection | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [reconciling, setReconciling] = useState(false);
+  const [repairingScopes, setRepairingScopes] = useState(false);
 
   async function loadInspection() {
     const response = await fetch("/api/admin/integrations/gohighlevel/florida-binding", {
@@ -374,6 +375,30 @@ function FloridaBindingReconciliation() {
     }
   }
 
+  async function repairScopes() {
+    if (!session.csrfToken) {
+      setStatus("Refresh the administrator session before repairing scope metadata.");
+      return;
+    }
+    setRepairingScopes(true);
+    setStatus(null);
+    try {
+      const response = await fetch("/api/admin/integrations/gohighlevel/florida-binding/repair-scopes", {
+        method: "POST",
+        credentials: "include",
+        headers: { Accept: "application/json", "x-eeos-csrf-token": session.csrfToken },
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Florida scope repair stopped safely.");
+      setStatus("Florida Private Integration read scopes recorded without rotating its token.");
+      await loadInspection();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Florida scope repair stopped safely.");
+    } finally {
+      setRepairingScopes(false);
+    }
+  }
+
   if (!inspection) return <EmptyState>{status ?? "Inspecting the existing Florida provider binding..."}</EmptyState>;
   const activeRuntime = inspection.runtime.connections.filter((connection) => !connection.disconnected_at);
   const canReconcile = Boolean(
@@ -406,7 +431,19 @@ function FloridaBindingReconciliation() {
           {reconciling ? "Reconciling..." : "Reconcile Florida binding"}
         </button>
       ) : (
-        <p className="mt-3 text-xs text-emerald-200">Florida is linked to subaccount {inspection.legacy.subaccount.id}.</p>
+        <>
+          <p className="mt-3 text-xs text-emerald-200">Florida is linked to subaccount {inspection.legacy.subaccount.id}.</p>
+          {activeRuntime.length === 1 && inspection.runtime.snapshotHistory.length === 0 ? (
+            <button
+              type="button"
+              disabled={repairingScopes}
+              onClick={() => void repairScopes()}
+              className="mt-4 rounded-lg border border-[rgba(201,162,39,0.4)] px-3 py-2 text-xs font-semibold text-[#C9A227] disabled:opacity-40"
+            >
+              {repairingScopes ? "Updating..." : "Record verified snapshot read scopes"}
+            </button>
+          ) : null}
+        </>
       )}
     </div>
   );
