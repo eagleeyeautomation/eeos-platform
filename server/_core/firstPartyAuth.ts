@@ -25,7 +25,10 @@ import {
   inspectRuntimeGhlBinding,
   reconcileRuntimeGhlBinding,
 } from "../db/runtimePersistence";
-import { storeGhlConnectionTokenWithAudit } from "../ghl-token-store";
+import {
+  storeGhlConnectionTokenWithAudit,
+  updateGhlConnectionScopesWithAudit,
+} from "../ghl-token-store";
 import {
   listAuthorizedLocationsForMembership,
   requirePlatformAdmin,
@@ -366,6 +369,63 @@ export function registerFirstPartyAuthRoutes(app: Express) {
         await deleteVerifiedGhlSubaccount(createdSubaccount.id, providerLocationId).catch(() => undefined);
       }
       res.status(500).json({ success: false, error: "Florida provider binding reconciliation failed safely." });
+    }
+  });
+
+  app.post("/api/admin/integrations/gohighlevel/florida-binding/repair-scopes", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) {
+      res.status(403).json({ success: false, error: "A valid EEOS CSRF token is required." });
+      return;
+    }
+    const providerLocationId = "cNQAsS4J15aPtGtOqgM0";
+    const requiredScopes = ["contacts.readonly", "opportunities.readonly"];
+    try {
+      const user = await sdk.authenticateRequest(req);
+      await requirePlatformAdmin(user);
+      const ownerContext = await resolveOrganizationAuthorizationContext(user);
+      if (
+        ownerContext?.role !== "ORGANIZATION_OWNER"
+        || ownerContext.organizationName !== "PRN Staffers Inc."
+        || !ownerContext.organizationId
+      ) {
+        res.status(403).json({ success: false, error: "An active PRN Staffers owner membership is required." });
+        return;
+      }
+      const runtime = await inspectRuntimeGhlBinding(providerLocationId);
+      const active = runtime.connections.filter((connection) => !connection.disconnected_at);
+      if (
+        active.length !== 1
+        || active[0].organization_id !== ownerContext.organizationId
+        || active[0].location_id !== providerLocationId
+      ) {
+        res.status(409).json({ success: false, error: "The exact Florida runtime binding could not be verified." });
+        return;
+      }
+      await updateGhlConnectionScopesWithAudit(
+        ownerContext.organizationId,
+        providerLocationId,
+        requiredScopes,
+        {
+          organizationId: ownerContext.organizationId,
+          source: "gohighlevel",
+          eventType: "binding.private_integration_scopes_verified",
+          locationId: providerLocationId,
+          metadata: {
+            actorUserId: String(user.id),
+            integrationName: "EEOS Prn Staffers",
+            scopes: requiredScopes,
+            providerPermissionsVerifiedInPlace: true,
+          },
+        },
+      );
+      res.status(200).json({
+        success: true,
+        provider: "gohighlevel",
+        maskedLocationId: "cNQAsS4J…OqgM0",
+        scopes: requiredScopes,
+      });
+    } catch {
+      res.status(500).json({ success: false, error: "Florida scope metadata repair failed safely." });
     }
   });
 

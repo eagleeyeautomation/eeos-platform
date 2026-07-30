@@ -120,6 +120,27 @@ export async function storeGhlConnectionTokenWithAudit(
   }, event);
 }
 
+export async function updateGhlConnectionScopesWithAudit(
+  organizationId: string,
+  locationId: string,
+  requiredScopes: string[],
+  event: RuntimeAuditEvent,
+) {
+  const record = await loadGhlConnection(organizationId, locationId);
+  if (!record) throw new Error("GoHighLevel connection was not found.");
+  const payload = decryptGhlTokenPayload(record.encryptedTokenPayload);
+  if (payload.locationId !== locationId) {
+    throw new Error("GoHighLevel token location binding mismatch.");
+  }
+  const scopes = Array.from(new Set([...payload.scopes, ...requiredScopes]));
+  await storeGhlConnectionTokenWithAudit({
+    organizationId,
+    operationalDivisionId: record.operationalDivisionId,
+    locationId,
+    payload: { ...payload, scopes },
+  }, event);
+}
+
 export async function loadGhlConnection(
   organizationId: string,
   locationId: string,
