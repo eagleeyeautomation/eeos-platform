@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import { trpc } from "@/lib/trpc";
 import { useProductSession } from "@/contexts/ProductSessionContext";
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const ADMIN_MODULES = [
   { label: "Organizations", href: "/admin/organizations", icon: Building2 },
@@ -271,6 +271,7 @@ function IntegrationsAdmin() {
           />
         ))}
       </div>
+      <FloridaBindingReconciliation />
       {data.connections.length === 0 ? (
         <EmptyState>No GoHighLevel connections have been persisted yet.</EmptyState>
       ) : (
@@ -293,6 +294,119 @@ function IntegrationsAdmin() {
             </div>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+type FloridaBindingInspection = {
+  providerLocationId: string;
+  legacy: {
+    connection: {
+      id: number;
+      tokenType: string;
+      active: boolean;
+      expiresAt: string | null;
+      lastRefreshedAt: string | null;
+      connectedAt: string | null;
+      updatedAt: string | null;
+    } | null;
+    subaccount: { id: number; membershipId: number; name: string } | null;
+  };
+  runtime: {
+    connections: Array<{
+      id: string;
+      organization_id: string;
+      operational_division_id: string;
+      location_id: string;
+      token_expires_at: string | null;
+      connected_at: string;
+      updated_at: string;
+      disconnected_at: string | null;
+    }>;
+    auditHistory: Array<{ event_type: string; organization_id: string; created_at: string }>;
+    onboardingStates: Array<{ status: string; organization_id: string; created_at: string }>;
+    snapshotHistory: Array<{ created_at: string }>;
+  };
+};
+
+function FloridaBindingReconciliation() {
+  const session = useProductSession();
+  const [inspection, setInspection] = useState<FloridaBindingInspection | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [reconciling, setReconciling] = useState(false);
+
+  async function loadInspection() {
+    const response = await fetch("/api/admin/integrations/gohighlevel/florida-binding", {
+      credentials: "include",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) throw new Error("Florida binding inspection is unavailable.");
+    setInspection(await response.json());
+  }
+
+  useEffect(() => {
+    void loadInspection().catch((error) => setStatus(error instanceof Error ? error.message : "Inspection failed."));
+  }, []);
+
+  async function reconcile() {
+    if (!session.csrfToken) {
+      setStatus("Refresh the administrator session before reconciling.");
+      return;
+    }
+    setReconciling(true);
+    setStatus(null);
+    try {
+      const response = await fetch("/api/admin/integrations/gohighlevel/florida-binding/reconcile", {
+        method: "POST",
+        credentials: "include",
+        headers: { Accept: "application/json", "x-eeos-csrf-token": session.csrfToken },
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Florida reconciliation stopped safely.");
+      setStatus("Florida provider binding reconciled to PRN Staffers.");
+      await loadInspection();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Florida reconciliation stopped safely.");
+    } finally {
+      setReconciling(false);
+    }
+  }
+
+  if (!inspection) return <EmptyState>{status ?? "Inspecting the existing Florida provider binding..."}</EmptyState>;
+  const activeRuntime = inspection.runtime.connections.filter((connection) => !connection.disconnected_at);
+  const canReconcile = Boolean(
+    inspection.legacy.connection?.active
+    && !inspection.legacy.subaccount
+    && activeRuntime.length === 1,
+  );
+
+  return (
+    <div className="rounded-xl border border-[rgba(201,162,39,0.2)] bg-[rgba(201,162,39,0.04)] p-4">
+      <div className="text-sm font-semibold">Florida provider-binding reconciliation</div>
+      <div className="mt-3 grid gap-2 text-xs text-white/55 sm:grid-cols-2 lg:grid-cols-4">
+        <div>Binding: {inspection.providerLocationId.slice(0, 8)}…{inspection.providerLocationId.slice(-5)}</div>
+        <div>Legacy connection: {inspection.legacy.connection?.id ?? "Not found"}</div>
+        <div>Subaccount: {inspection.legacy.subaccount?.id ?? "Not linked"}</div>
+        <div>Runtime bindings: {activeRuntime.length}</div>
+        <div>Token status: {inspection.legacy.connection?.active ? "Active" : "Inactive"}</div>
+        <div>Last refresh: {formatDate(inspection.legacy.connection?.lastRefreshedAt)}</div>
+        <div>Audit events: {inspection.runtime.auditHistory.length}</div>
+        <div>Snapshots: {inspection.runtime.snapshotHistory.length}</div>
+      </div>
+      {status ? <p className="mt-3 text-xs text-amber-200">{status}</p> : null}
+      {!inspection.legacy.subaccount ? (
+        <button
+          type="button"
+          disabled={!canReconcile || reconciling}
+          onClick={() => void reconcile()}
+          className="mt-4 rounded-lg border border-[rgba(201,162,39,0.4)] px-3 py-2 text-xs font-semibold text-[#C9A227] disabled:opacity-40"
+        >
+          {reconciling ? "Reconciling..." : "Reconcile Florida binding"}
+        </button>
+      ) : (
+        <p className="mt-3 text-xs text-emerald-200">Florida is linked to subaccount {inspection.legacy.subaccount.id}.</p>
       )}
     </div>
   );

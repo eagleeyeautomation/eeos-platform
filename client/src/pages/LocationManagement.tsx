@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { CheckCircle2, Loader2, MapPin, ShieldCheck } from "lucide-react";
 import Footer from "@/components/Footer";
 import Navigation from "@/components/Navigation";
+import { useProductSession } from "@/contexts/ProductSessionContext";
 import {
   inferStateLabel,
   loadManagedLocations,
@@ -18,12 +19,17 @@ function formatTimestamp(value: string | null) {
 }
 
 export default function LocationManagement() {
+  const session = useProductSession();
   const [locations, setLocations] = useState<ManagedLocation[]>([]);
   const [selectedKey, setSelectedKey] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [verifyingKey, setVerifyingKey] = useState<string | null>(null);
   const [verifiedKey, setVerifiedKey] = useState<string | null>(null);
+  const [newLocation, setNewLocation] = useState({ name: "", city: "", state: "" });
+  const [submittingLocation, setSubmittingLocation] = useState(false);
+  const [authorizationUrl, setAuthorizationUrl] = useState<string | null>(null);
+  const [onboardingError, setOnboardingError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -77,6 +83,59 @@ export default function LocationManagement() {
     }
   }
 
+  async function prepareLocationOnboarding(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setOnboardingError(null);
+    setAuthorizationUrl(null);
+    const normalized = {
+      name: newLocation.name.trim(),
+      city: newLocation.city.trim(),
+      state: newLocation.state.trim(),
+    };
+    if (
+      normalized.name !== "PRN Staffers FL"
+      || normalized.city !== "Greensboro"
+      || normalized.state !== "Florida"
+    ) {
+      setOnboardingError("Enter the approved Florida location: PRN Staffers FL, Greensboro, Florida.");
+      return;
+    }
+    if (!session.organization?.id || !session.csrfToken || session.organizationRole !== "ORGANIZATION_OWNER") {
+      setOnboardingError("An authenticated organization-owner session is required.");
+      return;
+    }
+
+    setSubmittingLocation(true);
+    try {
+      const response = await fetch("/api/location-management/locations", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "x-eeos-csrf-token": session.csrfToken,
+        },
+        body: JSON.stringify({
+          organizationId: session.organization.id,
+          provider: "gohighlevel",
+          ...normalized,
+        }),
+      });
+      const payload = await response.json().catch(() => ({})) as {
+        authorizationUrl?: string;
+        message?: string;
+      };
+      if (!response.ok || !payload.authorizationUrl) {
+        throw new Error(payload.message ?? "Florida onboarding could not be prepared.");
+      }
+      setAuthorizationUrl(payload.authorizationUrl);
+    } catch (submissionError) {
+      setOnboardingError(submissionError instanceof Error ? submissionError.message : "Florida onboarding could not be prepared.");
+    } finally {
+      setSubmittingLocation(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0B0B0B] text-white">
       <Navigation />
@@ -88,6 +147,68 @@ export default function LocationManagement() {
             Select an authorized operating location without reconnecting OAuth. Each connection, token, and snapshot remains isolated by organization, provider, and location.
           </p>
         </section>
+
+        {session.organizationRole === "ORGANIZATION_OWNER" ? (
+          <section className="mt-6 rounded-2xl border border-[#C9A227]/25 bg-white/[0.03] p-5">
+            <h2 className="text-xl font-semibold">Add an operating location</h2>
+            <p className="mt-2 text-sm text-white/55">
+              EEOS validates local metadata before creating a protected GoHighLevel authorization handoff. Provider location IDs are supplied only by GoHighLevel.
+            </p>
+            <form className="mt-5 grid gap-4 md:grid-cols-3" onSubmit={prepareLocationOnboarding}>
+              <label className="text-sm text-white/70">
+                Name
+                <input
+                  required
+                  value={newLocation.name}
+                  onChange={(event) => setNewLocation((current) => ({ ...current, name: event.target.value }))}
+                  className="mt-2 h-11 w-full rounded-lg border border-white/15 bg-black/30 px-3 text-white"
+                  autoComplete="organization"
+                />
+              </label>
+              <label className="text-sm text-white/70">
+                City
+                <input
+                  required
+                  value={newLocation.city}
+                  onChange={(event) => setNewLocation((current) => ({ ...current, city: event.target.value }))}
+                  className="mt-2 h-11 w-full rounded-lg border border-white/15 bg-black/30 px-3 text-white"
+                  autoComplete="address-level2"
+                />
+              </label>
+              <label className="text-sm text-white/70">
+                State
+                <select
+                  required
+                  value={newLocation.state}
+                  onChange={(event) => setNewLocation((current) => ({ ...current, state: event.target.value }))}
+                  className="mt-2 h-11 w-full rounded-lg border border-white/15 bg-black/30 px-3 text-white"
+                  autoComplete="address-level1"
+                >
+                  <option value="">Select state</option>
+                  <option value="Florida">Florida</option>
+                </select>
+              </label>
+              <div className="md:col-span-3">
+                <button
+                  type="submit"
+                  disabled={submittingLocation}
+                  className="h-11 rounded-lg bg-[#C9A227] px-5 text-sm font-semibold text-black disabled:opacity-50"
+                >
+                  {submittingLocation ? "Validating..." : "Prepare Florida onboarding"}
+                </button>
+              </div>
+            </form>
+            {onboardingError ? <p className="mt-4 text-sm text-red-200">{onboardingError}</p> : null}
+            {authorizationUrl ? (
+              <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-4">
+                <p className="text-sm text-emerald-100">Florida metadata validated. Continue only when you are ready to authorize in GoHighLevel.</p>
+                <a className="mt-3 inline-flex h-10 items-center rounded-lg border border-emerald-300/30 px-4 text-sm" href={authorizationUrl}>
+                  Continue to GoHighLevel
+                </a>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
         {loading ? (
           <div className="mt-6 flex min-h-48 items-center justify-center rounded-2xl border border-white/10">

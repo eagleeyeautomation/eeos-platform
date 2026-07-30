@@ -32,6 +32,99 @@ export type RuntimeAuditEvent = {
   metadata: Record<string, unknown>;
 };
 
+export async function inspectRuntimeGhlBinding(locationId: string) {
+  return withDatabase(async (client) => {
+    const [connections, audits, states, snapshots] = await Promise.all([
+      client.query<{
+        id: string; organization_id: string; operational_division_id: string;
+        location_id: string; token_expires_at: string | null; connected_at: string;
+        updated_at: string; disconnected_at: string | null;
+      }>(
+        `select id, organization_id, operational_division_id, location_id,
+                token_expires_at, connected_at, updated_at, disconnected_at
+           from eeos_integration_connections
+          where provider = 'gohighlevel' and location_id = $1
+          order by updated_at desc`,
+        [locationId],
+      ),
+      client.query<{ event_type: string; organization_id: string; created_at: string }>(
+        `select event_type, organization_id, created_at
+           from eeos_audit_events
+          where location_id = $1
+          order by created_at desc
+          limit 50`,
+        [locationId],
+      ),
+      client.query<{ status: string; organization_id: string; created_at: string; expires_at: string; consumed_at: string | null }>(
+        `select status, organization_id, created_at, expires_at, consumed_at
+           from eeos_oauth_states
+          where payload->>'locationId' = $1 or payload->>'location_id' = $1
+          order by created_at desc
+          limit 20`,
+        [locationId],
+      ),
+      client.query<{ created_at: string }>(
+        `select created_at
+           from eeos_audit_events
+          where location_id = $1 and event_type = 'operations.snapshot.read'
+          order by created_at desc
+          limit 20`,
+        [locationId],
+      ),
+    ]);
+    return {
+      connections: connections.rows,
+      auditHistory: audits.rows,
+      onboardingStates: states.rows,
+      snapshotHistory: snapshots.rows,
+    };
+  });
+}
+
+export async function reconcileRuntimeGhlBinding(input: {
+  connectionId: string;
+  locationId: string;
+  currentOrganizationId: string;
+  organizationId: string;
+  actorUserId: string;
+  subaccountId: number;
+}) {
+  await withTransaction(async (client) => {
+    const conflict = await client.query(
+      `select id from eeos_integration_connections
+        where organization_id = $1 and provider = 'gohighlevel'
+          and operational_division_id = $2 and id <> $3`,
+      [input.organizationId, input.locationId, input.connectionId],
+    );
+    if (conflict.rowCount) throw new Error("A provider binding already exists for the target organization and location.");
+
+    const updated = await client.query(
+      `update eeos_integration_connections
+          set organization_id = $1, operational_division_id = $2, updated_at = now()
+        where id = $3 and organization_id = $4 and provider = 'gohighlevel'
+          and location_id = $2 and disconnected_at is null`,
+      [input.organizationId, input.locationId, input.connectionId, input.currentOrganizationId],
+    );
+    if (updated.rowCount !== 1) throw new Error("The provider binding changed before reconciliation could complete.");
+
+    await client.query(
+      `insert into eeos_audit_events (
+         organization_id, source, event_type, location_id, metadata, created_at
+       ) values ($1, 'gohighlevel', 'binding.reconciled', $2, $3::jsonb, now())`,
+      [
+        input.organizationId,
+        input.locationId,
+        JSON.stringify({
+          actorUserId: input.actorUserId,
+          connectionId: input.connectionId,
+          previousOrganizationId: input.currentOrganizationId,
+          subaccountId: input.subaccountId,
+        }),
+      ],
+    );
+  });
+}
+
 export async function upsertGhlTokenRecord(record: GhlStoredTokenRecord) {
   await withDatabase(async (client) => {
     await client.query(

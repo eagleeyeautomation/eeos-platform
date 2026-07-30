@@ -169,6 +169,7 @@ export default function Navigation() {
     || location.startsWith("/knowledge-graph")
     || location.startsWith("/notifications")
     || location.startsWith("/system-health")
+    || location.startsWith("/location-management")
     || location.startsWith("/connect-ghl")
     || location.startsWith("/dashboard")
     || isCustomerRole(session.role));
