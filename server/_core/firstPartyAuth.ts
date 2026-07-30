@@ -25,6 +25,7 @@ import {
   inspectRuntimeGhlBinding,
   reconcileRuntimeGhlBinding,
 } from "../db/runtimePersistence";
+import { storeGhlConnectionTokenWithAudit } from "../ghl-token-store";
 import {
   listAuthorizedLocationsForMembership,
   requirePlatformAdmin,
@@ -284,8 +285,8 @@ export function registerFirstPartyAuthRoutes(app: Express) {
         return;
       }
       const activeRuntime = runtime.connections.filter((connection) => !connection.disconnected_at);
-      if (activeRuntime.length !== 1) {
-        res.status(409).json({ success: false, error: "Exactly one active runtime Florida provider binding is required for reconciliation." });
+      if (activeRuntime.length > 1) {
+        res.status(409).json({ success: false, error: "Multiple active runtime Florida bindings require manual review." });
         return;
       }
 
@@ -302,14 +303,50 @@ export function registerFirstPartyAuthRoutes(app: Express) {
       }
       createdSubaccount = { id: created.id };
 
-      await reconcileRuntimeGhlBinding({
-        connectionId: activeRuntime[0].id,
-        locationId: providerLocationId,
-        currentOrganizationId: activeRuntime[0].organization_id,
-        organizationId: ownerContext.organizationId,
-        actorUserId: String(user.id),
-        subaccountId: created.id,
-      });
+      if (activeRuntime.length === 1) {
+        await reconcileRuntimeGhlBinding({
+          connectionId: activeRuntime[0].id,
+          locationId: providerLocationId,
+          currentOrganizationId: activeRuntime[0].organization_id,
+          organizationId: ownerContext.organizationId,
+          actorUserId: String(user.id),
+          subaccountId: created.id,
+        });
+      } else {
+        const token = await getGhlToken(providerLocationId);
+        if (
+          !token
+          || !token.isActive
+          || (token.locationId ?? token.tenantId) !== providerLocationId
+        ) {
+          throw new Error("The legacy Florida token cannot be migrated safely.");
+        }
+        await storeGhlConnectionTokenWithAudit({
+          organizationId: ownerContext.organizationId,
+          operationalDivisionId: providerLocationId,
+          locationId: providerLocationId,
+          payload: {
+            accessToken: token.accessToken,
+            refreshToken: token.refreshToken,
+            tokenType: token.tokenType ?? "Bearer",
+            expiresAt: token.expiresAt.toISOString(),
+            scopes: token.scope?.split(/[,\s]+/).filter(Boolean) ?? [],
+            locationId: providerLocationId,
+            companyId: token.companyId ?? undefined,
+            userType: "Location",
+          },
+        }, {
+          organizationId: ownerContext.organizationId,
+          source: "gohighlevel",
+          eventType: "binding.legacy_migrated",
+          locationId: providerLocationId,
+          metadata: {
+            actorUserId: String(user.id),
+            legacyConnectionId: legacy.connection.id,
+            subaccountId: created.id,
+          },
+        });
+      }
       await audit({
         actorUserId: user.id,
         organizationId: Number(ownerContext.organizationId),

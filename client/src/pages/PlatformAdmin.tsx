@@ -379,7 +379,7 @@ function FloridaBindingReconciliation() {
   const canReconcile = Boolean(
     inspection.legacy.connection?.active
     && !inspection.legacy.subaccount
-    && activeRuntime.length === 1,
+    && activeRuntime.length <= 1,
   );
 
   return (
