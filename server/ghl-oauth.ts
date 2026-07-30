@@ -7,10 +7,10 @@
  * Every token stored here feeds the IE pipeline with accurate, fresh data.
  */
 
-import { createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { randomBytes } from "crypto";
 import type { Express, Request, Response } from "express";
-import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./_core/env";
+import { hasValidSessionCsrf, issueSessionCsrfToken } from "./_core/csrf";
 import { sdk } from "./_core/sdk";
 import {
   listOwnerOrganizationLocations,
@@ -48,7 +48,6 @@ const EEOS_OAUTH_PREFLIGHT_VALUE = "verify";
 const GHL_TOKEN_URL = "https://services.leadconnectorhq.com/oauth/token";
 const APPROVED_GHL_CALLBACK_PATH = "/api/integrations/eea/oauth/callback";
 const APPROVED_GHL_CALLBACK_URL = "https://eeos-platform-production.up.railway.app/api/integrations/eea/oauth/callback";
-const EEOS_CSRF_COOKIE = "eeos_csrf";
 
 type GhlConnectSessionContext = {
   userId: number;
@@ -465,7 +464,10 @@ export function registerGhlOAuthRoutes(app: Express) {
   app.get("/api/integrations/gohighlevel/session-context", async (req: Request, res: Response) => {
     try {
       const context = await resolveGhlConnectSessionContext(req, getQueryParam(req, "locationId"));
-      const csrfToken = ensureCsrfCookie(req, res);
+      const csrfToken = issueSessionCsrfToken(req, res);
+      if (!csrfToken) {
+        throw new GhlOAuthRequestError(403, "A valid EEOS CSRF token is required before connecting GoHighLevel.");
+      }
 
       res.status(200).json({
         authenticated: true,
@@ -1079,53 +1081,8 @@ function sendOAuthStartError(res: Response, error: unknown) {
   });
 }
 
-function ensureCsrfCookie(req: Request, res: Response) {
-  const secure = isSecureRequest(req);
-  const csrfToken = deriveSessionCsrfToken(req);
-  res.cookie(EEOS_CSRF_COOKIE, csrfToken, {
-    httpOnly: false,
-    path: "/",
-    sameSite: secure ? "none" : "lax",
-    secure,
-    maxAge: 10 * 60 * 1000,
-  });
-  return csrfToken;
-}
-
 function validateCsrf(req: Request) {
-  const headerToken = req.header("x-eeos-csrf-token");
-  const expectedToken = deriveSessionCsrfToken(req);
-
-  if (!headerToken || !safeEqual(expectedToken, headerToken)) {
+  if (!hasValidSessionCsrf(req)) {
     throw new GhlOAuthRequestError(403, "A valid EEOS CSRF token is required before connecting GoHighLevel.");
   }
-}
-
-function deriveSessionCsrfToken(req: Request) {
-  const sessionToken = sdk.readSessionToken(req);
-  const signingSecret = process.env.JWT_SECRET;
-  if (!sessionToken || !signingSecret) {
-    throw new GhlOAuthRequestError(403, "A valid EEOS CSRF token is required before connecting GoHighLevel.");
-  }
-  return createHmac("sha256", signingSecret)
-    .update("eeos:gohighlevel:oauth:csrf:")
-    .update(sessionToken)
-    .digest("base64url");
-}
-
-function safeEqual(left: string, right: string) {
-  const leftBuffer = Buffer.from(left);
-  const rightBuffer = Buffer.from(right);
-
-  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
-}
-
-function isSecureRequest(req: Request) {
-  if (req.protocol === "https") {
-    return true;
-  }
-
-  const forwardedProto = req.header("x-forwarded-proto");
-
-  return Boolean(forwardedProto?.split(",").some((proto) => proto.trim().toLowerCase() === "https"));
 }

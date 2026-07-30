@@ -82,6 +82,7 @@ async function withServer<T>(callback: (baseUrl: string) => Promise<T>) {
 describe("EEOS first-party authentication", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.JWT_SECRET = "test-session-signing-secret-at-least-32-characters";
     dbMocks.createAuthSession.mockResolvedValue(undefined);
     dbMocks.createPasswordResetToken.mockResolvedValue(undefined);
     dbMocks.createAuthInvitation.mockResolvedValue(undefined);
@@ -400,6 +401,73 @@ describe("EEOS first-party authentication", () => {
         organization: { id: "10", name: "PRN Staffers" },
         authorizedLocations: [{ id: "loc-sc", name: "South Carolina" }],
       });
+    });
+  });
+
+  it("lets a platform admin enter only the organization they actively own and audits the action", async () => {
+    const account = user({ role: "admin" });
+    const token = "opaque-session-token-for-owner-entry";
+    dbMocks.getAuthSessionByTokenHash.mockResolvedValue({
+      id: 22,
+      userId: account.id,
+      tokenHash: hashOpaqueToken(token),
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null,
+      createdAt: now,
+      lastSeenAt: now,
+      ipAddress: null,
+      userAgent: null,
+    });
+    dbMocks.getUserById.mockResolvedValue(account);
+    authorizationMocks.resolveOrganizationAuthorizationContext.mockResolvedValue({
+      userId: String(account.id),
+      role: "ORGANIZATION_OWNER",
+      organizationId: "10",
+      organizationName: "PRN Staffers",
+      membershipId: "100",
+      authorizedLocationIds: ["loc-sc"],
+      selectedLocationId: "loc-sc",
+      selectedLocationName: "South Carolina",
+    });
+
+    await withServer(async (baseUrl) => {
+      const sessionResponse = await fetch(`${baseUrl}/api/auth/session`, {
+        headers: { Cookie: `${COOKIE_NAME}=${token}` },
+      });
+      const session = await sessionResponse.json();
+      expect(session.csrfToken).toEqual(expect.any(String));
+
+      const response = await fetch(`${baseUrl}/api/admin/organizations/10/enter`, {
+        method: "POST",
+        headers: {
+          Cookie: `${COOKIE_NAME}=${token}`,
+          "x-eeos-csrf-token": session.csrfToken,
+        },
+      });
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({ success: true, redirectTo: "/executive-home" });
+      expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({
+        actorUserId: account.id,
+        organizationId: 10,
+        action: "organization.context.entered",
+      }));
+
+      const crossOrganizationResponse = await fetch(`${baseUrl}/api/admin/organizations/11/enter`, {
+        method: "POST",
+        headers: {
+          Cookie: `${COOKIE_NAME}=${token}`,
+          "x-eeos-csrf-token": session.csrfToken,
+        },
+      });
+      expect(crossOrganizationResponse.status).toBe(403);
+    });
+  });
+
+  it("rejects owner-context entry without a valid CSRF token", async () => {
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/admin/organizations/10/enter`, { method: "POST" });
+      expect(response.status).toBe(403);
+      expect(authorizationMocks.requirePlatformAdmin).not.toHaveBeenCalled();
     });
   });
 

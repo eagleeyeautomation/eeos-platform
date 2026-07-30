@@ -160,7 +160,7 @@ export default function Navigation() {
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [location] = useLocation();
   const headerRef = useRef<HTMLElement | null>(null);
-  const isAdminExperience = location.startsWith("/admin") || session.role === "PLATFORM_ADMIN";
+  const isAdminExperience = location.startsWith("/admin");
   const isOwnerExperience = !isAdminExperience && (location.startsWith("/executive")
     || location.startsWith("/business-health")
     || location.startsWith("/ai-recommendations")
@@ -331,6 +331,14 @@ export default function Navigation() {
 
             {/* Desktop CTA Buttons */}
             <div className="hidden lg:flex items-center gap-2">
+              {isOwnerExperience && session.role === "PLATFORM_ADMIN" ? (
+                <Link
+                  href="/admin"
+                  className="px-4 py-2 text-sm font-semibold text-white/70 hover:text-white transition-colors"
+                >
+                  Back to Admin
+                </Link>
+              ) : null}
               {isOwnerExperience || isAdminExperience ? (
                 <Link
                   href={isAdminExperience ? "/admin" : "/executive-home"}
@@ -456,6 +464,14 @@ export default function Navigation() {
 
           {/* Mobile CTAs */}
           <div className="mt-8 space-y-3 border-t border-[rgba(201,162,39,0.1)] pt-6">
+            {isOwnerExperience && session.role === "PLATFORM_ADMIN" ? (
+              <Link
+                href="/admin"
+                className="flex items-center justify-center w-full py-3 text-sm font-semibold text-white/70"
+              >
+                Back to Admin
+              </Link>
+            ) : null}
             {isOwnerExperience || isAdminExperience ? (
               <Link
                 href={isAdminExperience ? "/admin" : "/executive-home"}

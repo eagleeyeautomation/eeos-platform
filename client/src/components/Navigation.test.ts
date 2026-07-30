@@ -84,4 +84,11 @@ describe("Navigation dropdown route inventory", () => {
     expect(source).toContain('className="flex items-center justify-between h-16"');
     expect(source).toContain('aria-label="Toggle menu"');
   });
+
+  it("uses route context for dual-role navigation and provides an explicit return to admin", () => {
+    const source = readFileSync("client/src/components/Navigation.tsx", "utf8");
+    expect(source).toContain('const isAdminExperience = location.startsWith("/admin");');
+    expect(source).toContain('session.role === "PLATFORM_ADMIN"');
+    expect(source).toContain("Back to Admin");
+  });
 });

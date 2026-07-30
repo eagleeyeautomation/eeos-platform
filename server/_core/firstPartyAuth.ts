@@ -25,6 +25,7 @@ import {
   resolveOrganizationAuthorizationContext,
 } from "../authorization";
 import { getSessionCookieOptions } from "./cookies";
+import { hasValidSessionCsrf, issueSessionCsrfToken } from "./csrf";
 import { hashPassword, validatePasswordPolicy, verifyPassword } from "./passwordAuth";
 import { buildPasswordResetUrl, sendPasswordResetEmail } from "./passwordResetEmail";
 import { createOpaqueToken, hashOpaqueToken, readClientIp } from "./sessionTokens";
@@ -124,7 +125,7 @@ async function audit(input: {
   });
 }
 
-async function buildSessionSummary(req: Request) {
+async function buildSessionSummary(req: Request, res: Response) {
   let user;
   try {
     user = await sdk.authenticateRequest(req);
@@ -138,6 +139,7 @@ async function buildSessionSummary(req: Request) {
       organization: null,
       authorizedLocations: [],
       ghlConnected: false,
+      csrfToken: null,
     };
   }
 
@@ -164,6 +166,7 @@ async function buildSessionSummary(req: Request) {
     } : null,
     authorizedLocations,
     ghlConnected: connectedTokens.some((token) => token?.isActive && token.scope === "private_integration"),
+    csrfToken: issueSessionCsrfToken(req, res),
   };
 }
 
@@ -181,8 +184,44 @@ function clearSessionCookie(req: Request, res: Response) {
 
 export function registerFirstPartyAuthRoutes(app: Express) {
   app.get("/api/auth/session", async (req: Request, res: Response) => {
-    const summary = await buildSessionSummary(req);
+    const summary = await buildSessionSummary(req, res);
     res.status(summary.authenticated ? 200 : 401).json(summary);
+  });
+
+  app.post("/api/admin/organizations/:organizationId/enter", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) {
+      res.status(403).json({ success: false, error: "A valid EEOS CSRF token is required." });
+      return;
+    }
+
+    try {
+      const user = await sdk.authenticateRequest(req);
+      await requirePlatformAdmin(user);
+      const organizationContext = await resolveOrganizationAuthorizationContext(user);
+      const targetOrganizationId = z.coerce.number().int().positive().safeParse(req.params.organizationId);
+
+      if (
+        !targetOrganizationId.success
+        || organizationContext?.role !== "ORGANIZATION_OWNER"
+        || organizationContext.organizationId !== String(targetOrganizationId.data)
+      ) {
+        res.status(403).json({ success: false, error: "No active owner membership is available for this organization." });
+        return;
+      }
+
+      await audit({
+        actorUserId: user.id,
+        organizationId: targetOrganizationId.data,
+        action: "organization.context.entered",
+        targetType: "organization",
+        targetId: String(targetOrganizationId.data),
+        metadata: { role: organizationContext.role },
+      });
+      res.status(200).json({ success: true, redirectTo: "/executive-home" });
+    } catch (error) {
+      const status = error instanceof Error && error.message.includes("Authentication") ? 401 : 403;
+      res.status(status).json({ success: false, error: status === 401 ? "Authentication is required." : "Platform administrator access is required." });
+    }
   });
 
   app.post("/api/auth/login", async (req: Request, res: Response) => {

@@ -2,7 +2,9 @@ import { Activity, Brain, Building2, ClipboardList, FileClock, LifeBuoy, ShieldC
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { trpc } from "@/lib/trpc";
+import { useProductSession } from "@/contexts/ProductSessionContext";
 import { Link, useLocation } from "wouter";
+import { useState } from "react";
 
 const ADMIN_MODULES = [
   { label: "Organizations", href: "/admin/organizations", icon: Building2 },
@@ -151,6 +153,36 @@ function AdminOverview() {
 
 function OrganizationsAdmin() {
   const { data = [], isLoading, error } = trpc.admin.organizations.useQuery(undefined, { retry: false });
+  const session = useProductSession();
+  const [, navigate] = useLocation();
+  const [enteringOrganizationId, setEnteringOrganizationId] = useState<number | null>(null);
+  const [enterError, setEnterError] = useState<string | null>(null);
+
+  async function enterOrganization(organizationId: number) {
+    if (!session.csrfToken) {
+      setEnterError("Your administrator session could not be verified. Refresh and try again.");
+      return;
+    }
+    setEnteringOrganizationId(organizationId);
+    setEnterError(null);
+    try {
+      const response = await fetch(`/api/admin/organizations/${organizationId}/enter`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "x-eeos-csrf-token": session.csrfToken,
+        },
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to enter this organization.");
+      navigate(payload.redirectTo);
+    } catch (requestError) {
+      setEnterError(requestError instanceof Error ? requestError.message : "Unable to enter this organization.");
+    } finally {
+      setEnteringOrganizationId(null);
+    }
+  }
 
   if (error) return <EmptyState>Organizations could not be loaded for this administrator session.</EmptyState>;
   if (isLoading) return <EmptyState>Loading organizations...</EmptyState>;
@@ -158,6 +190,7 @@ function OrganizationsAdmin() {
 
   return (
     <div className="space-y-2">
+      {enterError ? <div className="text-sm text-amber-300">{enterError}</div> : null}
       {data.map((organization) => (
         <div key={organization.id} className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -175,6 +208,16 @@ function OrganizationsAdmin() {
             <div>Subaccounts: {organization.subaccountCount}</div>
             <div>GHL connected: {organization.connectedLocationCount}</div>
           </div>
+          {organization.isActive && session.organization?.id === String(organization.id) && session.organizationRole === "ORGANIZATION_OWNER" ? (
+            <button
+              type="button"
+              disabled={enteringOrganizationId === organization.id}
+              onClick={() => void enterOrganization(organization.id)}
+              className="mt-3 rounded-lg border border-[rgba(255,255,255,0.14)] px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-50"
+            >
+              {enteringOrganizationId === organization.id ? "Opening..." : "Enter organization"}
+            </button>
+          ) : null}
         </div>
       ))}
     </div>

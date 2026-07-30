@@ -26,6 +26,7 @@ export type SessionContextValue = {
     name: string;
   }>;
   ghlConnected: boolean;
+  csrfToken: string | null;
 };
 
 const anonymousSession: SessionContextValue = {
@@ -37,6 +38,7 @@ const anonymousSession: SessionContextValue = {
   organization: null,
   authorizedLocations: [],
   ghlConnected: false,
+  csrfToken: null,
 };
 
 const ProductSessionContext = createContext<SessionContextValue>(anonymousSession);
