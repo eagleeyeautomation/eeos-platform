@@ -17,6 +17,7 @@ import {
 import { Link } from "wouter";
 import Footer from "@/components/Footer";
 import Navigation from "@/components/Navigation";
+import OrganizationWelcomeBanner from "@/components/OrganizationWelcomeBanner";
 import { trpc } from "@/lib/trpc";
 import { useOwnerConnectionState } from "@/hooks/useOwnerConnectionState";
 import { useEffect, useMemo, useState } from "react";
@@ -202,6 +203,7 @@ export default function OwnerCommandCenter({ mode = "overview" }: OwnerCommandCe
       <Navigation />
 
       <main className="mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6 lg:px-8">
+        <OrganizationWelcomeBanner />
         <section className="rounded-3xl border border-[rgba(201,162,39,0.16)] bg-[#141414] p-6 sm:p-8">
           <div className="section-label mb-3">{copy.eyebrow}</div>
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">

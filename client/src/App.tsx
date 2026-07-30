@@ -6,6 +6,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { OwnerRoute, PlatformAdminRoute } from "./components/RouteGuards";
 import { ProductSessionProvider } from "./contexts/ProductSessionContext";
+import { OrganizationThemeProvider } from "./contexts/OrganizationThemeContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import WhyEEOS from "./pages/WhyEEOS";
@@ -232,8 +233,10 @@ function App() {
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <ProductSessionProvider>
-            <Toaster richColors theme="dark" />
-            <Router />
+            <OrganizationThemeProvider>
+              <Toaster richColors theme="dark" />
+              <Router />
+            </OrganizationThemeProvider>
           </ProductSessionProvider>
         </TooltipProvider>
       </ThemeProvider>

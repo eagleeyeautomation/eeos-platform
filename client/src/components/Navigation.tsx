@@ -6,6 +6,7 @@ import { Link, useLocation } from "wouter";
 import { Menu, X, ChevronDown, ArrowRight, Zap } from "lucide-react";
 import { startLogin } from "@/const";
 import { isCustomerRole, useProductSession } from "@/contexts/ProductSessionContext";
+import { useOrganizationTheme } from "@/contexts/OrganizationThemeContext";
 
 export const AVAILABLE_NAV_ROUTES = new Set([
   "/",
@@ -155,6 +156,7 @@ function isActiveNavItem(currentPath: string, link: NavItem) {
 
 export default function Navigation() {
   const session = useProductSession();
+  const organizationTheme = useOrganizationTheme();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
@@ -229,8 +231,26 @@ export default function Navigation() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 group shrink-0">
-              {isOwnerExperience || isAdminExperience ? (
+            <Link href={isOwnerExperience ? "/executive-home" : "/"} className="flex items-center gap-3 group shrink-0">
+              {isOwnerExperience && organizationTheme ? (
+                <>
+                  <span className="organization-logo-surface flex h-12 w-16 items-center justify-center rounded-lg p-1.5">
+                    <img
+                      src={organizationTheme.logoUrl}
+                      alt={`${organizationTheme.organizationName} logo`}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </span>
+                  <span className="hidden xl:block leading-tight">
+                    <span className="block text-sm font-bold text-white">
+                      {organizationTheme.organizationName.replace(/\s+Inc\.?$/i, "")} Command Center
+                    </span>
+                    <span className="organization-powered-by block text-[10px] font-semibold uppercase tracking-[0.16em]">
+                      Powered by EEOS
+                    </span>
+                  </span>
+                </>
+              ) : isOwnerExperience || isAdminExperience ? (
                 <img
                   src={AUTHENTICATED_HEADER_LOGO_SRC}
                   alt="EEOS Eagle Eye Operating System"
