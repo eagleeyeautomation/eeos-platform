@@ -621,3 +621,72 @@ export const ieMetrics = mysqlTable("ie_metrics", {
 ]);
 
 export type IeMetrics = typeof ieMetrics.$inferSelect;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTELLIGENCE EVOLUTION — authorized evidence, outcomes, and learning memory
+// Learning remains organization/location isolated. Platform reporting uses
+// aggregate counts only and never returns customer evidence or private rules.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const intelligenceLearningEvents = mysqlTable("intelligence_learning_events", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(),
+  tenantId: varchar("tenantId", { length: 128 }).notNull(),
+  recommendationId: int("recommendationId"),
+  sourceType: mysqlEnum("sourceType", [
+    "operational", "user_action", "executive_decision", "opportunity_outcome",
+    "connector", "crm", "financial", "marketing", "kpi", "recommendation_history",
+    "business_rule"
+  ]).notNull(),
+  sourceReference: varchar("sourceReference", { length: 256 }).notNull(),
+  approved: boolean("approved").default(false).notNull(),
+  eventType: varchar("eventType", { length: 64 }).notNull(),
+  normalizedEvidence: json("normalizedEvidence").notNull(),
+  modelArea: mysqlEnum("modelArea", [
+    "scoring", "prioritization", "recommendations", "forecasting", "duplicates",
+    "workflow", "assignment", "risk", "anomaly", "confidence"
+  ]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => [
+  index("idx_learning_event_org_tenant").on(t.organizationId, t.tenantId, t.createdAt),
+  index("idx_learning_event_recommendation").on(t.recommendationId),
+]);
+
+export const intelligenceOutcomes = mysqlTable("intelligence_outcomes", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(),
+  tenantId: varchar("tenantId", { length: 128 }).notNull(),
+  recommendationId: int("recommendationId").notNull(),
+  decision: mysqlEnum("decision", ["accepted", "rejected", "deferred", "already_done"]).notNull(),
+  outcomeType: mysqlEnum("outcomeType", ["positive", "negative", "neutral", "unknown"]).notNull(),
+  revenueImpact: int("revenueImpact"),
+  operationalImpact: text("operationalImpact"),
+  timeSavedMinutes: int("timeSavedMinutes"),
+  conversionImprovement: float("conversionImprovement"),
+  evidence: json("evidence").notNull(),
+  measuredAt: timestamp("measuredAt").notNull(),
+  recordedByUserId: int("recordedByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => [
+  index("idx_intelligence_outcome_org_tenant").on(t.organizationId, t.tenantId, t.measuredAt),
+  index("idx_intelligence_outcome_recommendation").on(t.recommendationId),
+]);
+
+export const intelligenceLearningProfiles = mysqlTable("intelligence_learning_profiles", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(),
+  tenantId: varchar("tenantId", { length: 128 }).notNull(),
+  modelArea: mysqlEnum("modelArea", [
+    "scoring", "prioritization", "recommendations", "forecasting", "duplicates",
+    "workflow", "assignment", "risk", "anomaly", "confidence"
+  ]).notNull(),
+  evidenceCount: int("evidenceCount").default(0).notNull(),
+  verifiedOutcomeCount: int("verifiedOutcomeCount").default(0).notNull(),
+  successfulOutcomeCount: int("successfulOutcomeCount").default(0).notNull(),
+  accuracyRate: float("accuracyRate").default(0).notNull(),
+  adjustment: float("adjustment").default(0).notNull(),
+  explanation: text("explanation").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (t) => [
+  uniqueIndex("learning_profile_org_tenant_area").on(t.organizationId, t.tenantId, t.modelArea),
+]);

@@ -35,6 +35,9 @@ import {
   listC2bOpportunities,
   listGlobalIntelligenceOpportunities,
   updateC2bOpportunity,
+  getIntelligenceEvolution,
+  getAnonymousPlatformLearningEvents,
+  recordIntelligenceOutcome,
 } from "./db";
 import { runIntelligenceEngine } from "./intelligence-engine";
 import {
@@ -53,6 +56,11 @@ import {
   summarizeC2bOpportunities,
   type C2bScoring,
 } from "./c2b/core";
+import {
+  anonymizePlatformLearning,
+  diagnoseIntelligenceHealth,
+  validateLearningEvent,
+} from "./intelligence-evolution/core";
 
 export const appRouter = router({
   system: systemRouter,
@@ -481,7 +489,77 @@ export const appRouter = router({
       }),
   }),
 
+  evolution: router({
+    dashboard: protectedProcedure.query(async ({ ctx }) => {
+      const authorization = await resolveOrganizationAuthorizationContext(ctx.user);
+      if (!authorization?.organizationId) throw new Error("An active organization context is required.");
+      const memory = await getIntelligenceEvolution(
+        Number(authorization.organizationId),
+        authorization.authorizedLocationIds,
+      );
+      const verifiedOutcomes = memory.outcomes.filter((item) => Array.isArray(item.evidence) && item.evidence.length > 0);
+      const successful = verifiedOutcomes.filter((item) => item.outcomeType === "positive").length;
+      return {
+        events: memory.events,
+        profiles: memory.profiles,
+        metrics: {
+          approvedLearningEvents: memory.events.length,
+          recordedOutcomes: memory.outcomes.length,
+          verifiedOutcomes: verifiedOutcomes.length,
+          accuracyRate: verifiedOutcomes.length ? Math.round((successful / verifiedOutcomes.length) * 10000) / 100 : 0,
+          adaptiveProfiles: memory.profiles.filter((item) => item.verifiedOutcomeCount >= 5).length,
+        },
+        health: diagnoseIntelligenceHealth({
+          evidenceCount: memory.events.length,
+          dataCompleteness: memory.events.length ? 100 : 0,
+          connectorHealthy: true,
+          recommendationAgeDays: 0,
+          historicalAccuracy: verifiedOutcomes.length ? (successful / verifiedOutcomes.length) * 100 : 0,
+          learningOutcomeCount: verifiedOutcomes.length,
+        }),
+      };
+    }),
+    recordOutcome: protectedProcedure
+      .input(z.object({
+        tenantId: z.string().min(1),
+        recommendationId: z.number().int().positive(),
+        decision: z.enum(["accepted", "rejected", "deferred", "already_done"]),
+        outcomeType: z.enum(["positive", "negative", "neutral", "unknown"]),
+        modelArea: z.enum(["scoring", "prioritization", "recommendations", "forecasting", "duplicates", "workflow", "assignment", "risk", "anomaly", "confidence"]),
+        sourceType: z.enum(["operational", "user_action", "executive_decision", "opportunity_outcome", "connector", "crm", "financial", "marketing", "kpi", "recommendation_history", "business_rule"]),
+        sourceReference: z.string().min(1),
+        approved: z.literal(true),
+        evidence: z.array(z.string().min(1)).min(1),
+        measuredAt: z.coerce.date(),
+        revenueImpact: z.number().int().optional(),
+        operationalImpact: z.string().optional(),
+        timeSavedMinutes: z.number().int().nonnegative().optional(),
+        conversionImprovement: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await requireAuthorizedLocation(ctx.user, input.tenantId);
+        const authorization = await requireWritableOrganizationRole(ctx.user);
+        const validation = validateLearningEvent(input);
+        if (!validation.valid) throw new Error(validation.errors.join(" "));
+        const recommendation = await getRecommendationById(input.recommendationId);
+        if (!recommendation || recommendation.tenantId !== input.tenantId) {
+          throw new Error("Recommendation not found");
+        }
+        const profile = await recordIntelligenceOutcome({
+          ...input,
+          organizationId: Number(authorization.organizationId),
+          recordedByUserId: ctx.user.id,
+        });
+        await computeAndStoreIeMetrics(input.tenantId);
+        return { success: true, profile, autonomousDataWritePerformed: false };
+      }),
+  }),
+
   admin: router({
+    globalEvolution: protectedProcedure.query(async ({ ctx }) => {
+      await requirePlatformAdmin(ctx.user);
+      return anonymizePlatformLearning(await getAnonymousPlatformLearningEvents());
+    }),
     globalIntelligence: protectedProcedure
       .input(z.object({ domain: z.enum(["c2c", "c2b", "b2b"]) }))
       .query(async ({ ctx, input }) => {

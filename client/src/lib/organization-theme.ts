@@ -33,6 +33,7 @@ const WORKSPACE_PATHS = [
   "/financial",
   "/reports",
   "/settings",
+  "/intelligence-evolution",
 ] as const;
 
 function normalize(value: string | undefined) {

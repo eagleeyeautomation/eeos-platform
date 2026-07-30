@@ -54,6 +54,7 @@ export const AVAILABLE_NAV_ROUTES = new Set([
   "/financial",
   "/reports",
   "/settings",
+  "/intelligence-evolution",
   "/admin",
   "/admin/organizations",
   "/admin/onboarding",
@@ -70,6 +71,7 @@ export const AVAILABLE_NAV_ROUTES = new Set([
   "/admin/executive-intelligence",
   "/admin/ai-recommendations",
   "/admin/marketplace",
+  "/admin/intelligence-governance",
   "/access-denied",
   "/404",
 ]);
@@ -117,6 +119,7 @@ export const OWNER_NAV_LINKS: NavItem[] = [
       { label: "Reports", href: "/reports" },
       { label: "Integrations", href: "/integration-status" },
       { label: "Settings", href: "/settings" },
+      { label: "Intelligence Evolution", href: "/intelligence-evolution" },
     ],
   },
   { label: "C2C Intelligence", href: "/c2c-intelligence" },
@@ -157,6 +160,7 @@ export const ADMIN_NAV_LINKS: NavItem[] = [
   { label: "Executive Intelligence", href: "/admin/executive-intelligence" },
   { label: "AI Recommendations", href: "/admin/ai-recommendations" },
   { label: "Marketplace", href: "/admin/marketplace" },
+  { label: "Intelligence Governance", href: "/admin/intelligence-governance" },
   {
     label: "Global Intelligence",
     href: "#",
@@ -230,6 +234,7 @@ export default function Navigation() {
     || location.startsWith("/financial")
     || location.startsWith("/reports")
     || location.startsWith("/settings")
+    || location.startsWith("/intelligence-evolution")
     || isCustomerRole(session.role));
   const activeLinks = isAdminExperience ? ADMIN_NAV_LINKS : isOwnerExperience ? OWNER_NAV_LINKS : NAV_LINKS;
   const dropdownInventory = useMemo(() => buildDropdownRouteInventory(activeLinks), [activeLinks]);

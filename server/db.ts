@@ -27,9 +27,13 @@ import {
   c2bConnectors,
   c2bOpportunities,
   c2bOpportunityAudit,
+  intelligenceLearningEvents,
+  intelligenceOutcomes,
+  intelligenceLearningProfiles,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { resolveMysqlUserSubaccounts } from "./db/mysqlIdentityAuthorization";
+import { calculateLearningProfile, type LearningSourceType } from "./intelligence-evolution/core";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Database Connection
@@ -1480,4 +1484,141 @@ export async function updateC2bOpportunity(input: {
       },
     });
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Intelligence Evolution — approved, tenant-isolated learning loop
+// ─────────────────────────────────────────────────────────────────────────────
+
+let intelligenceEvolutionSchemaReady = false;
+
+async function ensureIntelligenceEvolutionSchema() {
+  if (intelligenceEvolutionSchemaReady) return;
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql.raw(`
+    CREATE TABLE IF NOT EXISTS intelligence_learning_events (
+      id bigint AUTO_INCREMENT PRIMARY KEY, organizationId int NOT NULL, tenantId varchar(128) NOT NULL,
+      recommendationId int, sourceType enum('operational','user_action','executive_decision','opportunity_outcome','connector','crm','financial','marketing','kpi','recommendation_history','business_rule') NOT NULL,
+      sourceReference varchar(256) NOT NULL, approved boolean NOT NULL DEFAULT false, eventType varchar(64) NOT NULL,
+      normalizedEvidence json NOT NULL, modelArea enum('scoring','prioritization','recommendations','forecasting','duplicates','workflow','assignment','risk','anomaly','confidence') NOT NULL,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_learning_event_org_tenant (organizationId,tenantId,createdAt), KEY idx_learning_event_recommendation (recommendationId)
+    )
+  `));
+  await db.execute(sql.raw(`
+    CREATE TABLE IF NOT EXISTS intelligence_outcomes (
+      id bigint AUTO_INCREMENT PRIMARY KEY, organizationId int NOT NULL, tenantId varchar(128) NOT NULL,
+      recommendationId int NOT NULL, decision enum('accepted','rejected','deferred','already_done') NOT NULL,
+      outcomeType enum('positive','negative','neutral','unknown') NOT NULL, revenueImpact int, operationalImpact text,
+      timeSavedMinutes int, conversionImprovement float, evidence json NOT NULL, measuredAt timestamp NOT NULL,
+      recordedByUserId int NOT NULL, createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_intelligence_outcome_org_tenant (organizationId,tenantId,measuredAt), KEY idx_intelligence_outcome_recommendation (recommendationId)
+    )
+  `));
+  await db.execute(sql.raw(`
+    CREATE TABLE IF NOT EXISTS intelligence_learning_profiles (
+      id bigint AUTO_INCREMENT PRIMARY KEY, organizationId int NOT NULL, tenantId varchar(128) NOT NULL,
+      modelArea enum('scoring','prioritization','recommendations','forecasting','duplicates','workflow','assignment','risk','anomaly','confidence') NOT NULL,
+      evidenceCount int NOT NULL DEFAULT 0, verifiedOutcomeCount int NOT NULL DEFAULT 0, successfulOutcomeCount int NOT NULL DEFAULT 0,
+      accuracyRate float NOT NULL DEFAULT 0, adjustment float NOT NULL DEFAULT 0, explanation text NOT NULL,
+      updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY learning_profile_org_tenant_area (organizationId,tenantId,modelArea)
+    )
+  `));
+  intelligenceEvolutionSchemaReady = true;
+}
+
+type ModelArea = typeof intelligenceLearningProfiles.$inferInsert.modelArea;
+
+export async function recordIntelligenceOutcome(input: {
+  organizationId: number;
+  tenantId: string;
+  recommendationId: number;
+  decision: typeof intelligenceOutcomes.$inferInsert.decision;
+  outcomeType: typeof intelligenceOutcomes.$inferInsert.outcomeType;
+  modelArea: ModelArea;
+  sourceType: LearningSourceType;
+  sourceReference: string;
+  evidence: string[];
+  recordedByUserId: number;
+  measuredAt: Date;
+  revenueImpact?: number | null;
+  operationalImpact?: string | null;
+  timeSavedMinutes?: number | null;
+  conversionImprovement?: number | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await ensureIntelligenceEvolutionSchema();
+  await db.transaction(async (tx) => {
+    await tx.insert(intelligenceOutcomes).values({
+      organizationId: input.organizationId, tenantId: input.tenantId,
+      recommendationId: input.recommendationId, decision: input.decision,
+      outcomeType: input.outcomeType, revenueImpact: input.revenueImpact,
+      operationalImpact: input.operationalImpact, timeSavedMinutes: input.timeSavedMinutes,
+      conversionImprovement: input.conversionImprovement, evidence: input.evidence,
+      measuredAt: input.measuredAt, recordedByUserId: input.recordedByUserId,
+    });
+    await tx.insert(intelligenceLearningEvents).values({
+      organizationId: input.organizationId, tenantId: input.tenantId,
+      recommendationId: input.recommendationId, sourceType: input.sourceType,
+      sourceReference: input.sourceReference, approved: true,
+      eventType: "recommendation.outcome_recorded", normalizedEvidence: input.evidence,
+      modelArea: input.modelArea,
+    });
+  });
+  const outcomes = await db.select().from(intelligenceOutcomes).where(and(
+    eq(intelligenceOutcomes.organizationId, input.organizationId),
+    eq(intelligenceOutcomes.tenantId, input.tenantId),
+  ));
+  const events = await db.select().from(intelligenceLearningEvents).where(and(
+    eq(intelligenceLearningEvents.organizationId, input.organizationId),
+    eq(intelligenceLearningEvents.tenantId, input.tenantId),
+    eq(intelligenceLearningEvents.modelArea, input.modelArea),
+    eq(intelligenceLearningEvents.approved, true),
+  ));
+  const profile = calculateLearningProfile(outcomes);
+  await db.insert(intelligenceLearningProfiles).values({
+    organizationId: input.organizationId, tenantId: input.tenantId, modelArea: input.modelArea,
+    evidenceCount: events.length, ...profile,
+  }).onDuplicateKeyUpdate({ set: {
+    evidenceCount: events.length, verifiedOutcomeCount: profile.verifiedOutcomeCount,
+    successfulOutcomeCount: profile.successfulOutcomeCount, accuracyRate: profile.accuracyRate,
+    adjustment: profile.adjustment, explanation: profile.explanation, updatedAt: new Date(),
+  }});
+  return profile;
+}
+
+export async function getIntelligenceEvolution(organizationId: number, tenantIds: string[]) {
+  const db = await getDb();
+  if (!db || !tenantIds.length) return { events: [], outcomes: [], profiles: [] };
+  await ensureIntelligenceEvolutionSchema();
+  const [events, outcomes, profiles] = await Promise.all([
+    db.select().from(intelligenceLearningEvents).where(and(
+      eq(intelligenceLearningEvents.organizationId, organizationId),
+      inArray(intelligenceLearningEvents.tenantId, tenantIds),
+      eq(intelligenceLearningEvents.approved, true),
+    )).orderBy(desc(intelligenceLearningEvents.createdAt)),
+    db.select().from(intelligenceOutcomes).where(and(
+      eq(intelligenceOutcomes.organizationId, organizationId),
+      inArray(intelligenceOutcomes.tenantId, tenantIds),
+    )).orderBy(desc(intelligenceOutcomes.measuredAt)),
+    db.select().from(intelligenceLearningProfiles).where(and(
+      eq(intelligenceLearningProfiles.organizationId, organizationId),
+      inArray(intelligenceLearningProfiles.tenantId, tenantIds),
+    )),
+  ]);
+  return { events, outcomes, profiles };
+}
+
+export async function getAnonymousPlatformLearningEvents() {
+  const db = await getDb();
+  if (!db) return [];
+  await ensureIntelligenceEvolutionSchema();
+  return db.select({
+    organizationId: intelligenceLearningEvents.organizationId,
+    sourceType: intelligenceLearningEvents.sourceType,
+    modelArea: intelligenceLearningEvents.modelArea,
+  }).from(intelligenceLearningEvents).where(eq(intelligenceLearningEvents.approved, true));
 }

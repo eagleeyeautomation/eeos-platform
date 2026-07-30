@@ -22,6 +22,7 @@ const ADMIN_MODULES = [
   { label: "Executive Intelligence", href: "/admin/executive-intelligence", icon: Brain },
   { label: "AI Recommendations", href: "/admin/ai-recommendations", icon: Brain },
   { label: "Marketplace", href: "/admin/marketplace", icon: Building2 },
+  { label: "Intelligence Governance", href: "/admin/intelligence-governance", icon: ShieldCheck },
 ];
 
 const ADMIN_SCREENS = {
@@ -102,6 +103,12 @@ const ADMIN_SCREENS = {
     title: "Marketplace",
     description: "Review approved intelligence and connector capabilities available to EEOS organizations.",
     sectionTitle: "Marketplace",
+  },
+  "/admin/intelligence-governance": {
+    eyebrow: "AI Governance",
+    title: "Intelligence Governance",
+    description: "Monitor anonymous learning adoption and approved evidence without exposing customer Intelligence Memory.",
+    sectionTitle: "Anonymous Platform Learning",
   },
 } as const;
 
@@ -607,6 +614,35 @@ function AiOperationsAdmin() {
   );
 }
 
+function IntelligenceGovernanceAdmin() {
+  const { data, isLoading, error } = trpc.admin.globalEvolution.useQuery(undefined, { retry: false });
+  if (error) return <EmptyState>Anonymous platform learning metrics could not be loaded.</EmptyState>;
+  if (isLoading || !data) return <EmptyState>Loading intelligence governance...</EmptyState>;
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <StatCard label="Organizations represented" value={data.organizationsRepresented} />
+        <StatCard label="Approved learning events" value={data.totalApprovedLearningEvents} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border border-white/10 p-4">
+          <h3 className="font-semibold">Approved sources</h3>
+          <div className="mt-3 space-y-2 text-sm text-white/55">
+            {data.bySource.map((item) => <div key={item.label}>{item.label}: {item.value}</div>)}
+          </div>
+        </div>
+        <div className="rounded-xl border border-white/10 p-4">
+          <h3 className="font-semibold">Model areas</h3>
+          <div className="mt-3 space-y-2 text-sm text-white/55">
+            {data.byModelArea.map((item) => <div key={item.label}>{item.label}: {item.value}</div>)}
+          </div>
+        </div>
+      </div>
+      <p className="text-xs text-white/40">This view contains aggregate counts only. It does not return organization names, evidence, recommendations, strategies, or business rules.</p>
+    </div>
+  );
+}
+
 function AdminRouteContent({ location }: { location: string }) {
   switch (location) {
     case "/admin/organizations":
@@ -623,6 +659,8 @@ function AdminRouteContent({ location }: { location: string }) {
       return <SupportAdmin />;
     case "/admin/ai-operations":
       return <AiOperationsAdmin />;
+    case "/admin/intelligence-governance":
+      return <IntelligenceGovernanceAdmin />;
     default:
       return <AdminOverview />;
   }

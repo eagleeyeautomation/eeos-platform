@@ -39,6 +39,7 @@ import PlatformAdmin from "./pages/PlatformAdmin";
 import OwnerCommandCenter, { type OwnerCommandCenterProps } from "./pages/OwnerCommandCenter";
 import C2bIntelligence from "./pages/C2bIntelligence";
 import GlobalIntelligence from "./pages/GlobalIntelligence";
+import IntelligenceEvolution from "./pages/IntelligenceEvolution";
 
 function owner(component: ComponentType) {
   const Component = component;
@@ -221,6 +222,7 @@ function Router() {
       <Route path="/financial" component={ownerReview({ eyebrow: "Financial", title: "Financial", description: "Organization-scoped financial signals and verified business performance.", emptyTitle: "No financial records available yet", emptyMessage: "Verified financial records will appear after an approved source is connected." })} />
       <Route path="/reports" component={ownerReview({ eyebrow: "Reports", title: "Reports", description: "Organization-scoped executive reports built from verified system records.", emptyTitle: "No reports available yet", emptyMessage: "Reports will appear after verified data is available." })} />
       <Route path="/settings" component={ownerReview({ eyebrow: "Settings", title: "Settings", description: "Organization and workspace settings remain governed by existing roles and permissions.", emptyTitle: "No configurable settings available here yet", emptyMessage: "Additional organization settings will appear as they are approved." })} />
+      <Route path="/intelligence-evolution" component={owner(IntelligenceEvolution)} />
       <Route path="/admin/global-c2c" component={admin(() => <GlobalIntelligence domain="c2c" />)} />
       <Route path="/admin/global-c2b" component={admin(() => <GlobalIntelligence domain="c2b" />)} />
       <Route path="/admin/global-b2b" component={admin(() => <GlobalIntelligence domain="b2b" />)} />
@@ -238,6 +240,7 @@ function Router() {
       <Route path="/admin/executive-intelligence" component={admin(PlatformAdmin)} />
       <Route path="/admin/ai-recommendations" component={admin(PlatformAdmin)} />
       <Route path="/admin/marketplace" component={admin(PlatformAdmin)} />
+      <Route path="/admin/intelligence-governance" component={admin(PlatformAdmin)} />
       <Route path="/access-denied" component={AccessDenied} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
