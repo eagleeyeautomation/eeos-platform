@@ -472,6 +472,86 @@ export const recommendations = mysqlTable("recommendations", {
 export type Recommendation = typeof recommendations.$inferSelect;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// C2B INTELLIGENCE ENGINE — Human-governed acquisition opportunities
+// Every record retains its source attribution and explainable score anatomy.
+// No connector writes to downstream systems without an explicit user decision.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const c2bConnectors = mysqlTable("c2b_connectors", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(),
+  connectorKey: varchar("connectorKey", { length: 64 }).notNull(),
+  displayName: varchar("displayName", { length: 128 }).notNull(),
+  connectorType: mysqlEnum("connectorType", [
+    "search", "crm", "csv", "website", "directory", "referral", "government"
+  ]).notNull(),
+  enabled: boolean("enabled").default(false).notNull(),
+  approvalStatus: mysqlEnum("approvalStatus", ["draft", "approved", "suspended"]).default("draft").notNull(),
+  configuration: json("configuration"),
+  lastRunAt: timestamp("lastRunAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (t) => [
+  uniqueIndex("c2b_connector_org_key_unique").on(t.organizationId, t.connectorKey),
+  index("idx_c2b_connector_org").on(t.organizationId),
+]);
+
+export const c2bOpportunities = mysqlTable("c2b_opportunities", {
+  id: int("id").autoincrement().primaryKey(),
+  opportunityId: varchar("opportunityId", { length: 64 }).notNull().unique(),
+  organizationId: int("organizationId").notNull(),
+  tenantId: varchar("tenantId", { length: 128 }).notNull(),
+  type: varchar("type", { length: 64 }).notNull(),
+  name: varchar("name", { length: 256 }).notNull(),
+  businessName: varchar("businessName", { length: 256 }),
+  city: varchar("city", { length: 128 }),
+  state: varchar("state", { length: 64 }),
+  zip: varchar("zip", { length: 20 }),
+  source: varchar("source", { length: 128 }).notNull(),
+  sourceUrl: text("sourceUrl"),
+  discoveredAt: timestamp("discoveredAt").notNull(),
+  summary: text("summary").notNull(),
+  reasonRelevant: text("reasonRelevant").notNull(),
+  scoring: json("scoring").notNull(),
+  recommendedNextAction: text("recommendedNextAction").notNull(),
+  status: mysqlEnum("status", [
+    "new", "qualified", "high_priority", "pending_review", "approved",
+    "rejected", "research", "assigned", "pending_ghl", "converted"
+  ]).default("new").notNull(),
+  assignedUserId: int("assignedUserId"),
+  duplicateStatus: mysqlEnum("duplicateStatus", ["unchecked", "unique", "possible", "duplicate"]).default("unchecked").notNull(),
+  consentStatus: mysqlEnum("consentStatus", ["unknown", "not_required", "confirmed", "declined"]).default("unknown").notNull(),
+  ghlStatus: mysqlEnum("ghlStatus", ["not_requested", "pending_approval", "approved", "queued", "converted", "failed"]).default("not_requested").notNull(),
+  estimatedPipelineValue: int("estimatedPipelineValue").default(0).notNull(),
+  referralPartner: boolean("referralPartner").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (t) => [
+  index("idx_c2b_opportunity_org_status").on(t.organizationId, t.status),
+  index("idx_c2b_opportunity_tenant").on(t.tenantId),
+  index("idx_c2b_opportunity_source").on(t.organizationId, t.source),
+  index("idx_c2b_opportunity_state").on(t.organizationId, t.state),
+]);
+
+export const c2bOpportunityAudit = mysqlTable("c2b_opportunity_audit", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  opportunityId: int("opportunityId").notNull(),
+  organizationId: int("organizationId").notNull(),
+  actorUserId: int("actorUserId"),
+  action: varchar("action", { length: 64 }).notNull(),
+  previousStatus: varchar("previousStatus", { length: 32 }),
+  nextStatus: varchar("nextStatus", { length: 32 }),
+  details: json("details"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => [
+  index("idx_c2b_audit_opportunity").on(t.opportunityId, t.createdAt),
+  index("idx_c2b_audit_org").on(t.organizationId, t.createdAt),
+]);
+
+export type C2bConnector = typeof c2bConnectors.$inferSelect;
+export type C2bOpportunity = typeof c2bOpportunities.$inferSelect;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PIPELINE LAYER 8: Executive Feedback & Continuous Learning
 // Captures executive decisions on IE recommendations.
 // Feeds back into IE calibration — this is how the IE improves over time.

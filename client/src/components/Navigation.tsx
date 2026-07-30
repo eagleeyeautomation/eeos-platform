@@ -46,6 +46,7 @@ export const AVAILABLE_NAV_ROUTES = new Set([
   "/executive-timeline",
   "/knowledge-graph",
   "/executive-dashboard",
+  "/c2b-intelligence",
   "/admin",
   "/admin/organizations",
   "/admin/onboarding",
@@ -66,6 +67,7 @@ type NavItem = {
   children?: Array<{
     label: string;
     href: string;
+    disabled?: boolean;
   }>;
 };
 
@@ -88,6 +90,17 @@ export const NAV_LINKS: NavItem[] = [
 
 export const OWNER_NAV_LINKS: NavItem[] = [
   { label: "Executive Home", href: "/executive-home" },
+  {
+    label: "C2B Intelligence",
+    href: "/c2b-intelligence",
+    children: [
+      { label: "Client Acquisition", href: "/c2b-intelligence" },
+      { label: "Referral Intelligence", href: "/c2b-intelligence", disabled: true },
+      { label: "Market Intelligence", href: "/c2b-intelligence", disabled: true },
+      { label: "Competitor Intelligence", href: "/c2b-intelligence", disabled: true },
+      { label: "Community Intelligence", href: "/c2b-intelligence", disabled: true },
+    ],
+  },
   { label: "Business Health", href: "/business-health" },
   { label: "AI Recommendations", href: "/ai-recommendations" },
   { label: "Live Signals", href: "/live-signals" },
@@ -138,8 +151,8 @@ export function buildDropdownRouteInventory(
       parent: link.label,
       label: child.label,
       href: child.href,
-      routeExists: routes.has(child.href),
-      disabled: !routes.has(child.href),
+      routeExists: routes.has(child.href) && !child.disabled,
+      disabled: child.disabled || !routes.has(child.href),
       deadClickable: false,
     })),
   );
@@ -174,6 +187,7 @@ export default function Navigation() {
     || location.startsWith("/location-management")
     || location.startsWith("/connect-ghl")
     || location.startsWith("/dashboard")
+    || location.startsWith("/c2b-intelligence")
     || isCustomerRole(session.role));
   const activeLinks = isAdminExperience ? ADMIN_NAV_LINKS : isOwnerExperience ? OWNER_NAV_LINKS : NAV_LINKS;
   const dropdownInventory = useMemo(() => buildDropdownRouteInventory(activeLinks), [activeLinks]);
@@ -300,7 +314,9 @@ export default function Navigation() {
                       >
                         <div className="w-56 glass-card rounded-lg overflow-hidden shadow-xl" role="menu" aria-label={`${link.label} menu`}>
                           {link.children.map((child) => {
-                            const routeExists = AVAILABLE_NAV_ROUTES.has(child.href);
+                            const routeExists = dropdownInventory.some(
+                              (item) => item.label === child.label && item.href === child.href && item.routeExists,
+                            );
                             return routeExists ? (
                               <Link
                                 key={child.href}

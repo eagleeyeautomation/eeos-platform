@@ -37,6 +37,7 @@ import AcceptInvitation from "./pages/AcceptInvitation";
 import AccessDenied from "./pages/AccessDenied";
 import PlatformAdmin from "./pages/PlatformAdmin";
 import OwnerCommandCenter, { type OwnerCommandCenterProps } from "./pages/OwnerCommandCenter";
+import C2bIntelligence from "./pages/C2bIntelligence";
 
 function owner(component: ComponentType) {
   const Component = component;
@@ -211,6 +212,7 @@ function Router() {
           emptyMessage: "This section will populate after verified dashboard data is available from connected systems.",
         })}
       />
+      <Route path="/c2b-intelligence" component={owner(C2bIntelligence)} />
       <Route path="/admin" component={admin(PlatformAdmin)} />
       <Route path="/admin/organizations" component={admin(PlatformAdmin)} />
       <Route path="/admin/organizations/:organizationId" component={admin(PlatformAdmin)} />

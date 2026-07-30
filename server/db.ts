@@ -7,7 +7,7 @@
  * Every query here feeds the Intelligence Engine with precise, trustworthy data.
  */
 
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users,
@@ -24,6 +24,9 @@ import {
   recommendations, Recommendation,
   recommendationFeedback,
   ieMetrics,
+  c2bConnectors,
+  c2bOpportunities,
+  c2bOpportunityAudit,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { resolveMysqlUserSubaccounts } from "./db/mysqlIdentityAuthorization";
@@ -1288,4 +1291,152 @@ export async function getPlatformAiOperationsSummary() {
     latestSignalAt: latestIso(data.signals.map((signal) => signal.receivedAt)),
     recentRecommendations: data.recommendations.slice(0, 10),
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// C2B Intelligence Engine
+// ─────────────────────────────────────────────────────────────────────────────
+
+let c2bSchemaReady = false;
+
+async function ensureC2bSchema() {
+  if (c2bSchemaReady) return;
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql.raw(`
+    CREATE TABLE IF NOT EXISTS c2b_connectors (
+      id int AUTO_INCREMENT PRIMARY KEY,
+      organizationId int NOT NULL,
+      connectorKey varchar(64) NOT NULL,
+      displayName varchar(128) NOT NULL,
+      connectorType enum('search','crm','csv','website','directory','referral','government') NOT NULL,
+      enabled boolean NOT NULL DEFAULT false,
+      approvalStatus enum('draft','approved','suspended') NOT NULL DEFAULT 'draft',
+      configuration json,
+      lastRunAt timestamp NULL,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY c2b_connector_org_key_unique (organizationId, connectorKey),
+      KEY idx_c2b_connector_org (organizationId)
+    )
+  `));
+  await db.execute(sql.raw(`
+    CREATE TABLE IF NOT EXISTS c2b_opportunities (
+      id int AUTO_INCREMENT PRIMARY KEY,
+      opportunityId varchar(64) NOT NULL UNIQUE,
+      organizationId int NOT NULL,
+      tenantId varchar(128) NOT NULL,
+      type varchar(64) NOT NULL,
+      name varchar(256) NOT NULL,
+      businessName varchar(256),
+      city varchar(128),
+      state varchar(64),
+      zip varchar(20),
+      source varchar(128) NOT NULL,
+      sourceUrl text,
+      discoveredAt timestamp NOT NULL,
+      summary text NOT NULL,
+      reasonRelevant text NOT NULL,
+      scoring json NOT NULL,
+      recommendedNextAction text NOT NULL,
+      status enum('new','qualified','high_priority','pending_review','approved','rejected','research','assigned','pending_ghl','converted') NOT NULL DEFAULT 'new',
+      assignedUserId int,
+      duplicateStatus enum('unchecked','unique','possible','duplicate') NOT NULL DEFAULT 'unchecked',
+      consentStatus enum('unknown','not_required','confirmed','declined') NOT NULL DEFAULT 'unknown',
+      ghlStatus enum('not_requested','pending_approval','approved','queued','converted','failed') NOT NULL DEFAULT 'not_requested',
+      estimatedPipelineValue int NOT NULL DEFAULT 0,
+      referralPartner boolean NOT NULL DEFAULT false,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      KEY idx_c2b_opportunity_org_status (organizationId, status),
+      KEY idx_c2b_opportunity_tenant (tenantId),
+      KEY idx_c2b_opportunity_source (organizationId, source),
+      KEY idx_c2b_opportunity_state (organizationId, state)
+    )
+  `));
+  await db.execute(sql.raw(`
+    CREATE TABLE IF NOT EXISTS c2b_opportunity_audit (
+      id bigint AUTO_INCREMENT PRIMARY KEY,
+      opportunityId int NOT NULL,
+      organizationId int NOT NULL,
+      actorUserId int,
+      action varchar(64) NOT NULL,
+      previousStatus varchar(32),
+      nextStatus varchar(32),
+      details json,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_c2b_audit_opportunity (opportunityId, createdAt),
+      KEY idx_c2b_audit_org (organizationId, createdAt)
+    )
+  `));
+  c2bSchemaReady = true;
+}
+
+export async function listC2bOpportunities(organizationId: number, tenantIds: string[]) {
+  const db = await getDb();
+  if (!db || tenantIds.length === 0) return [];
+  await ensureC2bSchema();
+  return db.select().from(c2bOpportunities)
+    .where(and(
+      eq(c2bOpportunities.organizationId, organizationId),
+      inArray(c2bOpportunities.tenantId, tenantIds),
+    ))
+    .orderBy(desc(c2bOpportunities.createdAt));
+}
+
+export async function listC2bConnectors(organizationId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  await ensureC2bSchema();
+  return db.select().from(c2bConnectors)
+    .where(eq(c2bConnectors.organizationId, organizationId))
+    .orderBy(c2bConnectors.displayName);
+}
+
+export async function getC2bOpportunity(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  await ensureC2bSchema();
+  return (await db.select().from(c2bOpportunities).where(eq(c2bOpportunities.id, id)).limit(1))[0];
+}
+
+export async function updateC2bOpportunity(input: {
+  id: number;
+  organizationId: number;
+  actorUserId: number;
+  action: string;
+  status: typeof c2bOpportunities.$inferInsert.status;
+  ghlStatus: typeof c2bOpportunities.$inferInsert.ghlStatus;
+  assignedUserId?: number | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await ensureC2bSchema();
+  const current = await getC2bOpportunity(input.id);
+  if (!current || current.organizationId !== input.organizationId) {
+    throw new Error("Opportunity not found");
+  }
+  await db.transaction(async (tx) => {
+    await tx.update(c2bOpportunities).set({
+      status: input.status,
+      ghlStatus: input.ghlStatus,
+      assignedUserId: input.assignedUserId === undefined ? current.assignedUserId : input.assignedUserId,
+      updatedAt: new Date(),
+    }).where(and(
+      eq(c2bOpportunities.id, input.id),
+      eq(c2bOpportunities.organizationId, input.organizationId),
+    ));
+    await tx.insert(c2bOpportunityAudit).values({
+      opportunityId: input.id,
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: input.action,
+      previousStatus: current.status,
+      nextStatus: input.status,
+      details: {
+        downstreamWritePerformed: false,
+        humanApproved: input.action === "approve" || current.status === "approved",
+      },
+    });
+  });
 }

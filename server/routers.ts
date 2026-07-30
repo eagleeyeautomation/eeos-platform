@@ -30,6 +30,10 @@ import {
   getPlatformAuditActivity,
   getPlatformSupportSummary,
   getPlatformAiOperationsSummary,
+  getC2bOpportunity,
+  listC2bConnectors,
+  listC2bOpportunities,
+  updateC2bOpportunity,
 } from "./db";
 import { runIntelligenceEngine } from "./intelligence-engine";
 import {
@@ -41,6 +45,12 @@ import {
   resolveAuthorizationContext,
   resolveOrganizationAuthorizationContext,
 } from "./authorization";
+import {
+  C2B_ACTION_TRANSITIONS,
+  C2B_CONNECTOR_CATALOG,
+  summarizeC2bOpportunities,
+  type C2bScoring,
+} from "./c2b/core";
 
 export const appRouter = router({
   system: systemRouter,
@@ -382,6 +392,88 @@ export const appRouter = router({
         await requireWritableOrganizationRole(ctx.user!);
         await computeAndStoreIeMetrics(input.tenantId);
         return { success: true };
+      }),
+  }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // C2B Intelligence — attributed discovery and human-governed decisions
+  // ─────────────────────────────────────────────────────────────────────────
+  c2b: router({
+    dashboard: protectedProcedure.query(async ({ ctx }) => {
+      const authorization = await resolveOrganizationAuthorizationContext(ctx.user);
+      if (!authorization?.organizationId) {
+        throw new Error("An active organization context is required.");
+      }
+      const organizationId = Number(authorization.organizationId);
+      const [opportunities, storedConnectors] = await Promise.all([
+        listC2bOpportunities(organizationId, authorization.authorizedLocationIds),
+        listC2bConnectors(organizationId),
+      ]);
+      const connectorState = new Map(storedConnectors.map((item) => [item.connectorKey, item]));
+      const connectors = C2B_CONNECTOR_CATALOG.map((connector) => ({
+        ...connector,
+        enabled: connectorState.get(connector.key)?.enabled ?? false,
+        approvalStatus: connectorState.get(connector.key)?.approvalStatus ?? "draft",
+        lastRunAt: connectorState.get(connector.key)?.lastRunAt ?? null,
+      }));
+      const summary = summarizeC2bOpportunities(opportunities);
+      const recommendations = opportunities
+        .filter((item) => ["high_priority", "pending_review"].includes(item.status))
+        .map((item) => {
+          const scoring = item.scoring as C2bScoring;
+          return {
+            opportunityId: item.opportunityId,
+            priority: item.status === "high_priority" ? "HIGH PRIORITY" : "REVIEW",
+            title: item.businessName || item.name,
+            recommendation: item.recommendedNextAction,
+            source: item.source,
+            sourceUrl: item.sourceUrl,
+            reason: item.reasonRelevant,
+            confidence: scoring.confidence?.value ?? 0,
+            supportingData: scoring.confidence?.evidence ?? [],
+          };
+        });
+      return { summary, opportunities, connectors, recommendations };
+    }),
+
+    act: protectedProcedure
+      .input(z.object({
+        opportunityId: z.number().int().positive(),
+        action: z.enum(["approve", "reject", "assign", "research", "convert_to_ghl", "create_task"]),
+        assignedUserId: z.number().int().positive().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const authorization = await requireWritableOrganizationRole(ctx.user);
+        const opportunity = await getC2bOpportunity(input.opportunityId);
+        if (!opportunity
+          || opportunity.organizationId !== Number(authorization.organizationId)
+          || !authorization.authorizedLocationIds.includes(opportunity.tenantId)) {
+          throw new Error("Opportunity not found");
+        }
+        if (input.action === "convert_to_ghl" && opportunity.status !== "approved") {
+          throw new Error("Human approval is required before GoHighLevel conversion.");
+        }
+        if (input.action === "assign" && !input.assignedUserId) {
+          throw new Error("An assigned user is required.");
+        }
+        const transition = C2B_ACTION_TRANSITIONS[input.action];
+        await updateC2bOpportunity({
+          id: opportunity.id,
+          organizationId: opportunity.organizationId,
+          actorUserId: ctx.user.id,
+          action: input.action,
+          status: transition.status,
+          ghlStatus: transition.ghlStatus,
+          assignedUserId: input.assignedUserId,
+        });
+        return {
+          success: true,
+          downstreamWritePerformed: false,
+          nextStatus: transition.status,
+          message: input.action === "convert_to_ghl"
+            ? "Approved handoff queued. Phase 1 performs no automatic outreach or CRM write."
+            : "Decision recorded with audit history.",
+        };
       }),
   }),
 
