@@ -1,672 +1,211 @@
-// EEOS Customer Experience — Home Page
-// Eagle Eye Automation company positioning + EEOS as flagship product
-// "Transcend Your Business. Stop managing. Start leading."
-// Sovereign Night — aerospace command interface
-
-import { useAuth } from "@/_core/hooks/useAuth";
+import { ArrowRight, Brain, Link2, Lock, Play, ShieldCheck, Zap } from "lucide-react";
 import { Link } from "wouter";
-import {
-  ArrowRight, Play, ChevronRight, Zap, Shield, Brain,
-  BarChart3, Globe, Users, Database, Eye, Cpu, Lock,
-  TrendingUp, Lightbulb, Target,
-} from "lucide-react";
-import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
+
 import AnimatedSection from "@/components/AnimatedSection";
-import CountUp from "@/components/CountUp";
+import Footer from "@/components/Footer";
+import Navigation from "@/components/Navigation";
 
-const STATS = [
-  { value: 340, suffix: "%", label: "Average ROI" },
-  { value: 6, suffix: " weeks", label: "Time to Value" },
-  { value: 42, suffix: "+", label: "Service Businesses" },
-  { value: 98, suffix: "%", label: "Retention Rate" },
-];
-
-const VALUE_PROPS = [
+const CAPABILITIES = [
   {
     icon: Brain,
-    title: "AI Executive Intelligence",
-    description: "EEOS turns daily business activity into executive-level insight so small business owners can lead with the clarity of a much larger company.",
+    title: "Executive intelligence",
+    description: "Turn approved business signals into a clear view of health, priorities, and next actions.",
+    href: "/why-eeos",
+    linkLabel: "Why EEOS",
+  },
+  {
+    icon: Link2,
+    title: "Connected operations",
+    description: "Connect the systems your business already uses, beginning with GoHighLevel.",
+    href: "/integrations",
+    linkLabel: "Explore integrations",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Secure by design",
+    description: "Protect customer data with role-aware access, connection health, and disciplined operations.",
+    href: "/security",
+    linkLabel: "Review security",
   },
   {
     icon: Zap,
-    title: "Intelligent Automation",
-    description: "Automate follow-up, workflows, alerts, and decision support without turning EEOS into another tool your team has to manage.",
-  },
-  {
-    icon: Shield,
-    title: "Secure Operations",
-    description: "Bring disciplined access controls, connection health, and operational visibility to the systems your business already uses.",
-  },
-  {
-    icon: Globe,
-    title: "GoHighLevel Integration",
-    description: "Connect GoHighLevel first, then turn contacts, opportunities, conversations, appointments, and tasks into a trusted owner view.",
-  },
-  {
-    icon: BarChart3,
-    title: "Business Health Monitoring",
-    description: "Monitor the signals that matter most: growth, response, staffing, operations, pipeline, risk, and execution quality.",
-  },
-  {
-    icon: Users,
-    title: "Decision Support",
-    description: "Designed for owners and leadership teams who need answers, priorities, and next steps without hiring a Fortune 500 analytics department.",
-  },
-];
-
-const LOGOS = [
-  "MERIDIAN STAFFING", "APEX SERVICES", "NORTHSTAR CONSULTING", "VANTAGE HEALTH",
-  "SUMMIT OPERATIONS", "PINNACLE STAFFING", "SOVEREIGN SERVICES", "ATLAS GROUP",
-];
-
-const HOW_IT_WORKS = [
-  {
-    step: "01",
-    icon: Database,
-    title: "Connects to your business systems",
-    description: "EEOS securely connects to the systems your business already uses, starting with GoHighLevel, and reads approved activity signals.",
-    color: "#C9A227",
-  },
-  {
-    step: "02",
-    icon: Eye,
-    title: "Reads approved signals",
-    description: "Our intelligence engine monitors the signals you authorize — KPIs, alerts, trends, and anomalies — across every connected system in real time.",
-    color: "#0F2747",
-  },
-  {
-    step: "03",
-    icon: Cpu,
-    title: "Turns them into executive recommendations",
-    description: "EEOS synthesizes every signal into prioritized, context-rich recommendations delivered directly to your executive dashboard. No noise. Just decisions.",
-    color: "#10B981",
-  },
-];
-
-const PUBLIC_EEOS_ARTWORK = [
-  { src: "/eeos-assets/approved/modules/eeos-operating-system.png", alt: "EEOS AI operating system for service businesses" },
-  { src: "/eeos-assets/approved/modules/why-choose-eeos.png", alt: "Why service businesses choose EEOS" },
-  { src: "/eeos-assets/approved/modules/speak-to-eeos-brain.png", alt: "Speak to the EEOS Brain" },
-  { src: "/eeos-assets/approved/modules/automations-that-work.png", alt: "EEOS automations that work for your business" },
-  { src: "/eeos-assets/approved/modules/integrations-connect-everything.png", alt: "EEOS integrations that connect everything" },
-  { src: "/eeos-assets/approved/modules/security-you-can-trust.png", alt: "EEOS security you can trust" },
-  { src: "/eeos-assets/approved/modules/industries-we-serve.png", alt: "Industries served by Eagle Eye Automation" },
-  { src: "/eeos-assets/approved/modules/why-choose-eea.png", alt: "Why choose Eagle Eye Automation" },
-  { src: "/eeos-assets/approved/modules/pricing-that-makes-sense.png", alt: "EEOS pricing that makes sense" },
-];
-
-// The transformation narrative — what business owners move from and to
-const TRANSFORMATION = [
-  {
-    from: "Reacting to yesterday's problems",
-    to: "Making tomorrow's decisions with confidence",
-    icon: Target,
-  },
-  {
-    from: "Buried in reports and dashboards",
-    to: "One clear view of what matters most",
-    icon: Eye,
-  },
-  {
-    from: "Managing the business",
-    to: "Leading the business",
-    icon: TrendingUp,
-  },
-  {
-    from: "Guessing what to prioritize",
-    to: "Acting on AI-ranked recommendations",
-    icon: Lightbulb,
+    title: "A practical path to value",
+    description: "Start with a focused operating foundation designed for growing service businesses.",
+    href: "/pricing",
+    linkLabel: "View pricing",
   },
 ];
 
 export default function Home() {
-  // The useAuth hook provides authentication state.
-  // To implement login/logout, call logout(), or start login from an event
-  // handler: onClick={() => startLogin()} (imported from "@/const").
-  let { user, loading, error, isAuthenticated, logout } = useAuth();
-
   return (
-    <div className="min-h-screen bg-[#0B0B0B]">
+    <div className="min-h-screen bg-[#0B0B0B] text-[#FFFFFF]">
       <Navigation />
 
-      {/* ── HERO ── */}
-      <section className="relative min-h-screen flex items-center overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0">
-          <img
-            src="/eeos-assets/eeos-hero-bg.svg"
-            alt=""
-            className="w-full h-full object-cover opacity-55"
-          />
-          <div className="absolute inset-0 hero-overlay" />
-          <div className="absolute inset-0 scan-grid opacity-30" />
-        </div>
-
-        {/* Teal glow */}
-        <div
-          className="absolute right-[5%] top-[15%] w-[500px] h-[500px] rounded-full pointer-events-none"
-          style={{
-            background: "radial-gradient(circle, rgba(201,162,39,0.10) 0%, transparent 70%)",
-            filter: "blur(60px)",
-          }}
-        />
-
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 w-full">
-          <div className="max-w-3xl">
-
-            {/* Company badge */}
-            <div className="flex items-center gap-3 mb-8 animate-fade-up">
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-[rgba(201,162,39,0.25)] bg-[rgba(201,162,39,0.06)]">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#C9A227] animate-pulse" />
-                <span className="section-label text-[10px]">Eagle Eye Automation — AI Operating System for Small Businesses</span>
-              </div>
-            </div>
-
-            {/* Primary headline — the transcendence message */}
-            <h1
-              className="text-5xl sm:text-6xl lg:text-7xl font-bold text-[#FFFFFF] leading-[1.05] tracking-tight mb-4 animate-fade-up"
-              style={{ fontFamily: "'Space Grotesk', sans-serif", animationDelay: "100ms" }}
-            >
-              Fortune 500 Power
-              <br />
-              for Small Business.
-            </h1>
-            <p
-              className="text-2xl sm:text-3xl font-semibold text-[#FFFFFF]/70 mb-6 animate-fade-up"
-              style={{ fontFamily: "'Space Grotesk', sans-serif", animationDelay: "150ms" }}
-            >
-              The AI Operating System that helps owners{" "}
-              <span className="gradient-text">lead with executive intelligence.</span>
-            </p>
-
-            {/* The core explanation */}
-            <div className="mb-8 animate-fade-up" style={{ animationDelay: "200ms" }}>
-                <p className="text-base sm:text-lg text-[#FFFFFF]/65 leading-relaxed max-w-2xl mb-5">
-                  Eagle Eye Automation builds AI, automation, and executive intelligence for small businesses. Our flagship product, <span className="text-[#C9A227] font-semibold">EEOS</span>, gives owners enterprise-level visibility, decision support, workflow automation, and secure operations without requiring an enterprise-size team.
-                </p>
-              <div className="flex items-start gap-3 p-4 rounded-xl border border-[rgba(201,162,39,0.2)] bg-[rgba(201,162,39,0.04)]">
-                <Lock className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
-                <p className="text-sm text-[#FFFFFF]/75 leading-relaxed">
-                  <span className="text-[#C9A227] font-semibold">How EEOS works:</span> Connects to your business systems, reads approved signals, and turns them into executive intelligence — all without storing your source data.
-                </p>
-              </div>
-            </div>
-
-            {/* CTAs */}
-            <div
-              className="flex flex-col sm:flex-row gap-3 animate-fade-up"
-              style={{ animationDelay: "300ms" }}
-            >
-              <Link
-                href="/connect-ghl"
-                className="inline-flex items-center justify-center gap-2 px-7 py-4 text-base font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_28px_rgba(201,162,39,0.45)]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                <Zap className="w-4 h-4" />
-                Start Private Beta
-              </Link>
-              <Link
-                href="/demo"
-                className="inline-flex items-center justify-center gap-2 px-7 py-4 text-base font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] hover:border-[rgba(201,162,39,0.6)] active:scale-[0.97] transition-all duration-200"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                <Play className="w-4 h-4" />
-                Request Demo
-              </Link>
-              <Link
-                href="/onboarding"
-                className="inline-flex items-center justify-center gap-2 px-7 py-4 text-base font-semibold text-[#FFFFFF]/70 hover:text-[#FFFFFF] active:scale-[0.97] transition-all duration-200"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                Connect Your Business
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-
-            {/* Trust signals */}
-            <div
-              className="flex flex-wrap items-center gap-4 sm:gap-6 mt-10 animate-fade-up"
-              style={{ animationDelay: "400ms" }}
-            >
-              {["SOC 2 Type II", "ISO 27001", "FedRAMP Ready", "Service Business Specialists"].map((badge) => (
-                <div key={badge} className="flex items-center gap-1.5">
-                  <div className="w-1 h-1 rounded-full bg-[#C9A227]" />
-                  <span
-                    className="text-xs text-[#FFFFFF]/45 tracking-wide"
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  >
-                    {badge}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-float hidden sm:flex">
-          <div className="w-px h-12 bg-gradient-to-b from-[rgba(201,162,39,0.6)] to-transparent" />
-          <span
-            className="text-[10px] text-[#C9A227] tracking-[0.2em] uppercase"
-            style={{ fontFamily: "'JetBrains Mono', monospace" }}
-          >
-            Scroll
-          </span>
-        </div>
-      </section>
-
-      {/* ── STATS BAR ── */}
-      <section className="bg-[#141414] border-y border-[rgba(201,162,39,0.1)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-            {STATS.map((stat, i) => (
-              <AnimatedSection key={stat.label} delay={i * 100} className="text-center">
-                <div
-                  className="text-3xl sm:text-4xl font-bold text-[#C9A227] mb-1"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  <CountUp end={stat.value} suffix={stat.suffix} />
-                </div>
-                <div
-                  className="text-xs text-[#FFFFFF]/50 tracking-wide"
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                >
-                  {stat.label}
-                </div>
-              </AnimatedSection>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── APPROVED EEOS ARTWORK ── */}
-      <section className="bg-[#0B0B0B] py-20 sm:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <AnimatedSection className="mb-12">
-            <div className="section-label mb-3">Explore EEOS</div>
-            <h2
-              className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              Executive intelligence for
-              <br />
-              <span className="gradient-text">service businesses.</span>
-            </h2>
-          </AnimatedSection>
-
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {PUBLIC_EEOS_ARTWORK.map((artwork, index) => (
-              <AnimatedSection key={artwork.src} delay={(index % 3) * 80}>
-                <figure className="h-full overflow-hidden rounded-2xl border border-[rgba(201,162,39,0.18)] bg-[#050505] shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
-                  <img
-                    src={artwork.src}
-                    alt={artwork.alt}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-full w-full object-contain"
-                  />
-                </figure>
-              </AnimatedSection>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── THE TRANSFORMATION ── */}
-      <section className="bg-[#0B0B0B] py-20 sm:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <AnimatedSection className="mb-14">
-            <div className="section-label mb-3">The Shift</div>
-            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-              <h2
-                className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight leading-tight max-w-xl"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                From reactive operator
-                <br />
-                <span className="gradient-text">to confident leader.</span>
-              </h2>
-              <p className="text-[#FFFFFF]/55 max-w-sm text-sm leading-relaxed lg:text-right">
-                EEOS brings enterprise-level intelligence, automation, and business health monitoring into one owner command center.
-              </p>
-            </div>
-          </AnimatedSection>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {TRANSFORMATION.map((item, i) => (
-              <AnimatedSection key={item.from} delay={i * 80}>
-                <div className="glass-card rounded-xl p-6 h-full group hover:border-[rgba(201,162,39,0.3)] transition-all duration-300">
-                  <div className="flex items-start gap-4">
-                    <div className="w-9 h-9 rounded-lg bg-[rgba(201,162,39,0.08)] border border-[rgba(201,162,39,0.18)] flex items-center justify-center shrink-0 mt-0.5">
-                      <item.icon className="w-4 h-4 text-[#C9A227]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      {/* Before */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[9px] font-bold text-[#EF4444]/60 tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>BEFORE</span>
-                        <div className="flex-1 h-px bg-[rgba(239,68,68,0.15)]" />
-                      </div>
-                      <p className="text-sm text-[#FFFFFF]/40 line-through mb-3 leading-snug">{item.from}</p>
-                      {/* After */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[9px] font-bold text-[#C9A227]/70 tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>WITH EEOS</span>
-                        <div className="flex-1 h-px bg-[rgba(201,162,39,0.2)]" />
-                      </div>
-                      <p className="text-sm font-semibold text-[#FFFFFF] leading-snug">{item.to}</p>
-                    </div>
-                  </div>
-                </div>
-              </AnimatedSection>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ── */}
-      <section className="bg-[#141414] py-20 sm:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <AnimatedSection className="mb-14">
-            <div className="section-label mb-3">How EEOS Works</div>
-            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-              <h2
-                className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight leading-tight max-w-xl"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                Three steps from
-                <br />
-                <span className="gradient-text">data to decision.</span>
-              </h2>
-              <p className="text-[#FFFFFF]/55 max-w-sm text-sm leading-relaxed lg:text-right">
-                EEOS connects to your business systems, reads approved signals, and turns them into executive intelligence and decision support.
-              </p>
-            </div>
-          </AnimatedSection>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
-            {/* Connector line — desktop only */}
-            <div className="hidden md:block absolute top-12 left-[calc(33%+1rem)] right-[calc(33%+1rem)] h-px bg-gradient-to-r from-[rgba(201,162,39,0.3)] via-[rgba(99,102,241,0.3)] to-[rgba(16,185,129,0.3)]" />
-
-            {HOW_IT_WORKS.map((step, i) => (
-              <AnimatedSection key={step.step} delay={i * 120}>
-                <div className="relative glass-card rounded-2xl p-6 sm:p-8 h-full group hover:border-[rgba(201,162,39,0.3)] transition-all duration-300">
-                  <div
-                    className="text-[10px] font-bold tracking-[0.2em] mb-4"
-                    style={{ fontFamily: "'JetBrains Mono', monospace", color: step.color }}
-                  >
-                    STEP {step.step}
-                  </div>
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
-                    style={{ background: `${step.color}15`, border: `1px solid ${step.color}30` }}
-                  >
-                    <step.icon className="w-6 h-6" style={{ color: step.color }} />
-                  </div>
-                  <h3
-                    className="text-lg font-semibold text-[#FFFFFF] mb-3 leading-snug"
-                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                  >
-                    {step.title}
-                  </h3>
-                  <p className="text-sm text-[#FFFFFF]/60 leading-relaxed">{step.description}</p>
-                  {i < HOW_IT_WORKS.length - 1 && (
-                    <div className="md:hidden flex justify-center mt-6">
-                      <ArrowRight className="w-5 h-5 text-[#C9A227]/40 rotate-90" />
-                    </div>
-                  )}
-                </div>
-              </AnimatedSection>
-            ))}
-          </div>
-
-          <AnimatedSection delay={400} className="mt-10 text-center">
-            <Link
-              href="/integrations"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-[#C9A227] hover:gap-3 transition-all duration-200"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              See all integrations and security details
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </AnimatedSection>
-        </div>
-      </section>
-
-      {/* ── LOGO MARQUEE ── */}
-      <section className="bg-[#0B0B0B] border-t border-[rgba(201,162,39,0.06)] py-10 overflow-hidden">
-        <p
-          className="text-center text-[10px] text-[#FFFFFF]/25 tracking-[0.2em] uppercase mb-6"
-          style={{ fontFamily: "'JetBrains Mono', monospace" }}
-        >
-          Trusted by small businesses ready for enterprise-level intelligence
-        </p>
-        <div
-          className="flex gap-16 items-center"
-          style={{ animation: "marquee 30s linear infinite" }}
-        >
-          {[...LOGOS, ...LOGOS].map((logo, i) => (
-            <div
-              key={i}
-              className="whitespace-nowrap text-sm font-semibold text-[#FFFFFF]/18 tracking-[0.15em] uppercase shrink-0"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              {logo}
-            </div>
-          ))}
-        </div>
-        <style>{`
-          @keyframes marquee {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }
-        `}</style>
-      </section>
-
-      {/* ── VALUE PROPS ── */}
-      <section className="bg-[#0B0B0B] scan-grid py-20 sm:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <AnimatedSection className="mb-14">
-            <div className="section-label mb-3">Why EEOS</div>
-            <h2
-              className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight mb-3"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              Intelligence that operates
-              <br />
-              <span className="gradient-text">at the speed of leadership</span>
-            </h2>
-            <p className="text-[#FFFFFF]/55 max-w-lg text-sm leading-relaxed">
-              EEOS doesn't just report what happened — it helps small business owners understand what matters, what changed, and what to do next.
-            </p>
-          </AnimatedSection>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {VALUE_PROPS.map((prop, i) => (
-              <AnimatedSection key={prop.title} delay={i * 70}>
-                <div className="glass-card rounded-xl p-6 h-full hover:border-[rgba(201,162,39,0.3)] transition-all duration-300 group">
-                  <div className="w-10 h-10 rounded-lg bg-[rgba(201,162,39,0.08)] border border-[rgba(201,162,39,0.18)] flex items-center justify-center mb-4 group-hover:bg-[rgba(201,162,39,0.14)] transition-colors">
-                    <prop.icon className="w-5 h-5 text-[#C9A227]" />
-                  </div>
-                  <h3
-                    className="text-base font-semibold text-[#FFFFFF] mb-2"
-                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                  >
-                    {prop.title}
-                  </h3>
-                  <p className="text-sm text-[#FFFFFF]/58 leading-relaxed">{prop.description}</p>
-                </div>
-              </AnimatedSection>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── DEMO PREVIEW ── */}
-      <section className="bg-[#141414] py-20 sm:py-28 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <main>
+        <section className="relative overflow-hidden border-b border-[rgba(201,162,39,0.12)] bg-[#080808] pt-24">
+          <div className="absolute inset-0 scan-grid opacity-20" aria-hidden="true" />
+          <div className="relative z-10 mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
             <AnimatedSection>
-              <div className="section-label mb-4">EEOS — Executive Dashboard</div>
-              <h2
-                className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight mb-5"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                See everything.
-                <br />
-                <span className="gradient-text">Decide faster.</span>
-              </h2>
-              <p className="text-[#FFFFFF]/62 leading-relaxed mb-6 text-sm sm:text-base">
-                The EEOS Executive Dashboard delivers a command view of your entire small business — from lead flow and response speed to operations, staffing, pipeline health, and strategic momentum — in a single, actionable interface.
-              </p>
-              <ul className="space-y-2.5 mb-8">
-                {[
-                  "Real-time KPI synthesis across all departments",
-                  "AI-prioritized action queue for the business owner",
-                  "Risk signals surfaced before they become crises",
-                  "Strategic alignment scoring across business units",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-3">
-                    <ChevronRight className="w-4 h-4 text-[#C9A227] mt-0.5 shrink-0" />
-                    <span className="text-sm text-[#FFFFFF]/68">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Link
-                  href="/demo"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-lg hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_20px_rgba(201,162,39,0.35)]"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              <div className="overflow-hidden rounded-3xl border border-[#C9A227]/25 bg-black shadow-[0_28px_100px_rgba(0,0,0,0.65)]">
+                <video
+                  className="aspect-video h-auto w-full object-cover"
+                  autoPlay
+                  controls
+                  loop
+                  muted
+                  playsInline
+                  preload="metadata"
+                  poster="/eeos-assets/eeos-hero-bg.svg"
+                  aria-label="EEOS executive operating system introduction"
                 >
-                  Request Demo
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-                <Link
-                  href="/connect-ghl"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-lg hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  <Zap className="w-4 h-4" />
-                  Start Private Beta
-                </Link>
-              </div>
-            </AnimatedSection>
-
-            <AnimatedSection delay={200}>
-              <div className="relative">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[rgba(201,162,39,0.08)] to-transparent" />
-                <img
-                  src="/eeos-assets/eeos-demo-dashboard.svg"
-                  alt="EEOS Executive Dashboard"
-                  className="w-full rounded-2xl border border-[rgba(201,162,39,0.15)] shadow-[0_0_60px_rgba(201,162,39,0.1)]"
-                />
-                <div className="absolute -top-3 -right-3 sm:-top-4 sm:-right-4 glass-card rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 animate-float">
-                  <div className="text-[10px] text-[#FFFFFF]/50 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Revenue YTD</div>
-                  <div className="text-base sm:text-lg font-bold text-[#C9A227]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>$4.2M</div>
-                  <div className="text-xs text-[#10B981]">↑ +18.4%</div>
-                </div>
-                <div className="absolute -bottom-3 -left-3 sm:-bottom-4 sm:-left-4 glass-card rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 animate-float" style={{ animationDelay: "1s" }}>
-                  <div className="text-[10px] text-[#FFFFFF]/50 mb-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Priorities Active</div>
-                  <div className="text-base sm:text-lg font-bold text-[#F59E0B]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>5</div>
-                  <div className="text-xs text-[#FFFFFF]/50">1 Critical</div>
-                </div>
+                  <source
+                    src="/eeos-assets/video/eeos-first-commercial.mp4"
+                    type="video/mp4"
+                  />
+                  Your browser does not support embedded video.
+                </video>
               </div>
             </AnimatedSection>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── KNOWLEDGE GRAPH PREVIEW ── */}
-      <section className="bg-[#0B0B0B] py-20 sm:py-28 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <AnimatedSection delay={200} className="order-2 lg:order-1">
-              <div className="relative">
-                <img
-                  src="/eeos-assets/eeos-knowledge-graph.svg"
-                  alt="EEOS Knowledge Graph"
-                  className="w-full rounded-2xl border border-[rgba(201,162,39,0.15)] shadow-[0_0_60px_rgba(201,162,39,0.08)]"
-                />
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-[#0B0B0B]/40 to-transparent pointer-events-none" />
-              </div>
-            </AnimatedSection>
-
-            <AnimatedSection className="order-1 lg:order-2">
-              <div className="section-label mb-4">Business DNA</div>
-              <h2
-                className="text-3xl sm:text-4xl font-bold text-[#FFFFFF] tracking-tight mb-5"
+        <section className="relative overflow-hidden border-b border-[#C9A227]/10 bg-[#141414] py-20 sm:py-24">
+          <div className="absolute inset-0 scan-grid opacity-20" aria-hidden="true" />
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <AnimatedSection className="max-w-4xl">
+              <div className="section-label mb-5">Eagle Eye Operating System</div>
+              <h1
+                className="text-5xl font-bold leading-[1.04] tracking-tight text-[#FFFFFF] sm:text-6xl lg:text-7xl"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                Your business,
+                Fortune 500 Power
                 <br />
-                <span className="gradient-text">mapped in real time.</span>
-              </h2>
-              <p className="text-[#FFFFFF]/62 leading-relaxed mb-6 text-sm sm:text-base">
-                EEOS builds a living knowledge graph of your entire business — mapping relationships between people, departments, systems, risks, and opportunities. See how everything connects, and where the critical paths run.
+                for Small Business.
+              </h1>
+              <p className="mt-5 text-2xl font-semibold text-[#FFFFFF]/72 sm:text-3xl" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                The AI Operating System that helps owners <span className="gradient-text">lead with executive intelligence.</span>
               </p>
-              <Link
-                href="/features"
-                className="inline-flex items-center gap-2 text-sm font-semibold text-[#C9A227] hover:gap-3 transition-all duration-200"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                Explore all EEOS features
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </AnimatedSection>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FINAL CTA ── */}
-      <section className="bg-[#141414] border-t border-[rgba(201,162,39,0.1)] py-20 sm:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <AnimatedSection>
-            <div className="flex flex-col lg:flex-row items-start lg:items-center gap-10 lg:gap-20">
-              <div className="flex-1">
-                {/* Company attribution */}
-                <div className="text-[10px] text-[#FFFFFF]/30 tracking-[0.2em] uppercase mb-3" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  Eagle Eye Automation · Flagship Product
-                </div>
-                <h2
-                  className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#FFFFFF] tracking-tight mb-4 leading-tight"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  Ready to transcend
-                  <br />
-                  <span className="gradient-text">your business?</span>
-                </h2>
-                <p className="text-[#FFFFFF]/55 max-w-lg text-sm sm:text-base leading-relaxed">
-                  Join the small business owners who are moving beyond reactive management into executive intelligence. EEOS brings Fortune 500-level visibility, automation, and decision support into one owner command center.
+              <p className="mt-7 max-w-3xl text-base leading-7 text-[#FFFFFF]/68 sm:text-lg sm:leading-8">
+                Eagle Eye Automation builds AI, automation, and executive intelligence for small businesses. Our flagship product, <span className="font-semibold text-[#C9A227]">EEOS</span>, gives owners enterprise-level visibility, decision support, workflow automation, and secure operations without requiring an enterprise-size team.
+              </p>
+              <div className="mt-6 flex max-w-3xl items-start gap-3 rounded-xl border border-[#C9A227]/20 bg-[#C9A227]/[0.04] p-4">
+                <Lock className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A227]" />
+                <p className="text-sm leading-6 text-[#FFFFFF]/75">
+                  <span className="font-semibold text-[#C9A227]">How EEOS works:</span> Connects to your business systems, reads approved signals, and turns them into executive intelligence — all without storing your source data.
                 </p>
               </div>
-              <div className="flex flex-col gap-3 w-full sm:w-auto shrink-0">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link
                   href="/connect-ghl"
-                  className="flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-xl hover:bg-[#D8B84A] active:scale-[0.97] transition-all duration-200 shadow-[0_0_28px_rgba(201,162,39,0.45)]"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#C9A227] px-6 py-3 text-sm font-bold text-[#0B0B0B] transition hover:bg-[#D8B84A]"
                 >
-                  <Zap className="w-4 h-4" />
+                  <Zap className="h-4 w-4" />
                   Start Private Beta
                 </Link>
                 <Link
                   href="/demo"
-                  className="flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.35)] rounded-xl hover:bg-[rgba(201,162,39,0.08)] active:scale-[0.97] transition-all duration-200"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#C9A227]/40 px-6 py-3 text-sm font-semibold text-[#C9A227] transition hover:bg-[#C9A227]/10"
                 >
+                  <Play className="h-4 w-4" />
                   Request Demo
                 </Link>
                 <Link
                   href="/onboarding"
-                  className="flex items-center justify-center gap-2 px-8 py-3 text-sm font-semibold text-[#FFFFFF]/60 hover:text-[#FFFFFF] transition-all duration-200"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-[#FFFFFF]/72 transition hover:text-[#FFFFFF]"
                 >
                   Connect Your Business
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
+              <div className="mt-10 flex flex-wrap gap-x-6 gap-y-3">
+                {["SOC 2 Type II", "ISO 27001", "FedRAMP Ready", "Service Business Specialists"].map((indicator) => (
+                  <div key={indicator} className="flex items-center gap-2 text-xs tracking-wide text-[#FFFFFF]/55">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#C9A227]" aria-hidden="true" />
+                    {indicator}
+                  </div>
+                ))}
+              </div>
+            </AnimatedSection>
+          </div>
+        </section>
+
+        <section className="bg-[#0B0B0B] py-20">
+          <div className="mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8">
+            <AnimatedSection>
+              <div className="section-label mb-4">One operating view</div>
+              <h2
+                className="text-3xl font-bold tracking-tight sm:text-4xl"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                From scattered activity to executive clarity.
+              </h2>
+              <p className="mx-auto mt-5 max-w-3xl text-base leading-7 text-[#FFFFFF]/65">
+                EEOS is the operating layer between your business systems and the decisions you make every day. It presents verified information, connection status, operational priorities, and supported recommendations without turning leadership into another reporting job.
+              </p>
+            </AnimatedSection>
+          </div>
+        </section>
+
+        <section className="bg-[#0B0B0B] py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <AnimatedSection className="mb-10 max-w-3xl">
+              <div className="section-label mb-4">Platform capabilities</div>
+              <h2
+                className="text-3xl font-bold tracking-tight sm:text-4xl"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                The essentials, organized around how executives lead.
+              </h2>
+            </AnimatedSection>
+            <div className="grid gap-5 md:grid-cols-2">
+              {CAPABILITIES.map((capability, index) => (
+                <AnimatedSection key={capability.title} delay={index * 80}>
+                  <article className="glass-card flex h-full flex-col rounded-2xl p-6">
+                    <span className="mb-5 w-fit rounded-xl border border-[#C9A227]/30 bg-[#C9A227]/10 p-3 text-[#C9A227]">
+                      <capability.icon className="h-5 w-5" />
+                    </span>
+                    <h3 className="text-xl font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                      {capability.title}
+                    </h3>
+                    <p className="mt-3 flex-1 text-sm leading-6 text-[#FFFFFF]/62">{capability.description}</p>
+                    <Link
+                      href={capability.href}
+                      className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#C9A227] transition hover:text-[#D8B84A]"
+                    >
+                      {capability.linkLabel}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </article>
+                </AnimatedSection>
+              ))}
             </div>
-          </AnimatedSection>
-        </div>
-      </section>
+          </div>
+        </section>
+
+        <section className="border-y border-[#C9A227]/15 bg-[#141414] py-20">
+          <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+            <AnimatedSection>
+              <div className="section-label mb-4">See EEOS in context</div>
+              <h2
+                className="text-3xl font-bold tracking-tight sm:text-5xl"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                Build a clearer operating rhythm for your business.
+              </h2>
+              <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#FFFFFF]/65">
+                Request a focused walkthrough of the EEOS experience and its fit for your organization.
+              </p>
+              <Link
+                href="/demo"
+                className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#C9A227] px-7 py-3 text-sm font-bold text-[#0B0B0B] transition hover:bg-[#D8B84A]"
+              >
+                Request a Demo
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </AnimatedSection>
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </div>
