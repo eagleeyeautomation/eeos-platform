@@ -3,7 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerGhlOAuthRoutes } from "./ghl-oauth";
 import { sdk } from "./_core/sdk";
 import {
-  createMetadataOnlySubaccount,
+  createVerifiedGhlSubaccount,
+  deleteVerifiedGhlSubaccount,
+  getAllSubaccountsByMembership,
+  getSubaccountByGhlLocationId,
   getMembershipById,
   getMembershipUser,
   getOrganizationById,
@@ -19,7 +22,9 @@ import {
 import {
   safeGhlConnectionStatus,
   storeGhlConnectionToken,
+  storeGhlConnectionTokenWithAudit,
   verifyGhlLocationIdentity,
+  verifyGhlLocationWithAccessToken,
 } from "./ghl-token-store";
 import { buildGhlOperationsSnapshot } from "./ghl-operations-snapshot";
 
@@ -33,7 +38,10 @@ vi.mock("./_core/env", () => ({
 
 vi.mock("./_core/sdk", () => ({ sdk: { authenticateRequest: vi.fn(), readSessionToken: vi.fn() } }));
 vi.mock("./db", () => ({
-  createMetadataOnlySubaccount: vi.fn(),
+  createVerifiedGhlSubaccount: vi.fn(),
+  deleteVerifiedGhlSubaccount: vi.fn(),
+  getAllSubaccountsByMembership: vi.fn(),
+  getSubaccountByGhlLocationId: vi.fn(),
   getMembershipById: vi.fn(),
   getMembershipUser: vi.fn(),
   getOrganizationById: vi.fn(),
@@ -50,7 +58,9 @@ vi.mock("./ghl-token-store", () => ({
   maskGhlLocationId: (locationId: string) => `${locationId.slice(0, 4)}…${locationId.slice(-4)}`,
   safeGhlConnectionStatus: vi.fn(),
   storeGhlConnectionToken: vi.fn(),
+  storeGhlConnectionTokenWithAudit: vi.fn(),
   verifyGhlLocationIdentity: vi.fn(),
+  verifyGhlLocationWithAccessToken: vi.fn(),
 }));
 vi.mock("./ghl-operations-snapshot", async (importOriginal) => {
   const original = await importOriginal<typeof import("./ghl-operations-snapshot")>();
@@ -61,9 +71,14 @@ const authenticateRequestMock = vi.mocked(sdk.authenticateRequest);
 const readSessionTokenMock = vi.mocked(sdk.readSessionToken);
 const safeGhlConnectionStatusMock = vi.mocked(safeGhlConnectionStatus);
 const storeGhlConnectionTokenMock = vi.mocked(storeGhlConnectionToken);
+const storeGhlConnectionTokenWithAuditMock = vi.mocked(storeGhlConnectionTokenWithAudit);
 const verifyGhlLocationIdentityMock = vi.mocked(verifyGhlLocationIdentity);
+const verifyGhlLocationWithAccessTokenMock = vi.mocked(verifyGhlLocationWithAccessToken);
 const buildGhlOperationsSnapshotMock = vi.mocked(buildGhlOperationsSnapshot);
-const createMetadataOnlySubaccountMock = vi.mocked(createMetadataOnlySubaccount);
+const createVerifiedGhlSubaccountMock = vi.mocked(createVerifiedGhlSubaccount);
+const getAllSubaccountsByMembershipMock = vi.mocked(getAllSubaccountsByMembership);
+const getSubaccountByGhlLocationIdMock = vi.mocked(getSubaccountByGhlLocationId);
+const deleteVerifiedGhlSubaccountMock = vi.mocked(deleteVerifiedGhlSubaccount);
 const getUserSubaccountsMock = vi.mocked(getUserSubaccounts);
 const getMembershipByIdMock = vi.mocked(getMembershipById);
 const getMembershipUserMock = vi.mocked(getMembershipUser);
@@ -216,7 +231,14 @@ describe("GoHighLevel production OAuth security", () => {
     });
     readLatestCompletedSnapshotMock.mockResolvedValue(null);
     readLatestSnapshotHistoryMock.mockResolvedValue(new Map());
-    createMetadataOnlySubaccountMock.mockResolvedValue({ created: true, id: 31 });
+    createVerifiedGhlSubaccountMock.mockResolvedValue({ created: true, id: 31 });
+    getAllSubaccountsByMembershipMock.mockResolvedValue([]);
+    getSubaccountByGhlLocationIdMock.mockResolvedValue(undefined);
+    verifyGhlLocationWithAccessTokenMock.mockResolvedValue({
+      id: "cNQAsS4J15aPtGtOqgM0",
+      name: "PRN Staffers FL",
+      companyId: "company-id",
+    });
   });
 
   afterEach(() => {
@@ -525,6 +547,52 @@ describe("GoHighLevel production OAuth security", () => {
     });
   });
 
+  it("creates Florida only after callback verification and compensates if token storage fails", async () => {
+    consumeOAuthStateMock.mockResolvedValue({
+      organizationId: "100",
+      payload: {
+        mode: "new_location",
+        provider: "gohighlevel",
+        tenantId: "100",
+        membershipId: "7",
+        userId: "42",
+        name: "PRN Staffers FL",
+        city: "Greensboro",
+        state: "Florida",
+      },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access_token: "provider-access-token",
+        refresh_token: "provider-refresh-token",
+        token_type: "Bearer",
+        expires_in: 3600,
+        scope: "locations.readonly",
+        locationId: "cNQAsS4J15aPtGtOqgM0",
+      }),
+    }));
+    storeGhlConnectionTokenWithAuditMock.mockRejectedValueOnce(new Error("PostgreSQL unavailable"));
+
+    const result = await invoke("GET", "/api/integrations/eea/oauth/callback", {
+      query: { code: "authorization-code", state: "eeos_onboarding_opaque-state" },
+    });
+
+    expect(result.status).toBe(400);
+    expect(verifyGhlLocationWithAccessTokenMock).toHaveBeenCalledWith(
+      "cNQAsS4J15aPtGtOqgM0",
+      "provider-access-token",
+    );
+    expect(createVerifiedGhlSubaccountMock).toHaveBeenCalledWith({
+      membershipId: 7,
+      providerLocationId: "cNQAsS4J15aPtGtOqgM0",
+      name: "PRN Staffers FL",
+      city: "Greensboro",
+      state: "Florida",
+    });
+    expect(deleteVerifiedGhlSubaccountMock).toHaveBeenCalledWith(31, "cNQAsS4J15aPtGtOqgM0");
+  });
+
   it("rejects mismatched persisted organization or location before token exchange", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
@@ -811,7 +879,7 @@ describe("GoHighLevel production OAuth security", () => {
     expect(safeGhlConnectionStatusMock).not.toHaveBeenCalled();
   });
 
-  it("creates metadata-only owner locations without OAuth, tokens, provider calls, or snapshots", async () => {
+  it("starts owner-authorized Florida onboarding without a caller-supplied provider binding", async () => {
     const providerFetch = vi.fn();
     vi.stubGlobal("fetch", providerFetch);
 
@@ -820,53 +888,42 @@ describe("GoHighLevel production OAuth security", () => {
       body: {
         organizationId: "100",
         provider: "gohighlevel",
-        providerLocationId: "loc_florida_123",
         name: "PRN Staffers FL",
         city: "Greensboro",
         state: "Florida",
       },
     });
 
-    expect(result.status).toBe(201);
-    expect(createMetadataOnlySubaccountMock).toHaveBeenCalledWith({
-      membershipId: 7,
-      providerLocationId: "loc_florida_123",
-      name: "PRN Staffers FL",
-      city: "Greensboro",
-      state: "Florida",
-    });
-    expect(result.body).toEqual({
+    expect(result.status).toBe(200);
+    expect(createVerifiedGhlSubaccountMock).not.toHaveBeenCalled();
+    expect(result.body).toMatchObject({
       success: true,
       organization: { id: "100", name: "PRN Staffers" },
       provider: "gohighlevel",
-      location: {
-        name: "PRN Staffers FL",
-        city: "Greensboro",
-        state: "Florida",
-        maskedProviderBinding: "loc_…_123",
-      },
-      connection: { connected: false, status: "Not Connected" },
+      location: { name: "PRN Staffers FL", city: "Greensboro", state: "Florida" },
+      authorizationUrl: expect.stringContaining("marketplace.gohighlevel.com/oauth/chooselocation"),
     });
-    expect(JSON.stringify(result.body)).not.toContain("loc_florida_123");
-    expect(persistOAuthStateMock).not.toHaveBeenCalled();
+    expect(persistOAuthStateMock).toHaveBeenCalledWith(
+      expect.stringMatching(/^eeos_onboarding_/),
+      expect.objectContaining({ mode: "new_location", tenantId: "100", membershipId: "7" }),
+      expect.any(Date),
+    );
     expect(storeGhlConnectionTokenMock).not.toHaveBeenCalled();
     expect(buildGhlOperationsSnapshotMock).not.toHaveBeenCalled();
     expect(verifyGhlLocationIdentityMock).not.toHaveBeenCalled();
     expect(providerFetch).not.toHaveBeenCalled();
   });
 
-  it("prevents duplicate metadata-only operational locations", async () => {
-    createMetadataOnlySubaccountMock.mockResolvedValueOnce({
-      created: false,
-      reason: "provider_binding_exists",
-    });
+  it("prevents duplicate operational-location metadata before OAuth", async () => {
+    getAllSubaccountsByMembershipMock.mockResolvedValueOnce([{
+      name: "PRN Staffers FL", city: "Greensboro", state: "Florida",
+    } as never]);
 
     const result = await invoke("POST", "/api/location-management/locations", {
       ...csrf,
       body: {
         organizationId: "100",
         provider: "gohighlevel",
-        providerLocationId: "loc_florida_123",
         name: "PRN Staffers FL",
         city: "Greensboro",
         state: "Florida",
@@ -882,7 +939,6 @@ describe("GoHighLevel production OAuth security", () => {
     const body = {
       organizationId: "100",
       provider: "gohighlevel",
-      providerLocationId: "loc_florida_123",
       name: "PRN Staffers FL",
       city: "Greensboro",
       state: "Florida",
@@ -906,10 +962,10 @@ describe("GoHighLevel production OAuth security", () => {
       body: { ...body, organizationId: "999" },
     })).status).toBe(403);
 
-    expect(createMetadataOnlySubaccountMock).not.toHaveBeenCalled();
+    expect(createVerifiedGhlSubaccountMock).not.toHaveBeenCalled();
   });
 
-  it("rejects unsupported providers and incomplete metadata before persistence", async () => {
+  it("rejects caller-supplied provider IDs, unsupported providers, and incomplete metadata", async () => {
     const base = {
       organizationId: "100",
       provider: "other",
@@ -926,6 +982,10 @@ describe("GoHighLevel production OAuth security", () => {
       ...csrf,
       body: { ...base, provider: "gohighlevel", city: "" },
     })).status).toBe(400);
-    expect(createMetadataOnlySubaccountMock).not.toHaveBeenCalled();
+    expect((await invoke("POST", "/api/location-management/locations", {
+      ...csrf,
+      body: { ...base, provider: "gohighlevel" },
+    })).status).toBe(400);
+    expect(createVerifiedGhlSubaccountMock).not.toHaveBeenCalled();
   });
 });

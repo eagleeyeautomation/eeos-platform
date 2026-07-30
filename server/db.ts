@@ -688,6 +688,13 @@ export async function getSubaccountsByMembership(membershipId: number): Promise<
     .where(and(eq(subaccounts.membershipId, membershipId), eq(subaccounts.isActive, true)));
 }
 
+export async function getAllSubaccountsByMembership(membershipId: number): Promise<Subaccount[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(subaccounts)
+    .where(eq(subaccounts.membershipId, membershipId));
+}
+
 export async function getAllSubaccounts(): Promise<Subaccount[]> {
   const db = await getDb();
   if (!db) return [];
@@ -764,6 +771,25 @@ export async function createMetadataOnlySubaccount(
     }
     throw error;
   }
+}
+
+export async function createVerifiedGhlSubaccount(input: {
+  membershipId: number;
+  providerLocationId: string;
+  name: string;
+  city: string;
+  state: string;
+}): Promise<MetadataOnlySubaccountResult> {
+  return createMetadataOnlySubaccount(input);
+}
+
+export async function deleteVerifiedGhlSubaccount(id: number, providerLocationId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(subaccounts).where(and(
+    eq(subaccounts.id, id),
+    eq(subaccounts.ghlLocationId, providerLocationId),
+  ));
 }
 
 export async function upsertSubaccount(sub: InsertSubaccount): Promise<number> {

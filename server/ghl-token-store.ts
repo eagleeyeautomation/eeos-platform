@@ -2,6 +2,8 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypt
 import {
   readGhlConnectionRecord,
   upsertGhlTokenRecord,
+  upsertGhlTokenRecordWithAudit,
+  type RuntimeAuditEvent,
   type GhlConnectionRecord,
 } from "./db/runtimePersistence";
 
@@ -99,6 +101,23 @@ export async function storeGhlConnectionToken(input: {
     expiresAt: input.payload.expiresAt,
     scopes: input.payload.scopes,
   });
+}
+
+export async function storeGhlConnectionTokenWithAudit(
+  input: Parameters<typeof storeGhlConnectionToken>[0],
+  event: RuntimeAuditEvent,
+) {
+  if (input.payload.locationId !== input.locationId) {
+    throw new Error("GoHighLevel token location binding mismatch.");
+  }
+  await upsertGhlTokenRecordWithAudit({
+    membershipId: input.organizationId,
+    operationalDivisionId: input.operationalDivisionId,
+    locationId: input.locationId,
+    encryptedPayload: encryptGhlTokenPayload(input.payload),
+    expiresAt: input.payload.expiresAt,
+    scopes: input.payload.scopes,
+  }, event);
 }
 
 export async function loadGhlConnection(
@@ -244,4 +263,27 @@ export async function verifyGhlLocationIdentity(organizationId: string, location
     accountContext: "location",
     verifiedAt: new Date().toISOString(),
   };
+}
+
+export async function verifyGhlLocationWithAccessToken(locationId: string, accessToken: string) {
+  const response = await fetch(`${GHL_API_BASE}/locations/${encodeURIComponent(locationId)}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Version: "2021-07-28",
+      Accept: "application/json",
+    },
+  });
+  if (!response.ok) throw new Error(`GoHighLevel location verification failed with HTTP ${response.status}.`);
+  const data = await response.json() as {
+    location?: { id?: string; name?: string; companyId?: string };
+    id?: string;
+    name?: string;
+    companyId?: string;
+  };
+  const location = data.location || data;
+  if (!location.id || location.id !== locationId) {
+    throw new Error("GoHighLevel returned a cross-location response.");
+  }
+  return { id: location.id, name: location.name || "", companyId: location.companyId || "" };
 }
