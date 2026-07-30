@@ -8,6 +8,8 @@ type VercelRoute = {
   src?: string;
   dest?: string;
   handle?: string;
+  status?: number;
+  headers?: Record<string, string>;
 };
 
 type VercelConfig = {
@@ -53,6 +55,23 @@ describe("Vercel deployment routing", () => {
     const config = loadVercelConfig();
 
     expect(resolveDeploymentRoute("/integrations/gohighlevel", config.routes || [])).toBe("/index.html");
+  });
+
+  it("redirects only the exact application root to the public EEOS website", () => {
+    const config = loadVercelConfig();
+    const redirect = config.routes?.find((route) => route.status === 308);
+
+    expect(redirect).toEqual({
+      src: "/",
+      status: 308,
+      headers: {
+        Location: "https://geteeos.com/",
+      },
+    });
+    expect(new RegExp(`^${redirect?.src}$`).test("/")).toBe(true);
+    expect(new RegExp(`^${redirect?.src}$`).test("/login")).toBe(false);
+    expect(new RegExp(`^${redirect?.src}$`).test("/admin")).toBe(false);
+    expect(new RegExp(`^${redirect?.src}$`).test("/api/auth/session")).toBe(false);
   });
 
   it("rewrites API routes to the stable Vercel function instead of the SPA", () => {
