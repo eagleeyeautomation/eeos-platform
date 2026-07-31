@@ -69,6 +69,8 @@ import {
 } from "./mission-control/core";
 import { INTELLIGENCE_CATEGORIES, GRAPH_ENTITY_TYPES } from "./intelligence-orchestration/core";
 import { askExecutiveCopilot, getExecutiveContext, publishIntelligenceEvent } from "./intelligence-orchestration/service";
+import { GOAL_TYPES } from "./decision-orchestration/core";
+import { createBusinessGoal, decideWorkflow, getAutomationDashboard, prepareDecisionWorkflow, updateBusinessGoal } from "./decision-orchestration/service";
 
 export const appRouter = router({
   system: systemRouter,
@@ -707,6 +709,48 @@ export const appRouter = router({
         const authorization = await resolveOrganizationAuthorizationContext(ctx.user);
         if (!authorization?.organizationId) throw new Error("An active organization context is required.");
         return askExecutiveCopilot(authorization.organizationId, authorization.authorizedLocationIds, input.question);
+      }),
+  }),
+
+  // Phase 5 prepares governed work from Phase 4 intelligence. It never executes external writes.
+  automation: router({
+    dashboard: protectedProcedure.query(async ({ ctx }) => {
+      const authorization = await resolveOrganizationAuthorizationContext(ctx.user);
+      if (!authorization?.organizationId) throw new Error("An active organization context is required.");
+      return getAutomationDashboard(authorization.organizationId, authorization.authorizedLocationIds);
+    }),
+    prepare: protectedProcedure
+      .input(z.object({
+        locationId: z.string().min(1).optional(), recommendationId: z.string().uuid().optional(),
+        templateKey: z.string().min(1).max(80), playbookKey: z.string().min(1).max(80).optional(),
+        title: z.string().trim().min(2).max(200), payload: z.record(z.string(), z.unknown()),
+        evidence: z.array(z.string().trim().min(1)).min(1).max(100), confidence: z.number().min(0).max(100), riskScore: z.number().min(0).max(100),
+        bulk: z.boolean().optional(), financial: z.boolean().optional(), customerCommunication: z.boolean().optional(), externalIntegration: z.boolean().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const authorization = await requireWritableOrganizationRole(ctx.user);
+        if (input.locationId && !authorization.authorizedLocationIds.includes(input.locationId)) throw new Error("This location is not authorized for the current organization.");
+        return prepareDecisionWorkflow({ ...input, organizationId: authorization.organizationId!, requestedBy: authorization.userId });
+      }),
+    decide: protectedProcedure
+      .input(z.object({ workflowId: z.string().uuid(), decision: z.enum(["approved", "rejected"]), comment: z.string().trim().max(1000).optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const authorization = await requireWritableOrganizationRole(ctx.user);
+        if (authorization.role !== "ORGANIZATION_OWNER") throw new Error("Executive owner approval is required.");
+        return decideWorkflow({ ...input, organizationId: authorization.organizationId!, decidedBy: authorization.userId });
+      }),
+    createGoal: protectedProcedure
+      .input(z.object({ locationId: z.string().min(1).optional(), goalType: z.enum(GOAL_TYPES), title: z.string().trim().min(2).max(200), baseline: z.number().optional(), target: z.number(), currentValue: z.number().optional(), unit: z.string().trim().min(1).max(40), dueAt: z.string().datetime().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const authorization = await requireWritableOrganizationRole(ctx.user);
+        if (input.locationId && !authorization.authorizedLocationIds.includes(input.locationId)) throw new Error("This location is not authorized for the current organization.");
+        return createBusinessGoal({ ...input, organizationId: authorization.organizationId!, createdBy: authorization.userId });
+      }),
+    updateGoal: protectedProcedure
+      .input(z.object({ goalId: z.string().uuid(), currentValue: z.number(), status: z.enum(["active", "achieved", "paused"]).optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const authorization = await requireWritableOrganizationRole(ctx.user);
+        return updateBusinessGoal({ ...input, organizationId: authorization.organizationId!, updatedBy: authorization.userId });
       }),
   }),
 
