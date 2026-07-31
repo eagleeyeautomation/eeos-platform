@@ -1,0 +1,7 @@
+import { DEMO_LOCATIONS } from "./contract";
+export const MONDAY_EXECUTIVE_BRIEFING={name:"Monday Executive Briefing",description:"South Carolina staffing risk, Florida growth opportunity, and Virginia operating benchmark."};
+export const SYNTHETIC_METRICS:Record<string,Record<string,[number,string]>>={
+  [DEMO_LOCATIONS[0].id]:{active_clients:[128,"clients"],new_inquiries:[18,"inquiries"],assessment_completion:[91,"percent"],conversion_rate:[72,"percent"],open_shifts:[3,"shifts"],caregiver_coverage:[96,"percent"],overtime:[4,"percent"],customer_satisfaction:[94,"percent"],referral_partners:[22,"partners"],revenue_trend:[8,"percent"],marketing_efficiency:[82,"score"],compliance_status:[100,"percent"]},
+  [DEMO_LOCATIONS[1].id]:{active_clients:[104,"clients"],new_inquiries:[14,"inquiries"],assessment_completion:[76,"percent"],conversion_rate:[48,"percent"],open_shifts:[19,"shifts"],caregiver_coverage:[71,"percent"],overtime:[18,"percent"],customer_satisfaction:[84,"percent"],referral_partners:[13,"partners"],revenue_trend:[-4,"percent"],marketing_efficiency:[61,"score"],compliance_status:[96,"percent"]},
+  [DEMO_LOCATIONS[2].id]:{active_clients:[86,"clients"],new_inquiries:[36,"inquiries"],assessment_completion:[54,"percent"],conversion_rate:[51,"percent"],open_shifts:[7,"shifts"],caregiver_coverage:[88,"percent"],overtime:[8,"percent"],customer_satisfaction:[90,"percent"],referral_partners:[19,"partners"],revenue_trend:[14,"percent"],marketing_efficiency:[77,"score"],compliance_status:[98,"percent"]},
+};

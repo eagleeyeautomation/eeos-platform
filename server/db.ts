@@ -477,6 +477,12 @@ export async function getTimeline(tenantId: string, limit = 50): Promise<Timelin
     .orderBy(desc(timelineEvents.occurredAt)).limit(limit);
 }
 
+export async function deleteDemoTimelineEvents(tenantIds: string[], entityId: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  for (const tenantId of tenantIds) await db.delete(timelineEvents).where(and(eq(timelineEvents.tenantId, tenantId), eq(timelineEvents.entityId, entityId)));
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // LAYER 6: Audit Log
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,0 +1,67 @@
+import { randomUUID } from "crypto";
+import { createMembership, createOrganization, deleteDemoTimelineEvents, getMembershipByOrg, getMembershipUser, getOrganizationBySlug, insertAuditEntry, insertTimelineEvent, upsertMembershipUser, upsertSubaccount } from "../db";
+import { withDatabase, withTransaction } from "../db/postgres";
+import { publishIntelligenceEvent } from "../intelligence-orchestration/service";
+import { configureOrganizationIndustryPacks } from "../industry-intelligence/service";
+import { createBusinessGoal, prepareDecisionWorkflow } from "../decision-orchestration/service";
+import { assertDemoClassification, DEMO_LOCATIONS, DEMO_NAME, DEMO_SCENARIO_ID, DEMO_SLUG, DEMO_VERSION } from "./contract";
+import { MONDAY_EXECUTIVE_BRIEFING, SYNTHETIC_METRICS } from "./scenarios";
+
+async function provisionDemoIdentity(actorId:string){
+  let organization=await getOrganizationBySlug(DEMO_SLUG);
+  if(!organization){const id=await createOrganization({slug:DEMO_SLUG,name:DEMO_NAME,type:"customer",industry:"Home Care",website:null,logoUrl:null,isActive:true});organization=await getOrganizationBySlug(DEMO_SLUG);if(!organization) throw new Error(`Demo organization ${id} could not be resolved.`);}
+  let membership=await getMembershipByOrg(organization.id);
+  const membershipId=membership?.id??await createMembership({organizationId:organization.id,plan:"enterprise",status:"active",ieEnabled:true,ieModelVersion:"demo-1.0",maxSubaccounts:3});
+  if(!await getMembershipUser(membershipId,Number(actorId))) await upsertMembershipUser(membershipId,Number(actorId),"owner");
+  for(const location of DEMO_LOCATIONS) await upsertSubaccount({membershipId,ghlLocationId:location.id,name:location.name,city:location.city,state:location.state,timezone:"America/New_York",isActive:true,ieEnabled:true,ghlCompanyId:null});
+  return {organizationId:String(organization.id),membershipId};
+}
+
+export async function getDemoCenter(){
+  const organization=await getOrganizationBySlug(DEMO_SLUG); if(!organization) return {provisioned:false,environment:null,scenario:null,locations:[],metrics:[],runs:[]};
+  return withDatabase(async(client)=>{const [environment,scenario,metrics,runs]=await Promise.all([
+    client.query(`select organization_id as "organizationId",organization_name as "organizationName",classification,data_classification as "dataClassification",scenario_version as "scenarioVersion",seeded_at as "seededAt",reset_at as "resetAt" from demo_environments where organization_id=$1`,[String(organization.id)]),
+    client.query(`select id,organization_id as "organizationId",name,description,status,version,started_at as "startedAt",completed_at as "completedAt" from demo_scenarios where organization_id=$1`,[String(organization.id)]),
+    client.query(`select location_id as "locationId",metric_key as "metricKey",value::float8 as value,unit,source,classification,observed_at as "observedAt" from demo_synthetic_metrics where organization_id=$1 order by location_id,metric_key`,[String(organization.id)]),
+    client.query(`select run_key as "runKey",action,status,details,created_at as "createdAt" from demo_scenario_runs where organization_id=$1 order by created_at desc limit 20`,[String(organization.id)]),
+  ]);return {provisioned:true,environment:environment.rows[0]??null,scenario:scenario.rows[0]??null,locations:DEMO_LOCATIONS,metrics:metrics.rows,runs:runs.rows};});
+}
+
+export async function seedDemo(actorId:string){
+  const identity=await provisionDemoIdentity(actorId); const now=new Date();
+  await withTransaction(async(client)=>{
+    await client.query(`insert into demo_environments (organization_id,organization_name,classification,data_classification,organization_type,scenario_version,seeded_at) values ($1,$2,'demo','synthetic','Synthetic EEOS Demonstration Organization',$3,$4) on conflict(organization_id) do update set organization_name=excluded.organization_name,scenario_version=excluded.scenario_version,seeded_at=excluded.seeded_at,updated_at=now()`,[identity.organizationId,DEMO_NAME,DEMO_VERSION,now]);
+    await client.query(`insert into demo_scenarios (id,organization_id,name,description,status,version) values ($1,$2,$3,$4,'ready',$5) on conflict(id) do update set name=excluded.name,description=excluded.description,status=case when demo_scenarios.status='active' then 'active' else 'ready' end,updated_at=now()`,[DEMO_SCENARIO_ID,identity.organizationId,MONDAY_EXECUTIVE_BRIEFING.name,MONDAY_EXECUTIVE_BRIEFING.description,DEMO_VERSION]);
+    for(const [locationId,metrics] of Object.entries(SYNTHETIC_METRICS)) for(const [key,[value,unit]] of Object.entries(metrics)) await client.query(`insert into demo_synthetic_metrics (id,organization_id,location_id,metric_key,value,unit,scenario_version,observed_at) values ($1,$2,$3,$4,$5,$6,$7,$8) on conflict(organization_id,location_id,metric_key,scenario_version) do update set value=excluded.value,unit=excluded.unit,observed_at=excluded.observed_at,updated_at=now()`,[`${DEMO_VERSION}:${locationId}:${key}`,identity.organizationId,locationId,key,value,unit,DEMO_VERSION,now]);
+    await client.query(`insert into demo_scenario_runs (id,organization_id,scenario_id,run_key,action,status,actor_id,scenario_version,details) values ($1,$2,$3,$4,'seed','completed',$5,$6,$7::jsonb) on conflict(organization_id,run_key) do update set status='completed',updated_at=now()`,[randomUUID(),identity.organizationId,DEMO_SCENARIO_ID,`${DEMO_VERSION}:seed`,actorId,DEMO_VERSION,JSON.stringify({synthetic:true,locations:DEMO_LOCATIONS.length})]);
+  });
+  await configureOrganizationIndustryPacks({organizationId:identity.organizationId,packKeys:["home-care","healthcare"],primaryPackKey:"home-care",actorId});
+  await insertAuditEntry({tenantId:DEMO_LOCATIONS[0].id,actor:"system",action:"demo.seed",entityType:"organization",entityId:identity.organizationId,outcome:"success",details:{classification:"synthetic",version:DEMO_VERSION}});
+  return getDemoCenter();
+}
+
+export async function startDemoScenario(actorId:string){
+  const seeded=await seedDemo(actorId); const environment=seeded.environment!; const organizationId=environment.organizationId; const occurredAt=new Date().toISOString();
+  if(seeded.scenario?.status==="active") return seeded;
+  const locationEvents=[
+    {location:DEMO_LOCATIONS[0],type:"virginia_operating_benchmark",category:"operations" as const,evidence:["Synthetic caregiver coverage: 96%","Synthetic customer satisfaction: 94%"],payload:{status:"Healthy",synthetic:true,demo:true,metrics:SYNTHETIC_METRICS[DEMO_LOCATIONS[0].id]}},
+    {location:DEMO_LOCATIONS[1],type:"south_carolina_coverage_risk",category:"staffing" as const,evidence:["Synthetic caregiver coverage: 71%","Synthetic open shifts: 19","Synthetic overtime: 18%","Synthetic conversion: 48%"],payload:{status:"Needs Attention",synthetic:true,demo:true,metrics:SYNTHETIC_METRICS[DEMO_LOCATIONS[1].id]}},
+    {location:DEMO_LOCATIONS[2],type:"florida_growth_opportunity",category:"growth" as const,evidence:["Synthetic new inquiries: 36","Synthetic assessment completion: 54%","Synthetic revenue trend: +14%"],payload:{status:"Growth Opportunity",synthetic:true,demo:true,metrics:SYNTHETIC_METRICS[DEMO_LOCATIONS[2].id]}},
+  ];
+  let recommendationId:string|null=null;
+  for(const item of locationEvents){const isRecommendation=item.location.id===DEMO_LOCATIONS[1].id;const result=await publishIntelligenceEvent({id:`${DEMO_VERSION}:${item.type}`,organizationId,locationId:isRecommendation?undefined:item.location.id,producer:"summit_demo",type:item.type,category:item.category,occurredAt,subject:{type:"location",key:item.location.id,name:item.location.name,attributes:{classification:"synthetic",demo:true}},payload:item.payload,evidence:item.evidence,recommendation:isRecommendation?{key:"summit-sc-caregiver-stabilization",title:"Stabilize South Carolina caregiver coverage",summary:"Coverage and overtime conditions create near-term scheduling and client-growth risk.",action:"Prepare a seven-day caregiver recruitment and scheduling stabilization plan.",consumers:["executive_dashboard","business_health","staffing","executive_timeline","executive_copilot"],factors:{businessImpact:90,financialValue:72,operationalImpact:94,strategicValue:88,risk:91,urgency:93,confidence:92}}:undefined});if(result.recommendationId) recommendationId=result.recommendationId;}
+  const existingGoal=await withDatabase(client=>client.query(`select id from business_goals_v2 where organization_id=$1 and location_id=$2 and title=$3 limit 1`,[organizationId,DEMO_LOCATIONS[1].id,"Restore South Carolina caregiver coverage"]));
+  if(!existingGoal.rowCount) await createBusinessGoal({organizationId,locationId:DEMO_LOCATIONS[1].id,goalType:"hiring",title:"Restore South Carolina caregiver coverage",baseline:71,target:90,currentValue:71,unit:"percent",dueAt:new Date(Date.now()+7*86400000).toISOString(),createdBy:"demo-system"});
+  if(recommendationId){const existing=await withDatabase(client=>client.query(`select id from decision_workflows where organization_id=$1 and recommendation_id=$2 limit 1`,[organizationId,recommendationId]));if(!existing.rowCount) await prepareDecisionWorkflow({organizationId,locationId:DEMO_LOCATIONS[1].id,recommendationId,templateKey:"prepare-crm-record",playbookKey:"low-staffing",title:"Seven-day caregiver recruitment and scheduling stabilization plan",payload:{classification:"synthetic",demo:true,externalExecution:false},evidence:locationEvents[1].evidence,confidence:92,riskScore:72,externalIntegration:true,requestedBy:actorId});}
+  await insertTimelineEvent({tenantId:DEMO_LOCATIONS[1].id,eventType:"demo.monday_executive_briefing",title:"The Brain prioritizes South Carolina staffing stabilization",description:"Virginia provides the benchmark while Florida presents a measured expansion opportunity.",entityType:"demo_scenario",entityId:DEMO_SCENARIO_ID,entityName:MONDAY_EXECUTIVE_BRIEFING.name,significance:"critical",businessImpact:"Protect client service capacity before accepting additional high-acuity cases.",metadata:{synthetic:true,demo:true,evidence:locationEvents[1].evidence},occurredAt:new Date()});
+  await withDatabase(client=>client.query(`update demo_scenarios set status='active',started_at=coalesce(started_at,now()),updated_at=now() where id=$1 and organization_id=$2`,[DEMO_SCENARIO_ID,organizationId]));
+  await recordRun(organizationId,`${DEMO_VERSION}:start`,"start",actorId,{recommendationId}); return getDemoCenter();
+}
+
+async function recordRun(organizationId:string,runKey:string,action:string,actorId:string,details:Record<string,unknown>){await withDatabase(client=>client.query(`insert into demo_scenario_runs (id,organization_id,scenario_id,run_key,action,status,actor_id,scenario_version,details) values ($1,$2,$3,$4,$5,'completed',$6,$7,$8::jsonb) on conflict(organization_id,run_key) do update set status='completed',details=excluded.details,updated_at=now()`,[randomUUID(),organizationId,DEMO_SCENARIO_ID,runKey,action,actorId,DEMO_VERSION,JSON.stringify(details)]));}
+
+export async function resetDemo(actorId:string){const center=await getDemoCenter();assertDemoClassification(center.environment??undefined);const organizationId=center.environment!.organizationId;
+  await deleteDemoTimelineEvents(DEMO_LOCATIONS.map(location=>location.id),DEMO_SCENARIO_ID);
+  await withTransaction(async(client)=>{await client.query(`delete from workflow_approvals where organization_id=$1`,[organizationId]);await client.query(`delete from business_automation_queue where organization_id=$1`,[organizationId]);await client.query(`delete from decision_workflows where organization_id=$1`,[organizationId]);await client.query(`delete from intelligence_distributions where organization_id=$1`,[organizationId]);await client.query(`delete from executive_priority_queue where organization_id=$1`,[organizationId]);await client.query(`delete from executive_graph_entities where organization_id=$1`,[organizationId]);await client.query(`delete from unified_business_memory where organization_id=$1`,[organizationId]);await client.query(`delete from intelligence_events where organization_id=$1 and producer in ('summit_demo','decision_orchestration','industry_intelligence')`,[organizationId]);await client.query(`delete from business_goals_v2 where organization_id=$1`,[organizationId]);await client.query(`update demo_scenarios set status='reset',started_at=null,completed_at=null,updated_at=now() where organization_id=$1`,[organizationId]);await client.query(`update demo_environments set reset_at=now(),updated_at=now() where organization_id=$1`,[organizationId]);});
+  await recordRun(organizationId,`${DEMO_VERSION}:reset:${Date.now()}`,"reset",actorId,{synthetic:true});const result=await seedDemo(actorId);await withDatabase(client=>client.query(`update demo_scenarios set status='ready',updated_at=now() where organization_id=$1`,[organizationId]));return result;}
+export async function replayDemo(actorId:string){const center=await resetDemo(actorId);const result=await startDemoScenario(actorId);await recordRun(center.environment!.organizationId,`${DEMO_VERSION}:replay:${Date.now()}`,"replay",actorId,{deterministic:true});return result;}

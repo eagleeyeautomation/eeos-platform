@@ -75,6 +75,7 @@ export const AVAILABLE_NAV_ROUTES = new Set([
   "/admin/marketplace",
   "/admin/intelligence-governance",
   "/access-denied",
+  "/admin/demo-center",
   "/404",
 ]);
 
@@ -155,6 +156,7 @@ export const OWNER_NAV_LINKS: NavItem[] = [
 
 export const ADMIN_NAV_LINKS: NavItem[] = [
   { label: "Platform Overview", href: "/admin" },
+  { label: "Demo Center", href: "/admin/demo-center" },
   { label: "Organizations", href: "/admin/organizations" },
   { label: "Customer Onboarding", href: "/admin/onboarding" },
   { label: "Global Integrations", href: "/admin/integrations" },
