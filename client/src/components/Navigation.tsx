@@ -220,6 +220,7 @@ export default function Navigation() {
   const headerRef = useRef<HTMLElement | null>(null);
   const isAdminExperience = location.startsWith("/admin");
   const isOwnerExperience = !isAdminExperience && (location.startsWith("/executive")
+    || location.startsWith("/industry-intelligence")
     || location.startsWith("/business-health")
     || location.startsWith("/ai-recommendations")
     || location.startsWith("/live-signals")
