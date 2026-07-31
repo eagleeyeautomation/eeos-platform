@@ -67,6 +67,8 @@ import {
   calculateExecutiveReadiness,
   healthLabel,
 } from "./mission-control/core";
+import { INTELLIGENCE_CATEGORIES, GRAPH_ENTITY_TYPES } from "./intelligence-orchestration/core";
+import { askExecutiveCopilot, getExecutiveContext, publishIntelligenceEvent } from "./intelligence-orchestration/service";
 
 export const appRouter = router({
   system: systemRouter,
@@ -300,6 +302,22 @@ export const appRouter = router({
           decidedAt: new Date(),
         });
 
+        const authorization = await resolveOrganizationAuthorizationContext(ctx.user!);
+        if (authorization?.organizationId) {
+          await publishIntelligenceEvent({
+            id: `recommendation-feedback:${input.recommendationId}:${input.decision}`,
+            organizationId: authorization.organizationId,
+            locationId: input.tenantId,
+            producer: "recommendations",
+            type: `recommendation.${input.decision}`,
+            category: input.decision === "rejected" ? "risk" : "operations",
+            occurredAt: new Date().toISOString(),
+            subject: { type: "recommendation", key: String(input.recommendationId), name: rec.title },
+            payload: { decision: input.decision, comment: input.executiveComment ?? null },
+            evidence: [`recommendation:${input.recommendationId}`, `executive-decision:${input.decision}`],
+          });
+        }
+
         // Trigger metrics recomputation asynchronously
         computeAndStoreIeMetrics(input.tenantId)
           .catch(err => console.error("[IE] Metrics recomputation error:", err));
@@ -484,6 +502,15 @@ export const appRouter = router({
             ? input.assignedUserId ?? ctx.user.id
             : input.assignedUserId,
         });
+        await publishIntelligenceEvent({
+          id: `opportunity-action:${opportunity.opportunityId}:${input.action}`,
+          organizationId: authorization.organizationId!, locationId: opportunity.tenantId,
+          producer: opportunity.intelligenceDomain ?? "c2b", type: `opportunity.${input.action}`,
+          category: input.action === "reject" ? "risk" : "growth", occurredAt: new Date().toISOString(),
+          subject: { type: "opportunity", key: String(opportunity.opportunityId), name: opportunity.businessName || opportunity.name },
+          payload: { action: input.action, source: opportunity.source, nextStatus: transition.status },
+          evidence: [opportunity.sourceUrl, `opportunity:${opportunity.opportunityId}`].filter((item): item is string => Boolean(item)),
+        });
         return {
           success: true,
           downstreamWritePerformed: false,
@@ -648,6 +675,39 @@ export const appRouter = router({
         },
       };
     }),
+  }),
+
+  // Phase 4 extends the Phase 1–3 contracts with one organization-scoped Brain.
+  intelligence: router({
+    context: protectedProcedure
+      .input(z.object({ consumer: z.string().min(1).max(80).default("executive_dashboard") }).optional())
+      .query(async ({ ctx, input }) => {
+        const authorization = await resolveOrganizationAuthorizationContext(ctx.user);
+        if (!authorization?.organizationId) throw new Error("An active organization context is required.");
+        return getExecutiveContext(authorization.organizationId, authorization.authorizedLocationIds, input?.consumer);
+      }),
+    publish: protectedProcedure
+      .input(z.object({
+        id: z.string().min(1).max(160), locationId: z.string().min(1).optional(), producer: z.string().min(1).max(80),
+        type: z.string().min(1).max(120), category: z.enum(INTELLIGENCE_CATEGORIES), occurredAt: z.string().datetime(),
+        subject: z.object({ type: z.enum(GRAPH_ENTITY_TYPES), key: z.string().min(1), name: z.string().min(1), attributes: z.record(z.string(), z.unknown()).optional() }).optional(),
+        entities: z.array(z.object({ type: z.enum(GRAPH_ENTITY_TYPES), key: z.string().min(1), name: z.string().min(1), attributes: z.record(z.string(), z.unknown()).optional() })).max(100).optional(),
+        relationships: z.array(z.object({ from: z.object({ type: z.enum(GRAPH_ENTITY_TYPES), key: z.string().min(1) }), to: z.object({ type: z.enum(GRAPH_ENTITY_TYPES), key: z.string().min(1) }), type: z.string().min(1), attributes: z.record(z.string(), z.unknown()).optional() })).max(200).optional(),
+        payload: z.record(z.string(), z.unknown()), evidence: z.array(z.string().min(1)).max(100), correlationId: z.string().optional(),
+        recommendation: z.object({ key: z.string().min(1), title: z.string().min(1), summary: z.string().min(1), action: z.string().min(1), consumers: z.array(z.string().min(1)).max(30).optional(), factors: z.object({ businessImpact: z.number(), financialValue: z.number(), operationalImpact: z.number(), strategicValue: z.number(), risk: z.number(), urgency: z.number(), confidence: z.number() }) }).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const authorization = await requireWritableOrganizationRole(ctx.user);
+        if (input.locationId && !authorization.authorizedLocationIds.includes(input.locationId)) throw new Error("This location is not authorized for the current organization.");
+        return publishIntelligenceEvent({ ...input, organizationId: authorization.organizationId! });
+      }),
+    copilot: protectedProcedure
+      .input(z.object({ question: z.string().trim().min(2).max(1000) }))
+      .mutation(async ({ ctx, input }) => {
+        const authorization = await resolveOrganizationAuthorizationContext(ctx.user);
+        if (!authorization?.organizationId) throw new Error("An active organization context is required.");
+        return askExecutiveCopilot(authorization.organizationId, authorization.authorizedLocationIds, input.question);
+      }),
   }),
 
   admin: router({

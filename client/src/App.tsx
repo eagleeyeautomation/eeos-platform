@@ -41,6 +41,7 @@ import C2bIntelligence from "./pages/C2bIntelligence";
 import GlobalIntelligence from "./pages/GlobalIntelligence";
 import IntelligenceEvolution from "./pages/IntelligenceEvolution";
 import ExecutiveMissionControl from "./pages/ExecutiveMissionControl";
+import ExecutiveCopilot from "./components/ExecutiveCopilot";
 
 function owner(component: ComponentType) {
   const Component = component;
@@ -48,6 +49,7 @@ function owner(component: ComponentType) {
     return (
       <OwnerRoute>
         <Component />
+        <ExecutiveCopilot />
       </OwnerRoute>
     );
   };
