@@ -676,22 +676,57 @@ export default function Demo() {
       <Navigation />
 
       {/* Hero */}
-      <section className="pt-32 pb-10 bg-[#0B0B0B] scan-grid">
+      <section className="pt-32 pb-12 bg-[#0B0B0B] scan-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
+          <div className="mx-auto max-w-5xl text-center">
+            <img
+              src="/eeos-assets/eeos-logo-official.png"
+              alt="EEOS"
+              className="mx-auto mb-6 h-14 w-auto object-contain sm:h-16"
+            />
             <div className="section-label mb-4">EEOS Interactive Demo — Eagle Eye Automation</div>
             <h1
-              className="text-4xl sm:text-5xl font-bold text-[#FFFFFF] tracking-tight mb-4 leading-tight"
+              className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#FFFFFF] tracking-tight mb-4 leading-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              See what leading
-              <br />
-              <span className="gradient-text">looks like.</span>
+              The Executive Intelligence
+              <br className="hidden sm:block" />
+              <span className="gradient-text"> Operating System</span>
             </h1>
-            <p className="text-lg text-[#FFFFFF]/60 max-w-xl">
-              All six EEOS intelligence modules loaded with demonstration data from{" "}
-              <span className="text-[#C9A227] font-semibold">{DEMO_COMPANY.name}</span> — a fictional{" "}
-              {DEMO_COMPANY.industry} business with {DEMO_COMPANY.employees.toLocaleString()} employees.
+            <p className="mx-auto max-w-2xl text-lg text-[#FFFFFF]/65 sm:text-xl">
+              Fortune 500 Intelligence. Built for Every Business.
+            </p>
+            <a
+              href="#eeos-demo-film"
+              className="mt-7 inline-flex items-center justify-center gap-2 rounded-lg bg-[#C9A227] px-6 py-3 text-sm font-semibold text-[#0B0B0B] shadow-[0_0_24px_rgba(201,162,39,0.35)] transition-all duration-200 hover:bg-[#D8B84A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A227] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0B0B]"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              <Zap className="h-4 w-4" />
+              Watch the EEOS Demo
+            </a>
+          </div>
+
+          <div
+            id="eeos-demo-film"
+            className="mx-auto mt-10 max-w-5xl scroll-mt-24 overflow-hidden rounded-2xl border border-[rgba(201,162,39,0.25)] bg-black shadow-[0_28px_100px_rgba(0,0,0,0.65),0_0_35px_rgba(201,162,39,0.08)]"
+          >
+            <video
+              className="aspect-video h-auto w-full bg-black object-contain"
+              controls
+              playsInline
+              preload="metadata"
+              poster="/eeos-assets/eeos-hero-bg.svg"
+              aria-label="Play the EEOS cinematic introduction"
+            >
+              <source src="/eeos-assets/video/eeos-rise-in-sunshine.mp4" type="video/mp4" />
+              Your browser does not support embedded video.
+            </video>
+          </div>
+
+          <div className="mx-auto mt-7 max-w-3xl text-center">
+            <p className="text-base text-[#FFFFFF]/55">
+              Explore six EEOS intelligence modules using synthetic demonstration data from{" "}
+              <span className="font-semibold text-[#C9A227]">{DEMO_COMPANY.name}</span>.
             </p>
           </div>
         </div>
