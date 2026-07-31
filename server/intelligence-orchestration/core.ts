@@ -29,6 +29,13 @@ export function calculateExecutivePriority(factors: PriorityFactors) {
   return { score, components: normalized };
 }
 
+export function priorityLabel(score: number): "low" | "medium" | "high" | "critical" {
+  if (score >= 85) return "critical";
+  if (score >= 70) return "high";
+  if (score >= 45) return "medium";
+  return "low";
+}
+
 export function validateIntelligenceEvent(event: IntelligenceEvent) {
   const errors: string[] = [];
   if (!event.id.trim()) errors.push("Event id is required.");

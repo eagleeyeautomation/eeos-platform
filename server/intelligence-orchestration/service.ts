@@ -1,18 +1,22 @@
 import { randomUUID } from "crypto";
 import type { PoolClient } from "pg";
 import { withDatabase, withTransaction } from "../db/postgres";
-import { buildGroundedCopilotAnswer, calculateExecutivePriority, validateIntelligenceEvent, type IntelligenceEntity, type IntelligenceEvent } from "./core";
+import { insertRecommendation } from "../db";
+import { buildGroundedCopilotAnswer, calculateExecutivePriority, priorityLabel, validateIntelligenceEvent, type IntelligenceEntity, type IntelligenceEvent } from "./core";
 
 const DEFAULT_CONSUMERS = ["executive_dashboard", "business_health", "financial", "marketing", "operations", "staffing", "notifications", "executive_timeline"];
 
 export async function publishIntelligenceEvent(event: IntelligenceEvent) {
   const validation = validateIntelligenceEvent(event);
   if (!validation.valid) throw new Error(validation.errors.join(" "));
-  return withTransaction(async (client) => {
+  const result = await withTransaction(async (client) => {
     const inserted = await client.query(`insert into intelligence_events (id, organization_id, location_id, producer, event_type, category, occurred_at, subject_type, subject_key, payload, evidence, correlation_id)
       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12) on conflict (organization_id, producer, id) do nothing returning id`,
       [event.id, event.organizationId, event.locationId ?? null, event.producer, event.type, event.category, event.occurredAt, event.subject?.type ?? null, event.subject?.key ?? null, JSON.stringify(event.payload), JSON.stringify(event.evidence), event.correlationId ?? null]);
-    if (!inserted.rowCount) return { accepted: true, duplicate: true, eventId: event.id };
+    if (!inserted.rowCount) {
+      const existing = await client.query<{ id: string; legacyRecommendationId: number | null }>(`select id, legacy_recommendation_id as "legacyRecommendationId" from executive_priority_queue where organization_id=$1 and source_event_id=$2 limit 1`, [event.organizationId, event.id]);
+      return { accepted: true, duplicate: true, eventId: event.id, recommendationId: existing.rows[0]?.id ?? null, legacyRecommendationId: existing.rows[0]?.legacyRecommendationId ?? null };
+    }
     const organization: IntelligenceEntity = { type: "organization", key: event.organizationId, name: String(event.payload.organizationName ?? "Organization") };
     const entities = [organization, ...(event.locationId ? [{ type: "location" as const, key: event.locationId, name: String(event.payload.locationName ?? event.locationId) }] : []), ...(event.subject ? [event.subject] : []), ...(event.entities ?? [])];
     const ids = new Map<string, string>();
@@ -34,8 +38,38 @@ export async function publishIntelligenceEvent(event: IntelligenceEvent) {
       recommendationId = result.rows[0].id;
       for (const consumer of event.recommendation.consumers ?? DEFAULT_CONSUMERS) await client.query(`insert into intelligence_distributions (id, organization_id, recommendation_id, consumer) values ($1,$2,$3,$4) on conflict (organization_id, recommendation_id, consumer) do nothing`, [randomUUID(), event.organizationId, recommendationId, consumer]);
     }
-    return { accepted: true, duplicate: false, eventId: event.id, recommendationId };
+    return { accepted: true, duplicate: false, eventId: event.id, recommendationId, legacyRecommendationId: null as number | null };
   });
+  if (event.recommendation && event.locationId && result.recommendationId && !result.legacyRecommendationId) {
+    const priority = calculateExecutivePriority(event.recommendation.factors);
+    const legacyRecommendationId = await insertRecommendation({
+      tenantId: event.locationId, title: event.recommendation.title, why: event.recommendation.summary,
+      whyNow: `Priority ${priority.score}/100 based on the unified executive scoring contract.`, evidence: event.evidence,
+      businessImpact: `Business impact score ${priority.components.businessImpact}/100.`,
+      riskLevel: priorityLabel(priority.components.risk), recommendedAction: event.recommendation.action,
+      measurementPlan: "Measure the supporting KPI after an executive decision is recorded.",
+      confidenceScore: priority.components.confidence, confidenceFactors: priority.components,
+      signalCount: event.evidence.length, signalWindowDays: 7,
+      category: mapLegacyCategory(event.category), priority: priorityLabel(priority.score),
+      ieModelVersion: "4.0", status: "active",
+    }, {
+      source: event.producer, evidence: event.evidence, strategicPriorityScore: priority.components.strategicValue,
+      expectedImpact: event.recommendation.summary, supportingMetrics: [], assumptions: ["Recommendation remains advisory until executive action."],
+      predictive: false, confidenceAnatomy: priority.components,
+    });
+    await withDatabase((client) => client.query(`update executive_priority_queue set legacy_recommendation_id=$3,updated_at=now() where organization_id=$1 and id=$2 and legacy_recommendation_id is null`, [event.organizationId, result.recommendationId, legacyRecommendationId]));
+    result.legacyRecommendationId = legacyRecommendationId;
+  }
+  return result;
+}
+
+function mapLegacyCategory(category: IntelligenceEvent["category"]): "revenue" | "pipeline" | "retention" | "operations" | "growth" | "risk" | "team" {
+  if (category === "financial") return "revenue";
+  if (category === "customer") return "retention";
+  if (category === "staffing") return "team";
+  if (["growth", "marketing", "referral"].includes(category)) return "growth";
+  if (category === "risk") return "risk";
+  return "operations";
 }
 
 async function upsertEntity(client: PoolClient, organizationId: string, entity: IntelligenceEntity, occurredAt: string) {

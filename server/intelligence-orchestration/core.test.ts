@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildGroundedCopilotAnswer, calculateExecutivePriority, validateIntelligenceEvent } from "./core";
+import { buildGroundedCopilotAnswer, calculateExecutivePriority, priorityLabel, validateIntelligenceEvent } from "./core";
 
 describe("unified intelligence orchestration", () => {
   it("calculates a bounded, explainable executive priority", () => {
@@ -11,5 +11,8 @@ describe("unified intelligence orchestration", () => {
   });
   it("refuses to fabricate when authorized context is empty", () => {
     expect(buildGroundedCopilotAnswer("What should I do?", { priorities: [], risks: [], opportunities: [], eventCount: 0 })).toMatchObject({ confidence: 0, evidence: [], grounded: true });
+  });
+  it("maps priority scores into the certified recommendation lifecycle", () => {
+    expect([priorityLabel(20), priorityLabel(50), priorityLabel(75), priorityLabel(90)]).toEqual(["low", "medium", "high", "critical"]);
   });
 });
