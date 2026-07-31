@@ -7,6 +7,7 @@ type RouteHandler = (req: Request, res: Response) => Promise<void>;
 
 const owner = { id: 42 } as User;
 const viewer = { id: 43 } as User;
+const userWithoutOrganization = { id: 44 } as User;
 const handlers = new Map<string, RouteHandler>();
 const writes: Array<{ businessId: string; actor?: BusinessMemoryActorContext; method: string }> = [];
 
@@ -35,7 +36,7 @@ function response() {
 
 function request(input: {
   method: string;
-  session?: "owner" | "viewer" | "invalid";
+  session?: "owner" | "viewer" | "no-organization" | "invalid";
   locationId?: string;
   csrf?: string;
   body?: Record<string, unknown>;
@@ -93,9 +94,11 @@ describe("Business Memory route authorization", () => {
         const session = req.header("x-test-session");
         if (session === "owner") return owner;
         if (session === "viewer") return viewer;
+        if (session === "no-organization") return userWithoutOrganization;
         throw new Error("Invalid session");
       }),
       resolveOrganizationContext: vi.fn(async (user: User, requestedLocationId?: string) => {
+        if (user.id === userWithoutOrganization.id) return null;
         const locationId = requestedLocationId ?? "loc-a";
         if (locationId !== "loc-a") return null;
         return {
@@ -148,6 +151,10 @@ describe("Business Memory route authorization", () => {
   });
 
   it("denies cross-location reads and derives authorized read scope from the session", async () => {
+    const noOrganization = response();
+    await route("GET", "/api/prn/business-memory")(request({ method: "GET", session: "no-organization" }), noOrganization.res);
+    expect(noOrganization.result.status).toBe(403);
+
     const denied = response();
     await route("GET", "/api/prn/business-memory")(request({ method: "GET", session: "owner", locationId: "loc-other" }), denied.res);
     expect(denied.result.status).toBe(403);
