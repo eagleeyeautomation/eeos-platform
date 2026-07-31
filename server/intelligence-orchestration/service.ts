@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import { withDatabase, withTransaction } from "../db/postgres";
 import { insertRecommendation } from "../db";
 import { buildGroundedCopilotAnswer, calculateExecutivePriority, priorityLabel, validateIntelligenceEvent, type IntelligenceEntity, type IntelligenceEvent } from "./core";
+import { resolveIndustryContext, type IndustryKey } from "../industry-intelligence/core";
 
 const DEFAULT_CONSUMERS = ["executive_dashboard", "business_health", "financial", "marketing", "operations", "staffing", "notifications", "executive_timeline"];
 
@@ -90,8 +91,9 @@ export async function getExecutiveContext(organizationId: string, authorizedLoca
     const memory = await client.query(`select memory_key as "key",memory_type as "type",value,confidence,observed_at as "observedAt" from unified_business_memory where organization_id=$1 order by updated_at desc limit 50`, [organizationId]);
     const graph = await client.query(`select entity_type as "type",count(*)::int as count from executive_graph_entities where organization_id=$1 group by entity_type order by entity_type`, [organizationId]);
     const graphRelationships = await client.query(`select relationship_type as "type",count(*)::int as count,min(first_seen_at) as "firstSeenAt",max(last_seen_at) as "lastSeenAt" from executive_graph_edges where organization_id=$1 group by relationship_type order by relationship_type`, [organizationId]);
+    const industryPacks = await client.query<{ packKey: IndustryKey }>(`select pack_key as "packKey" from organization_industry_packs where organization_id=$1 order by is_primary desc,created_at`, [organizationId]);
     void locationFilter;
-    return { organizationId, consumer, priorities: priorities.rows, risks: priorities.rows.filter((x: any) => x.category === "risk"), opportunities: priorities.rows.filter((x: any) => x.category === "growth"), recentEvents: events.rows, memory: memory.rows, graphSummary: graph.rows, graphRelationships: graphRelationships.rows };
+    return { organizationId, consumer, priorities: priorities.rows, risks: priorities.rows.filter((x: any) => x.category === "risk"), opportunities: priorities.rows.filter((x: any) => x.category === "growth"), recentEvents: events.rows, memory: memory.rows, graphSummary: graph.rows, graphRelationships: graphRelationships.rows, industry: resolveIndustryContext(industryPacks.rows.map((row) => row.packKey)) };
   });
 }
 

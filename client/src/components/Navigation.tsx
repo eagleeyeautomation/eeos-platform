@@ -36,6 +36,7 @@ export const AVAILABLE_NAV_ROUTES = new Set([
   "/prn-onboarding",
   "/executive-home",
   "/executive-automation",
+  "/industry-intelligence",
   "/live-status",
   "/connected-apps",
   "/system-health",
@@ -109,6 +110,7 @@ export const NAV_LINKS: NavItem[] = [
 export const OWNER_NAV_LINKS: NavItem[] = [
   { label: "Executive Home", href: "/executive-home" },
   { label: "Executive Automation", href: "/executive-automation" },
+  { label: "Industry Intelligence", href: "/industry-intelligence" },
   {
     label: "Command Center",
     href: "#",

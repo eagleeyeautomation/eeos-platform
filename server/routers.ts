@@ -71,6 +71,8 @@ import { INTELLIGENCE_CATEGORIES, GRAPH_ENTITY_TYPES } from "./intelligence-orch
 import { askExecutiveCopilot, getExecutiveContext, publishIntelligenceEvent } from "./intelligence-orchestration/service";
 import { GOAL_TYPES } from "./decision-orchestration/core";
 import { createBusinessGoal, decideWorkflow, getAutomationDashboard, prepareDecisionWorkflow, updateBusinessGoal } from "./decision-orchestration/service";
+import { INDUSTRY_KEYS, scoreIndustryOpportunity } from "./industry-intelligence/core";
+import { configureOrganizationIndustryPacks, getOrganizationIndustryContext, listIndustryCatalog, recordIndustryKpi } from "./industry-intelligence/service";
 
 export const appRouter = router({
   system: systemRouter,
@@ -752,6 +754,33 @@ export const appRouter = router({
         const authorization = await requireWritableOrganizationRole(ctx.user);
         return updateBusinessGoal({ ...input, organizationId: authorization.organizationId!, updatedBy: authorization.userId });
       }),
+  }),
+
+  // Phase 6 configures one shared Brain with tenant-selected Industry Packs.
+  industry: router({
+    catalog: protectedProcedure.query(() => listIndustryCatalog()),
+    context: protectedProcedure.query(async ({ ctx }) => {
+      const authorization = await resolveOrganizationAuthorizationContext(ctx.user);
+      if (!authorization?.organizationId) throw new Error("An active organization context is required.");
+      return getOrganizationIndustryContext(authorization.organizationId, authorization.authorizedLocationIds);
+    }),
+    configure: protectedProcedure
+      .input(z.object({ packKeys: z.array(z.enum(INDUSTRY_KEYS)).min(1).max(8), primaryPackKey: z.enum(INDUSTRY_KEYS) }))
+      .mutation(async ({ ctx, input }) => {
+        const authorization = await requireWritableOrganizationRole(ctx.user);
+        if (authorization.role !== "ORGANIZATION_OWNER") throw new Error("Organization owner access is required to configure Industry Packs.");
+        return configureOrganizationIndustryPacks({ ...input, organizationId: authorization.organizationId!, actorId: authorization.userId });
+      }),
+    recordKpi: protectedProcedure
+      .input(z.object({ locationId:z.string().min(1).optional(),packKey:z.enum(INDUSTRY_KEYS),kpiKey:z.string().min(1).max(120),value:z.number(),unit:z.string().min(1).max(40),observedAt:z.string().datetime(),evidence:z.array(z.string().min(1)).min(1).max(50) }))
+      .mutation(async ({ctx,input})=>{
+        const authorization=await requireWritableOrganizationRole(ctx.user);
+        if(input.locationId&&!authorization.authorizedLocationIds.includes(input.locationId)) throw new Error("This location is not authorized for the current organization.");
+        return recordIndustryKpi({...input,organizationId:authorization.organizationId!,actorId:authorization.userId});
+      }),
+    scoreOpportunity: protectedProcedure
+      .input(z.object({ evidenceCount:z.number().int().min(0),strategicFit:z.number(),conversionPotential:z.number(),complianceRisk:z.number() }))
+      .query(({input})=>scoreIndustryOpportunity(input)),
   }),
 
   admin: router({

@@ -42,6 +42,7 @@ import GlobalIntelligence from "./pages/GlobalIntelligence";
 import IntelligenceEvolution from "./pages/IntelligenceEvolution";
 import ExecutiveMissionControl from "./pages/ExecutiveMissionControl";
 import ExecutiveAutomation from "./pages/ExecutiveAutomation";
+import IndustryIntelligence from "./pages/IndustryIntelligence";
 import ExecutiveCopilot from "./components/ExecutiveCopilot";
 
 function owner(component: ComponentType) {
@@ -133,6 +134,7 @@ function Router() {
         component={owner(ExecutiveMissionControl)}
       />
       <Route path="/executive-automation" component={owner(ExecutiveAutomation)} />
+      <Route path="/industry-intelligence" component={owner(IndustryIntelligence)} />
       <Route
         path="/live-status"
         component={ownerReview({
