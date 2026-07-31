@@ -1,7 +1,11 @@
 import type { Express, Request, Response } from "express";
 import type { PoolClient } from "pg";
 import { randomUUID } from "crypto";
+import { z } from "zod";
 import { withDatabase, withTransaction } from "./db/postgres";
+import { resolveOrganizationAuthorizationContext } from "./authorization";
+import { hasValidSessionCsrf } from "./_core/csrf";
+import { sdk } from "./_core/sdk";
 
 export const PRN_BUSINESS_ID = "prn-staffers-south-carolina";
 
@@ -46,6 +50,13 @@ export type BusinessMemoryAuditEntry = {
   source: BusinessMemorySource;
   snapshot: Record<string, unknown>;
   createdAt: string;
+};
+
+export type BusinessMemoryActorContext = {
+  actorUserId: string;
+  organizationId: string;
+  locationId: string;
+  requestId: string | null;
 };
 
 export type BusinessMemorySnapshot = {
@@ -101,10 +112,48 @@ const memoryTables = {
 
 let schemaReady = false;
 
-export function registerBusinessMemoryRoutes(app: Express) {
-  app.get("/api/prn/business-memory", async (_req, res) => {
+class BusinessMemoryAccessError extends Error {
+  constructor() {
+    super("Business Memory access is not authorized.");
+    this.name = "BusinessMemoryAccessError";
+  }
+}
+
+const locationScopeSchema = z.string().trim().min(1).max(512);
+
+type BusinessMemoryRouteDependencies = {
+  authenticateRequest: typeof sdk.authenticateRequest;
+  resolveOrganizationContext: typeof resolveOrganizationAuthorizationContext;
+  validateCsrf: typeof hasValidSessionCsrf;
+  loadSnapshot: typeof loadBusinessMemorySnapshot;
+  createBaseRecord: typeof createBaseMemoryRecord;
+  updateBaseRecord: typeof updateBaseMemoryRecord;
+  createOutcome: typeof createRecommendationOutcome;
+  updateOutcome: typeof updateRecommendationOutcome;
+};
+
+export function registerBusinessMemoryRoutes(
+  app: Express,
+  overrides: Partial<BusinessMemoryRouteDependencies> = {},
+) {
+  const dependencies: BusinessMemoryRouteDependencies = {
+    authenticateRequest: sdk.authenticateRequest.bind(sdk),
+    resolveOrganizationContext: resolveOrganizationAuthorizationContext,
+    validateCsrf: hasValidSessionCsrf,
+    loadSnapshot: loadBusinessMemorySnapshot,
+    createBaseRecord: createBaseMemoryRecord,
+    updateBaseRecord: updateBaseMemoryRecord,
+    createOutcome: createRecommendationOutcome,
+    updateOutcome: updateRecommendationOutcome,
+    ...overrides,
+  };
+
+  app.get("/api/prn/business-memory", async (req, res) => {
     try {
-      const snapshot = await loadBusinessMemorySnapshot(PRN_BUSINESS_ID);
+      const scope = await authorizeBusinessMemoryRequest(req, res, dependencies, false);
+      if (!scope) return;
+      const snapshot = await dependencies.loadSnapshot(scope.businessId);
+      res.set("Cache-Control", "private, no-store, max-age=0");
       res.status(200).json({ ok: true, source: "EEOS Business Memory", ...snapshot });
     } catch (error) {
       handleBusinessMemoryError(res, error, "Unable to load Business Memory.");
@@ -112,32 +161,37 @@ export function registerBusinessMemoryRoutes(app: Express) {
   });
 
   app.post("/api/prn/business-memory/goals", async (req, res) => {
-    await createBaseMemoryResponse(req, res, "business_goal");
+    await createBaseMemoryResponse(req, res, "business_goal", dependencies);
   });
 
   app.patch("/api/prn/business-memory/goals/:id", async (req, res) => {
-    await updateBaseMemoryResponse(req, res, "business_goal");
+    await updateBaseMemoryResponse(req, res, "business_goal", dependencies);
   });
 
   app.post("/api/prn/business-memory/priorities", async (req, res) => {
-    await createBaseMemoryResponse(req, res, "strategic_priority");
+    await createBaseMemoryResponse(req, res, "strategic_priority", dependencies);
   });
 
   app.patch("/api/prn/business-memory/priorities/:id", async (req, res) => {
-    await updateBaseMemoryResponse(req, res, "strategic_priority");
+    await updateBaseMemoryResponse(req, res, "strategic_priority", dependencies);
   });
 
   app.post("/api/prn/business-memory/decisions", async (req, res) => {
-    await createBaseMemoryResponse(req, res, "executive_decision");
+    await createBaseMemoryResponse(req, res, "executive_decision", dependencies);
   });
 
   app.patch("/api/prn/business-memory/decisions/:id", async (req, res) => {
-    await updateBaseMemoryResponse(req, res, "executive_decision");
+    await updateBaseMemoryResponse(req, res, "executive_decision", dependencies);
   });
 
   app.post("/api/prn/business-memory/outcomes", async (req, res) => {
     try {
-      const record = await createRecommendationOutcome(req.body);
+      const scope = await authorizeBusinessMemoryRequest(req, res, dependencies, true);
+      if (!scope) return;
+      const record = await dependencies.createOutcome(
+        secureCreateInput(req.body, scope.businessId),
+        scope.actor,
+      );
       res.status(201).json({ ok: true, record });
     } catch (error) {
       handleBusinessMemoryError(res, error, "Unable to create recommendation outcome.");
@@ -146,7 +200,14 @@ export function registerBusinessMemoryRoutes(app: Express) {
 
   app.patch("/api/prn/business-memory/outcomes/:id", async (req, res) => {
     try {
-      const record = await updateRecommendationOutcome(req.params.id, req.body);
+      const scope = await authorizeBusinessMemoryRequest(req, res, dependencies, true);
+      if (!scope) return;
+      const record = await dependencies.updateOutcome(
+        req.params.id,
+        secureUpdateInput(req.body),
+        scope.businessId,
+        scope.actor,
+      );
       res.status(200).json({ ok: true, record });
     } catch (error) {
       handleBusinessMemoryError(res, error, "Unable to update recommendation outcome.");
@@ -154,11 +215,11 @@ export function registerBusinessMemoryRoutes(app: Express) {
   });
 
   app.post("/api/prn/business-memory/milestones", async (req, res) => {
-    await createBaseMemoryResponse(req, res, "business_milestone");
+    await createBaseMemoryResponse(req, res, "business_milestone", dependencies);
   });
 
   app.patch("/api/prn/business-memory/milestones/:id", async (req, res) => {
-    await updateBaseMemoryResponse(req, res, "business_milestone");
+    await updateBaseMemoryResponse(req, res, "business_milestone", dependencies);
   });
 }
 
@@ -179,6 +240,7 @@ export async function loadBusinessMemorySnapshot(businessId = PRN_BUSINESS_ID): 
 export async function createBaseMemoryRecord(
   recordType: Exclude<BusinessMemoryRecordType, "recommendation_outcome">,
   input: BusinessMemoryCreateInput,
+  actor?: BusinessMemoryActorContext,
 ) {
   const normalized = normalizeBaseInput(input);
   await ensureBusinessMemorySchema();
@@ -204,7 +266,7 @@ export async function createBaseMemoryRecord(
       ],
     );
     const record = mapBaseRecord(result.rows[0]);
-    await insertAuditEntry(client, recordType, record.id, record.businessId, record.source, record);
+    await insertAuditEntry(client, recordType, record.id, record.businessId, record.source, record, "created", actor);
     return record;
   });
 }
@@ -213,13 +275,16 @@ export async function updateBaseMemoryRecord(
   recordType: Exclude<BusinessMemoryRecordType, "recommendation_outcome">,
   id: string,
   input: BusinessMemoryUpdateInput,
+  authorizedBusinessId?: string,
+  actor?: BusinessMemoryActorContext,
 ) {
   const normalized = normalizeBaseUpdateInput(input);
   await ensureBusinessMemorySchema();
 
   return withTransaction(async (client) => {
-    const existing = await selectBaseRecordById(client, recordType, id);
+    const existing = await selectBaseRecordById(client, recordType, id, authorizedBusinessId);
     if (!existing) {
+      if (authorizedBusinessId) throw new BusinessMemoryAccessError();
       throw new Error("Business Memory record not found.");
     }
 
@@ -251,12 +316,15 @@ export async function updateBaseMemoryRecord(
       ],
     );
     const record = mapBaseRecord(result.rows[0]);
-    await insertAuditEntry(client, recordType, record.id, record.businessId, record.source, { before: existing, after: record }, "updated");
+    await insertAuditEntry(client, recordType, record.id, record.businessId, record.source, { before: existing, after: record }, "updated", actor);
     return record;
   });
 }
 
-export async function createRecommendationOutcome(input: RecommendationOutcomeCreateInput) {
+export async function createRecommendationOutcome(
+  input: RecommendationOutcomeCreateInput,
+  actor?: BusinessMemoryActorContext,
+) {
   const normalized = normalizeOutcomeInput(input);
   await ensureBusinessMemorySchema();
 
@@ -321,18 +389,24 @@ export async function createRecommendationOutcome(input: RecommendationOutcomeCr
       ],
     );
     const record = mapRecommendationOutcome(result.rows[0]);
-    await insertAuditEntry(client, "recommendation_outcome", record.id, record.businessId, record.source, record);
+    await insertAuditEntry(client, "recommendation_outcome", record.id, record.businessId, record.source, record, "created", actor);
     return record;
   });
 }
 
-export async function updateRecommendationOutcome(id: string, input: RecommendationOutcomeCreateInput) {
+export async function updateRecommendationOutcome(
+  id: string,
+  input: RecommendationOutcomeCreateInput,
+  authorizedBusinessId?: string,
+  actor?: BusinessMemoryActorContext,
+) {
   const normalized = normalizeOutcomeUpdateInput(input);
   await ensureBusinessMemorySchema();
 
   return withTransaction(async (client) => {
-    const existing = await selectRecommendationOutcomeById(client, id);
+    const existing = await selectRecommendationOutcomeById(client, id, authorizedBusinessId);
     if (!existing) {
+      if (authorizedBusinessId) throw new BusinessMemoryAccessError();
       throw new Error("Recommendation outcome not found.");
     }
 
@@ -395,7 +469,7 @@ export async function updateRecommendationOutcome(id: string, input: Recommendat
       ],
     );
     const record = mapRecommendationOutcome(result.rows[0]);
-    await insertAuditEntry(client, "recommendation_outcome", record.id, record.businessId, record.source, { before: existing, after: record }, "updated");
+    await insertAuditEntry(client, "recommendation_outcome", record.id, record.businessId, record.source, { before: existing, after: record }, "updated", actor);
     return record;
   });
 }
@@ -415,9 +489,16 @@ async function createBaseMemoryResponse(
   req: Request,
   res: Response,
   recordType: Exclude<BusinessMemoryRecordType, "recommendation_outcome">,
+  dependencies: BusinessMemoryRouteDependencies,
 ) {
   try {
-    const record = await createBaseMemoryRecord(recordType, req.body);
+    const scope = await authorizeBusinessMemoryRequest(req, res, dependencies, true);
+    if (!scope) return;
+    const record = await dependencies.createBaseRecord(
+      recordType,
+      secureCreateInput(req.body, scope.businessId),
+      scope.actor,
+    );
     res.status(201).json({ ok: true, record });
   } catch (error) {
     handleBusinessMemoryError(res, error, "Unable to create Business Memory record.");
@@ -428,13 +509,98 @@ async function updateBaseMemoryResponse(
   req: Request,
   res: Response,
   recordType: Exclude<BusinessMemoryRecordType, "recommendation_outcome">,
+  dependencies: BusinessMemoryRouteDependencies,
 ) {
   try {
-    const record = await updateBaseMemoryRecord(recordType, req.params.id, req.body);
+    const scope = await authorizeBusinessMemoryRequest(req, res, dependencies, true);
+    if (!scope) return;
+    const record = await dependencies.updateBaseRecord(
+      recordType,
+      req.params.id,
+      secureUpdateInput(req.body),
+      scope.businessId,
+      scope.actor,
+    );
     res.status(200).json({ ok: true, record });
   } catch (error) {
     handleBusinessMemoryError(res, error, "Unable to update Business Memory record.");
   }
+}
+
+async function authorizeBusinessMemoryRequest(
+  req: Request,
+  res: Response,
+  dependencies: BusinessMemoryRouteDependencies,
+  write: boolean,
+) {
+  let user;
+  try {
+    user = await dependencies.authenticateRequest(req);
+  } catch {
+    res.status(401).json({ ok: false, error: "Authentication is required." });
+    return null;
+  }
+
+  const requestedLocation = requestedLocationId(req);
+  if (requestedLocation === false) {
+    res.status(400).json({ ok: false, error: "The requested location scope is invalid." });
+    return null;
+  }
+
+  const context = await dependencies.resolveOrganizationContext(user, requestedLocation || undefined);
+  if (!context?.organizationId || !context.membershipId || !context.selectedLocationId) {
+    res.status(403).json({ ok: false, error: "Business Memory access is not authorized." });
+    return null;
+  }
+  if (!context.authorizedLocationIds.includes(context.selectedLocationId)) {
+    res.status(403).json({ ok: false, error: "Business Memory access is not authorized." });
+    return null;
+  }
+  if (write && context.role === "READ_ONLY") {
+    res.status(403).json({ ok: false, error: "Business Memory access is not authorized." });
+    return null;
+  }
+  if (write && !dependencies.validateCsrf(req)) {
+    res.status(403).json({ ok: false, error: "A valid EEOS CSRF token is required." });
+    return null;
+  }
+
+  return {
+    businessId: canonicalBusinessMemoryId(context.organizationId, context.selectedLocationId),
+    actor: {
+      actorUserId: String(user.id),
+      organizationId: context.organizationId,
+      locationId: context.selectedLocationId,
+      requestId: requestCorrelationId(req),
+    } satisfies BusinessMemoryActorContext,
+  };
+}
+
+function requestedLocationId(req: Request): string | false | null {
+  const candidate = req.method === "GET" ? req.query.locationId : req.body?.locationId;
+  if (candidate === undefined || candidate === null || candidate === "") return null;
+  const parsed = locationScopeSchema.safeParse(candidate);
+  return parsed.success ? parsed.data : false;
+}
+
+function canonicalBusinessMemoryId(organizationId: string, locationId: string) {
+  return `organization:${organizationId}:location:${locationId}`;
+}
+
+function requestCorrelationId(req: Request) {
+  const value = req.header("x-request-id")?.trim();
+  return value ? value.slice(0, 256) : null;
+}
+
+function secureCreateInput(input: unknown, businessId: string): RecommendationOutcomeCreateInput {
+  const source = isRecord(input) ? input : {};
+  return { ...source, businessId, source: "user" };
+}
+
+function secureUpdateInput(input: unknown): RecommendationOutcomeCreateInput {
+  const source = isRecord(input) ? input : {};
+  const { businessId: _businessId, organizationId: _organizationId, locationId: _locationId, ...safe } = source;
+  return { ...safe, source: "user" };
 }
 
 async function selectBaseRecords(client: PoolClient, recordType: Exclude<BusinessMemoryRecordType, "recommendation_outcome">, businessId: string) {
@@ -455,15 +621,17 @@ async function selectBaseRecordById(
   client: PoolClient,
   recordType: Exclude<BusinessMemoryRecordType, "recommendation_outcome">,
   id: string,
+  businessId?: string,
 ) {
   const result = await client.query<DbBaseRecord>(
     `
       select id, business_id, category, title, description, status, source, metadata, created_at, updated_at
       from ${memoryTables[recordType]}
       where id = $1
+        and ($2::text is null or business_id = $2)
       limit 1
     `,
-    [id],
+    [id, businessId ?? null],
   );
 
   return result.rows[0] ? mapBaseRecord(result.rows[0]) : null;
@@ -500,7 +668,7 @@ async function selectRecommendationOutcomes(client: PoolClient, businessId: stri
   return result.rows.map(mapRecommendationOutcome);
 }
 
-async function selectRecommendationOutcomeById(client: PoolClient, id: string) {
+async function selectRecommendationOutcomeById(client: PoolClient, id: string, businessId?: string) {
   const result = await client.query<DbRecommendationOutcomeRecord>(
     `
       select
@@ -523,9 +691,10 @@ async function selectRecommendationOutcomeById(client: PoolClient, id: string) {
         updated_at
       from recommendation_outcomes
       where id = $1
+        and ($2::text is null or business_id = $2)
       limit 1
     `,
-    [id],
+    [id, businessId ?? null],
   );
 
   return result.rows[0] ? mapRecommendationOutcome(result.rows[0]) : null;
@@ -563,7 +732,9 @@ async function insertAuditEntry(
   source: BusinessMemorySource,
   snapshot: Record<string, unknown>,
   action: "created" | "updated" = "created",
+  actor?: BusinessMemoryActorContext,
 ) {
+  const attributedSnapshot = actor ? { ...snapshot, actor } : snapshot;
   await client.query(
     `
       insert into business_memory_audit_entries (
@@ -571,7 +742,7 @@ async function insertAuditEntry(
       )
       values ($1, $2, $3, $4, $5, $6, $7::jsonb, now())
     `,
-    [randomUUID(), businessId, recordType, recordId, action, source, JSON.stringify(snapshot)],
+    [randomUUID(), businessId, recordType, recordId, action, source, JSON.stringify(attributedSnapshot)],
   );
 }
 
@@ -580,7 +751,7 @@ function normalizeBaseInput(input: BusinessMemoryCreateInput) {
   const description = requireText(input.description, "description");
 
   return {
-    businessId: normalizeText(input.businessId) || PRN_BUSINESS_ID,
+    businessId: requireText(input.businessId, "businessId"),
     category: normalizeText(input.category) || "general",
     title,
     description,
@@ -716,6 +887,10 @@ function toIso(value: Date | string) {
 }
 
 function handleBusinessMemoryError(res: Response, error: unknown, message: string) {
+  if (error instanceof BusinessMemoryAccessError) {
+    res.status(403).json({ ok: false, error: "Business Memory access is not authorized." });
+    return;
+  }
   const errorMessage = error instanceof Error ? error.message : "Unknown error";
   const status = errorMessage.includes("required") ? 400 : 500;
 

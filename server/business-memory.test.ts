@@ -67,7 +67,10 @@ const client = {
       }
 
       if (normalized.includes(`from ${table}`) && normalized.includes("where id = $1")) {
-        return { rows: rows[table].filter((row) => row.id === params[0]) };
+        return {
+          rows: rows[table].filter((row) =>
+            row.id === params[0] && (params[1] == null || row.business_id === params[1])),
+        };
       }
 
       if (normalized.includes(`from ${table}`)) {
@@ -122,7 +125,10 @@ const client = {
     }
 
     if (normalized.includes("from recommendation_outcomes") && normalized.includes("where id = $1")) {
-      return { rows: rows.recommendation_outcomes.filter((row) => row.id === params[0]) };
+      return {
+        rows: rows.recommendation_outcomes.filter((row) =>
+          row.id === params[0] && (params[1] == null || row.business_id === params[1])),
+      };
     }
 
     if (normalized.includes("from recommendation_outcomes")) {
@@ -274,5 +280,33 @@ describe("Business Memory persistence", () => {
 
     expect(updated.result).toBe("completed");
     expect(updated.actualOutcome).toBe("User confirmed matching process was completed");
+  });
+
+  it("rejects record-level cross-tenant updates without changing data or audit history", async () => {
+    const { createBaseMemoryRecord, updateBaseMemoryRecord, loadBusinessMemorySnapshot } = await import("./business-memory");
+    const actor = {
+      actorUserId: "42",
+      organizationId: "10",
+      locationId: "loc-a",
+      requestId: "record-isolation-test",
+    };
+    const goal = await createBaseMemoryRecord("business_goal", {
+      businessId: "organization:10:location:loc-a",
+      title: "Protected goal",
+      description: "Tenant-scoped record.",
+    }, actor);
+
+    await expect(updateBaseMemoryRecord(
+      "business_goal",
+      goal.id,
+      { title: "Unauthorized change" },
+      "organization:20:location:loc-b",
+      { ...actor, organizationId: "20", locationId: "loc-b" },
+    )).rejects.toMatchObject({ name: "BusinessMemoryAccessError" });
+
+    const snapshot = await loadBusinessMemorySnapshot("organization:10:location:loc-a");
+    expect(snapshot.businessGoals[0]?.title).toBe("Protected goal");
+    expect(snapshot.auditTrail).toHaveLength(1);
+    expect(snapshot.auditTrail[0]?.snapshot).toMatchObject({ actor });
   });
 });
