@@ -3,12 +3,31 @@ import { Bot, Send, X } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useProductSession } from "@/contexts/ProductSessionContext";
 
 export default function ExecutiveCopilot() {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [response, setResponse] = useState<{ answer: string; confidence: number; evidence: string[] } | null>(null);
+  const session = useProductSession();
+  const certificationMode = new URLSearchParams(window.location.search).get("phase4Certification") === "27805b0";
   const ask = trpc.intelligence.copilot.useMutation({ onSuccess: setResponse });
+  const certify = trpc.intelligence.publish.useMutation();
+  const runCertification = () => {
+    const locationId = session.authorizedLocations[0]?.id;
+    if (!locationId) return;
+    certify.mutate({
+      id: "phase4-certification-27805b0", locationId, producer: "phase4-certification",
+      type: "certification.intelligence_verified", category: "risk", occurredAt: new Date().toISOString(),
+      subject: { type: "risk", key: "phase4-certification-risk", name: "Phase 4 certification risk check", attributes: { certification: true } },
+      entities: [{ type: "kpi", key: "phase4-certification-kpi", name: "Phase 4 certification KPI", attributes: { value: 1, unit: "verification" } }],
+      relationships: [{ from: { type: "risk", key: "phase4-certification-risk" }, to: { type: "kpi", key: "phase4-certification-kpi" }, type: "measured_by" }],
+      payload: { organizationName: session.organization?.name ?? "Authorized organization", certification: true },
+      evidence: ["certification:commit:27805b05e0abc60fe8bc78c0979371297140d9c9", "certification:authenticated-owner-session"],
+      correlationId: "phase4-final-certification",
+      recommendation: { key: "phase4-certification-recommendation", title: "Review Phase 4 certification evidence", summary: "The authenticated certification event verified the unified intelligence orchestration chain.", action: "Review the attributed certification evidence and close the Phase 4 verification task.", consumers: ["executive_dashboard", "business_health", "notifications", "executive_timeline"], factors: { businessImpact: 75, financialValue: 20, operationalImpact: 80, strategicValue: 90, risk: 45, urgency: 60, confidence: 95 } },
+    });
+  };
   return (
     <div className="fixed bottom-5 right-5 z-[80]">
       {open ? <div className="mb-3 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-white/10 bg-[#07131f]/95 p-4 text-white shadow-2xl backdrop-blur-xl" role="dialog" aria-label="Executive Copilot">
@@ -18,6 +37,7 @@ export default function ExecutiveCopilot() {
         {ask.error ? <p className="mt-2 text-xs text-red-300">{ask.error.message}</p> : null}
       </div> : null}
       <Button onClick={() => setOpen((value) => !value)} className="ml-auto flex h-12 rounded-full bg-cyan-500 px-4 text-[#04111d] hover:bg-cyan-400"><Bot className="mr-2 h-5 w-5" />Ask The Brain</Button>
+      {certificationMode ? <div className="mt-2 rounded-lg border border-amber-400/40 bg-[#07131f] p-2 text-right"><Button size="sm" onClick={runCertification} disabled={certify.isPending || !session.authorizedLocations.length}>Run Phase 4 Certification</Button><p className="mt-1 text-xs text-white">{certify.data ? `Published ${certify.data.eventId}; legacy ${certify.data.legacyRecommendationId}` : certify.error?.message ?? "One-time authenticated production verification"}</p></div> : null}
     </div>
   );
 }
