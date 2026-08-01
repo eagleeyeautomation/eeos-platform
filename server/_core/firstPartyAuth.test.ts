@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "../../drizzle/schema";
 import { COOKIE_NAME } from "../../shared/const";
 import { registerFirstPartyAuthRoutes } from "./firstPartyAuth";
+import { encryptMfaSecret, hashRecoveryCode, totpCode } from "./mfa";
 import { hashPassword, verifyPassword } from "./passwordAuth";
 import { hashOpaqueToken } from "./sessionTokens";
 
@@ -106,6 +107,7 @@ describe("EEOS first-party authentication", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.JWT_SECRET = "test-session-signing-secret-at-least-32-characters";
+    process.env.EEOS_MFA_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
     process.env.EEOS_MFA_REQUIRED_ROLES = "disabled";
     dbMocks.createAuthSession.mockResolvedValue(undefined);
     dbMocks.createPasswordResetToken.mockResolvedValue(undefined);
@@ -426,6 +428,110 @@ describe("EEOS first-party authentication", () => {
         ghlConnected: true,
       });
       expect(dbMocks.touchAuthSession).toHaveBeenCalledWith(20);
+    });
+  });
+
+  it("enrolls MFA only from a recent authenticated session and audits both enrollment steps", async () => {
+    const account = user();
+    const token = "recent-session-for-mfa-enrollment";
+    const session = {
+      id: 30, userId: account.id, tokenHash: hashOpaqueToken(token),
+      expiresAt: new Date(Date.now() + 60_000), revokedAt: null, createdAt: now,
+      lastSeenAt: new Date(), recentAuthAt: new Date(), mfaVerifiedAt: new Date(),
+      ipAddress: null, userAgent: null,
+    };
+    dbMocks.getAuthSessionByTokenHash.mockResolvedValue(session);
+    dbMocks.getUserById.mockResolvedValue(account);
+
+    await withServer(async (baseUrl) => {
+      const contextResponse = await fetch(`${baseUrl}/api/auth/session`, { headers: { Cookie: `${COOKIE_NAME}=${token}` } });
+      const context = await contextResponse.json() as { csrfToken: string };
+      const start = await fetch(`${baseUrl}/api/auth/mfa/enrollment/start`, {
+        method: "POST", headers: { Cookie: `${COOKIE_NAME}=${token}`, "x-eeos-csrf-token": context.csrfToken },
+      });
+      expect(start.status).toBe(200);
+      const started = await start.json() as { provisioningUri: string };
+      const secret = new URL(started.provisioningUri).searchParams.get("secret");
+      expect(secret).toMatch(/^[A-Z2-7]+$/);
+      expect(dbMocks.savePendingMfaFactor).toHaveBeenCalledWith(account.id, expect.stringMatching(/^v1\./));
+
+      dbMocks.getMfaFactor.mockResolvedValue({ encryptedSecret: encryptMfaSecret(secret!), enabledAt: null, lastTotpCounter: null });
+      dbMocks.enableMfaFactor.mockResolvedValue(undefined);
+      const counter = Math.floor(Date.now() / 30_000);
+      const confirm = await fetch(`${baseUrl}/api/auth/mfa/enrollment/confirm`, {
+        method: "POST", headers: { Cookie: `${COOKIE_NAME}=${token}`, "content-type": "application/json", "x-eeos-csrf-token": context.csrfToken },
+        body: JSON.stringify({ code: totpCode(secret!, counter) }),
+      });
+      expect(confirm.status).toBe(200);
+      const confirmed = await confirm.json() as { recoveryCodes: string[] };
+      expect(confirmed.recoveryCodes).toHaveLength(10);
+      expect(dbMocks.enableMfaFactor).toHaveBeenCalledWith(account.id, confirmed.recoveryCodes.map(hashRecoveryCode), counter);
+      expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.mfa.enrollment.started" }));
+      expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.mfa.enrollment.completed" }));
+    });
+  });
+
+  it("rejects MFA bypass and replay attempts while auditing the denied challenge", async () => {
+    const account = user();
+    const token = "pending-session-for-mfa-challenge";
+    const secret = "JBSWY3DPEHPK3PXP";
+    dbMocks.getAuthSessionByTokenHash.mockResolvedValue({
+      id: 31, userId: account.id, tokenHash: hashOpaqueToken(token), expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null, createdAt: now, lastSeenAt: new Date(), recentAuthAt: new Date(), mfaVerifiedAt: null,
+      ipAddress: null, userAgent: null,
+    });
+    dbMocks.getUserById.mockResolvedValue(account);
+    dbMocks.getMfaFactor.mockResolvedValue({ encryptedSecret: encryptMfaSecret(secret), enabledAt: now, lastTotpCounter: null });
+    dbMocks.consumeMfaRecoveryCode.mockResolvedValue(false);
+
+    await withServer(async (baseUrl) => {
+      const pending = await fetch(`${baseUrl}/api/auth/mfa/pending`, { headers: { Cookie: `${COOKIE_NAME}=${token}` } });
+      const context = await pending.json() as { csrfToken: string };
+      const invalid = await fetch(`${baseUrl}/api/auth/mfa/challenge`, {
+        method: "POST", headers: { Cookie: `${COOKIE_NAME}=${token}`, "content-type": "application/json", "x-eeos-csrf-token": context.csrfToken },
+        body: JSON.stringify({ code: "000000" }),
+      });
+      expect(invalid.status).toBe(401);
+      expect(dbMocks.markSessionMfaVerified).not.toHaveBeenCalled();
+      expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.mfa.challenge.failed" }));
+
+      const counter = Math.floor(Date.now() / 30_000);
+      dbMocks.updateMfaCounter.mockResolvedValue(false);
+      const replay = await fetch(`${baseUrl}/api/auth/mfa/challenge`, {
+        method: "POST", headers: { Cookie: `${COOKIE_NAME}=${token}`, "content-type": "application/json", "x-eeos-csrf-token": context.csrfToken },
+        body: JSON.stringify({ code: totpCode(secret, counter) }),
+      });
+      expect(replay.status).toBe(401);
+      expect(dbMocks.markSessionMfaVerified).not.toHaveBeenCalled();
+      expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.mfa.challenge.replay_denied" }));
+    });
+  });
+
+  it("consumes a recovery code once, marks only that pending session verified, and audits its use", async () => {
+    const account = user();
+    const token = "pending-session-for-recovery-code";
+    const recoveryCode = "12345678-90abcdef";
+    dbMocks.getAuthSessionByTokenHash.mockResolvedValue({
+      id: 32, userId: account.id, tokenHash: hashOpaqueToken(token), expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null, createdAt: now, lastSeenAt: new Date(), recentAuthAt: new Date(), mfaVerifiedAt: null,
+      ipAddress: null, userAgent: null,
+    });
+    dbMocks.getUserById.mockResolvedValue(account);
+    dbMocks.getMfaFactor.mockResolvedValue({ encryptedSecret: encryptMfaSecret("JBSWY3DPEHPK3PXP"), enabledAt: now, lastTotpCounter: null });
+    dbMocks.consumeMfaRecoveryCode.mockResolvedValue(true);
+    dbMocks.markSessionMfaVerified.mockResolvedValue(undefined);
+
+    await withServer(async (baseUrl) => {
+      const pending = await fetch(`${baseUrl}/api/auth/mfa/pending`, { headers: { Cookie: `${COOKIE_NAME}=${token}` } });
+      const context = await pending.json() as { csrfToken: string };
+      const response = await fetch(`${baseUrl}/api/auth/mfa/challenge`, {
+        method: "POST", headers: { Cookie: `${COOKIE_NAME}=${token}`, "content-type": "application/json", "x-eeos-csrf-token": context.csrfToken },
+        body: JSON.stringify({ code: recoveryCode }),
+      });
+      expect(response.status).toBe(200);
+      expect(dbMocks.consumeMfaRecoveryCode).toHaveBeenCalledWith(account.id, hashRecoveryCode(recoveryCode));
+      expect(dbMocks.markSessionMfaVerified).toHaveBeenCalledWith(32);
+      expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.mfa.recovery.used" }));
     });
   });
 
