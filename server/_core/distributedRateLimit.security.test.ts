@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AuthenticationRateLimiter, MemoryRateLimitStore, rateLimitIdentity, type RateLimitStore } from "./distributedRateLimit";
+import { AuthenticationRateLimiter, MemoryRateLimitStore, rateLimitIdentity, resolveUpstashRateLimitConfig, type RateLimitStore } from "./distributedRateLimit";
 
 describe("distributed authentication throttling", () => {
   it("shares limits across simulated instances and survives an instance restart", async () => {
@@ -41,5 +41,17 @@ describe("distributed authentication throttling", () => {
   it("uses irreversible non-secret Redis key material", () => {
     expect(rateLimitIdentity("Sensitive@Example.test")).toMatch(/^[a-f0-9]{64}$/);
     expect(rateLimitIdentity("Sensitive@Example.test")).not.toContain("Sensitive");
+  });
+
+  it("accepts the current Vercel Marketplace Redis variable convention", () => {
+    expect(resolveUpstashRateLimitConfig({
+      KV_REST_API_URL: "https://redis.example.test",
+      KV_REST_API_TOKEN: "token",
+    })).toEqual({ url: "https://redis.example.test", token: "token" });
+  });
+
+  it("does not enable the shared store with an incomplete credential pair", () => {
+    expect(resolveUpstashRateLimitConfig({ KV_REST_API_URL: "https://redis.example.test" })).toBeUndefined();
+    expect(resolveUpstashRateLimitConfig({ KV_REST_API_TOKEN: "token" })).toBeUndefined();
   });
 });

@@ -36,12 +36,21 @@ export class MemoryRateLimitStore implements RateLimitStore {
   }
 }
 
+export function resolveUpstashRateLimitConfig(env: NodeJS.ProcessEnv = process.env) {
+  const url = env.UPSTASH_REDIS_REST_KV_REST_API_URL
+    ?? env.UPSTASH_REDIS_REST_URL
+    ?? env.KV_REST_API_URL;
+  const token = env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN
+    ?? env.UPSTASH_REDIS_REST_TOKEN
+    ?? env.KV_REST_API_TOKEN;
+  return url && token ? { url, token } : undefined;
+}
+
 export function createProductionRateLimitStore(env: NodeJS.ProcessEnv = process.env): RateLimitStore | undefined {
   if (env.NODE_ENV === "test") return undefined;
-  const url = env.UPSTASH_REDIS_REST_KV_REST_API_URL ?? env.UPSTASH_REDIS_REST_URL;
-  const token = env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN ?? env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return undefined;
-  return new UpstashRateLimitStore(new Redis({ url, token }));
+  const config = resolveUpstashRateLimitConfig(env);
+  if (!config) return undefined;
+  return new UpstashRateLimitStore(new Redis(config));
 }
 
 export function rateLimitIdentity(value: string) {
