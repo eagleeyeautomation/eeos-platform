@@ -25,6 +25,7 @@ import { randomUUID } from "crypto";
 import { getAllGhlTokens, getAllSubaccounts, upsertGhlToken, getGhlToken, upsertSubaccount } from "./db";
 import { listAuthorizedSubaccounts, requireAuthorizedLocation, requireWritableOrganizationRole } from "./authorization";
 import { sdk } from "./_core/sdk";
+import { hasValidSessionCsrf } from "./_core/csrf";
 
 const GHL_API_BASE = "https://services.leadconnectorhq.com";
 
@@ -224,6 +225,10 @@ export function registerGhlPitRoutes(app: Express) {
    * is published, this route remains available for admin/manual connections.
    */
   app.post("/api/ghl/pit/connect", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) {
+      res.status(403).json({ success: false, error: "A valid EEOS CSRF token is required." });
+      return;
+    }
     const { locationId, privateToken, subaccountName } = req.body as PitConnectBody;
 
     if (!locationId || !privateToken || !subaccountName) {
@@ -243,6 +248,10 @@ export function registerGhlPitRoutes(app: Express) {
         return;
       }
       const authorization = await requireWritableOrganizationRole(user);
+      if (authorization.role !== "ORGANIZATION_OWNER") {
+        res.status(403).json({ success: false, error: "Organization owner access is required." });
+        return;
+      }
       console.log(`[GHL PIT] Validating token for location ${locationId} (${subaccountName})`);
 
       // Validate the token against the GHL API
@@ -335,6 +344,10 @@ export function registerGhlPitRoutes(app: Express) {
    * Used by the ConnectGHL page to show live connection health.
    */
   app.post("/api/ghl/pit/verify", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) {
+      res.status(403).json({ success: false, valid: false, error: "A valid EEOS CSRF token is required." });
+      return;
+    }
     const { locationId } = req.body as { locationId: string };
 
     if (!locationId) {
@@ -392,6 +405,10 @@ export function registerGhlPitRoutes(app: Express) {
    * Does NOT delete the record — marks isActive = false for audit trail.
    */
   app.delete("/api/ghl/pit/disconnect", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) {
+      res.status(403).json({ success: false, error: "A valid EEOS CSRF token is required." });
+      return;
+    }
     const { locationId } = req.body as { locationId: string };
 
     if (!locationId) {
@@ -407,7 +424,11 @@ export function registerGhlPitRoutes(app: Express) {
         res.status(401).json({ success: false, error: "Authentication is required." });
         return;
       }
-      await requireWritableOrganizationRole(user);
+      const authorization = await requireWritableOrganizationRole(user);
+      if (authorization.role !== "ORGANIZATION_OWNER") {
+        res.status(403).json({ success: false, error: "Organization owner access is required." });
+        return;
+      }
       await requireAuthorizedLocation(user, locationId);
       const token = await getGhlToken(locationId);
       if (!token) {

@@ -29,6 +29,13 @@
       "when": 1785354287454,
       "tag": "0003_amusing_white_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785542400000,
+      "tag": "0008_phase1_mfa",
+      "breakpoints": true
     }
   ]
 }

@@ -171,10 +171,25 @@ export const authSessions = mysqlTable("auth_sessions", {
   revokedAt: timestamp("revokedAt"),
   ipAddress: varchar("ipAddress", { length: 128 }),
   userAgent: text("userAgent"),
+  recentAuthAt: timestamp("recentAuthAt"),
+  mfaVerifiedAt: timestamp("mfaVerifiedAt"),
 }, (t) => [
   uniqueIndex("auth_sessions_token_hash_unique").on(t.tokenHash),
   index("idx_auth_sessions_user").on(t.userId),
   index("idx_auth_sessions_expires").on(t.expiresAt),
+]);
+
+export const authMfaFactors = mysqlTable("auth_mfa_factors", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  encryptedSecret: text("encryptedSecret").notNull(),
+  recoveryCodeHashes: json("recoveryCodeHashes").$type<string[]>().notNull(),
+  lastTotpCounter: bigint("lastTotpCounter", { mode: "number" }),
+  enabledAt: timestamp("enabledAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (t) => [
+  uniqueIndex("auth_mfa_factors_user_unique").on(t.userId),
 ]);
 
 export const passwordResetTokens = mysqlTable("password_reset_tokens", {

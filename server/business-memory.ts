@@ -583,7 +583,7 @@ function requestedLocationId(req: Request): string | false | null {
   return parsed.success ? parsed.data : false;
 }
 
-function canonicalBusinessMemoryId(organizationId: string, locationId: string) {
+export function canonicalBusinessMemoryId(organizationId: string, locationId: string) {
   return `organization:${organizationId}:location:${locationId}`;
 }
 

@@ -122,7 +122,7 @@ export const appRouter = router({
         ghlConnected: connectedTokens.some((token) => token?.isActive && token.scope === "private_integration"),
       };
     }),
-    logout: publicProcedure.mutation(async ({ ctx }) => {
+    logout: protectedProcedure.mutation(async ({ ctx }) => {
       await sdk.revokeCurrentSession(ctx.req);
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -138,7 +138,7 @@ export const appRouter = router({
      * Returns the GHL connection status for the current tenant.
      * Used by ConnectGHL page and IntegrationStatus page.
      */
-    connectionStatus: publicProcedure
+    connectionStatus: protectedProcedure
       .input(z.object({ tenantId: z.string() }))
       .query(async ({ input, ctx }) => {
         const user = ctx.user;
@@ -178,7 +178,7 @@ export const appRouter = router({
      * Returns the current business memory snapshot for a tenant.
      * Used by ExecutiveHome and BusinessHealth pages.
      */
-    get: publicProcedure
+    get: protectedProcedure
       .input(z.object({ tenantId: z.string() }))
       .query(async ({ input, ctx }) => {
         await requireAuthorizedLocation(ctx.user!, input.tenantId);
@@ -194,7 +194,7 @@ export const appRouter = router({
      * Returns paginated timeline events for a tenant.
      * Used by ExecutiveTimeline page.
      */
-    list: publicProcedure
+    list: protectedProcedure
       .input(z.object({
         tenantId: z.string(),
         limit: z.number().min(1).max(100).default(50),
@@ -213,7 +213,7 @@ export const appRouter = router({
      * Returns the knowledge graph (nodes + edges) for a tenant.
      * Used by KnowledgeGraphPreview page.
      */
-    get: publicProcedure
+    get: protectedProcedure
       .input(z.object({ tenantId: z.string() }))
       .query(async ({ input, ctx }) => {
         await requireAuthorizedLocation(ctx.user!, input.tenantId);
@@ -229,7 +229,7 @@ export const appRouter = router({
      * Returns recent signals for a tenant.
      * Used by LiveSignals page.
      */
-    recent: publicProcedure
+    recent: protectedProcedure
       .input(z.object({
         tenantId: z.string(),
         hours: z.number().min(1).max(168).default(24),
@@ -248,7 +248,7 @@ export const appRouter = router({
      * Returns all active recommendations for a tenant.
      * Used by AIRecommendations and ExecutiveHome pages.
      */
-    list: publicProcedure
+    list: protectedProcedure
       .input(z.object({ tenantId: z.string() }))
       .query(async ({ input, ctx }) => {
         await requireAuthorizedLocation(ctx.user!, input.tenantId);
@@ -260,7 +260,7 @@ export const appRouter = router({
      * Manually triggers the Intelligence Engine for a tenant.
      * Used by the executive dashboard "Refresh" button.
      */
-    generate: publicProcedure
+    generate: protectedProcedure
       .input(z.object({ tenantId: z.string() }))
       .mutation(async ({ input, ctx }) => {
         await requireAuthorizedLocation(ctx.user!, input.tenantId);
@@ -273,7 +273,7 @@ export const appRouter = router({
      * Records executive feedback on a recommendation.
      * Feeds the IE continuous learning loop.
      */
-    feedback: publicProcedure
+    feedback: protectedProcedure
       .input(z.object({
         recommendationId: z.number(),
         tenantId: z.string(),
@@ -284,7 +284,7 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         await requireAuthorizedLocation(ctx.user!, input.tenantId);
         await requireWritableOrganizationRole(ctx.user!);
-        const rec = await getRecommendationById(input.recommendationId);
+        const rec = await getRecommendationById(input.recommendationId, input.tenantId);
         if (!rec) {
           throw new Error("Recommendation not found");
         }
@@ -294,7 +294,7 @@ export const appRouter = router({
           : input.decision === "rejected" ? "rejected"
           : "active"; // deferred/already_done keep it active
 
-        await updateRecommendationStatus(input.recommendationId, newStatus);
+        await updateRecommendationStatus(input.recommendationId, newStatus, input.tenantId);
 
         // Record feedback
         await insertFeedback({
@@ -334,7 +334,7 @@ export const appRouter = router({
      * Records the outcome of a previously accepted recommendation.
      * Critical for IE accuracy calibration.
      */
-    recordOutcome: publicProcedure
+    recordOutcome: protectedProcedure
       .input(z.object({
         recommendationId: z.number(),
         tenantId: z.string(),
@@ -376,7 +376,7 @@ export const appRouter = router({
     /**
      * Returns the GHL connection status for a specific subaccount.
      */
-    subaccountStatus: publicProcedure
+    subaccountStatus: protectedProcedure
       .input(z.object({ ghlLocationId: z.string() }))
       .query(async ({ input, ctx }) => {
         await requireAuthorizedLocation(ctx.user!, input.ghlLocationId);
@@ -400,7 +400,7 @@ export const appRouter = router({
      * Returns the latest IE accuracy metrics for a tenant.
      * Used by SystemHealth and the executive feedback loop.
      */
-    metrics: publicProcedure
+    metrics: protectedProcedure
       .input(z.object({ tenantId: z.string() }))
       .query(async ({ input, ctx }) => {
         await requireAuthorizedLocation(ctx.user!, input.tenantId);
@@ -411,7 +411,7 @@ export const appRouter = router({
      * Returns executive feedback history for a tenant.
      * Used by the IE accuracy dashboard.
      */
-    feedbackHistory: publicProcedure
+    feedbackHistory: protectedProcedure
       .input(z.object({
         tenantId: z.string(),
         limit: z.number().min(1).max(100).default(50),
@@ -424,7 +424,7 @@ export const appRouter = router({
     /**
      * Manually triggers IE metrics recomputation.
      */
-    recomputeMetrics: publicProcedure
+    recomputeMetrics: protectedProcedure
       .input(z.object({ tenantId: z.string() }))
       .mutation(async ({ input, ctx }) => {
         await requireAuthorizedLocation(ctx.user!, input.tenantId);
@@ -822,35 +822,35 @@ export const appRouter = router({
             })),
         };
       }),
-    overview: publicProcedure.query(async ({ ctx }) => {
+    overview: protectedProcedure.query(async ({ ctx }) => {
       await requirePlatformAdmin(ctx.user);
       return getPlatformAdminOverview();
     }),
-    organizations: publicProcedure.query(async ({ ctx }) => {
+    organizations: protectedProcedure.query(async ({ ctx }) => {
       await requirePlatformAdmin(ctx.user);
       return getPlatformOrganizationDetails();
     }),
-    onboarding: publicProcedure.query(async ({ ctx }) => {
+    onboarding: protectedProcedure.query(async ({ ctx }) => {
       await requirePlatformAdmin(ctx.user);
       return getPlatformOnboardingSummary();
     }),
-    integrations: publicProcedure.query(async ({ ctx }) => {
+    integrations: protectedProcedure.query(async ({ ctx }) => {
       await requirePlatformAdmin(ctx.user);
       return getPlatformIntegrationSummary();
     }),
-    platformHealth: publicProcedure.query(async ({ ctx }) => {
+    platformHealth: protectedProcedure.query(async ({ ctx }) => {
       await requirePlatformAdmin(ctx.user);
       return getPlatformHealthSummary();
     }),
-    auditActivity: publicProcedure.query(async ({ ctx }) => {
+    auditActivity: protectedProcedure.query(async ({ ctx }) => {
       await requirePlatformAdmin(ctx.user);
       return getPlatformAuditActivity();
     }),
-    support: publicProcedure.query(async ({ ctx }) => {
+    support: protectedProcedure.query(async ({ ctx }) => {
       await requirePlatformAdmin(ctx.user);
       return getPlatformSupportSummary();
     }),
-    aiOperations: publicProcedure.query(async ({ ctx }) => {
+    aiOperations: protectedProcedure.query(async ({ ctx }) => {
       await requirePlatformAdmin(ctx.user);
       return getPlatformAiOperationsSummary();
     }),

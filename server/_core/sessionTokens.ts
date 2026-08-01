@@ -12,8 +12,9 @@ export function hashOpaqueToken(token: string) {
 }
 
 export function readClientIp(req: Request) {
-  const forwarded = req.header("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || req.socket.remoteAddress || null;
+  // Express resolves req.ip using the application's explicit trust-proxy policy.
+  // Reading X-Forwarded-For directly would let callers influence rate-limit keys.
+  return req.ip || req.socket.remoteAddress || null;
 }
 
 export function readUserAgent(req: Request) {

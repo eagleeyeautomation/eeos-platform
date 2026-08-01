@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { randomUUID } from "crypto";
 import type { PoolClient } from "pg";
-import { PRN_BUSINESS_ID, loadBusinessMemorySnapshot, type BusinessMemorySnapshot } from "./business-memory";
+import { loadBusinessMemorySnapshot, type BusinessMemorySnapshot } from "./business-memory";
 import { withDatabase, withTransaction } from "./db/postgres";
 import {
   applyLearningAdjustment,
@@ -19,6 +19,7 @@ import {
   type PrnIntelligenceEngineRecommendation,
   type PrnLiveData,
 } from "./prn-private-ghl";
+import { authorizePrnRoute } from "./prn-route-authorization";
 
 type AthenaDataFreshnessStatus = "fresh" | "stale" | "incomplete";
 type AthenaHealthStatus = "excellent" | "healthy" | "watch" | "critical";
@@ -113,12 +114,14 @@ export type AthenaExecutiveBrief = {
 };
 
 export function registerAthenaRoutes(app: Express) {
-  app.get("/api/prn/athena/executive-brief", async (_req, res) => {
+  app.get("/api/prn/athena/executive-brief", async (req, res) => {
     try {
-      const liveData = await loadPrnLiveData();
-      const memory = await loadBusinessMemorySnapshot(PRN_BUSINESS_ID);
-      const previousSnapshot = await loadLatestAthenaSnapshot(PRN_BUSINESS_ID);
-      const learningContext = await loadAthenaLearningContext(PRN_BUSINESS_ID);
+      const scope = await authorizePrnRoute(req, res);
+      if (!scope) return;
+      const liveData = await loadPrnLiveData(scope.locationId);
+      const memory = await loadBusinessMemorySnapshot(scope.businessId);
+      const previousSnapshot = await loadLatestAthenaSnapshot(scope.businessId);
+      const learningContext = await loadAthenaLearningContext(scope.businessId);
       const executiveRecommendations = buildExecutiveRecommendations(liveData);
       const intelligence = buildPrnIntelligenceEngine(liveData, memory);
       const b2b = buildB2BIntelligence(liveData);
@@ -134,7 +137,6 @@ export function registerAthenaRoutes(app: Express) {
         learningContext,
       });
 
-      await persistAthenaRun(brief, liveData, memory, previousSnapshot);
       res.status(200).json(brief);
     } catch (error) {
       console.error(JSON.stringify({
@@ -144,7 +146,7 @@ export function registerAthenaRoutes(app: Express) {
         error: error instanceof Error ? error.message : "Unknown error",
       }));
       res.status(502).json({
-        businessId: PRN_BUSINESS_ID,
+        businessId: "unavailable",
         generatedAt: new Date().toISOString(),
         error: "Unable to generate Athena Executive Brief from verified production data.",
       });

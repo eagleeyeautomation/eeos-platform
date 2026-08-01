@@ -1,7 +1,7 @@
 import type { Express, Response } from "express";
 import { randomUUID } from "crypto";
 import type { PoolClient } from "pg";
-import { PRN_BUSINESS_ID } from "./business-memory";
+import { authorizePrnRoute } from "./prn-route-authorization";
 import { withDatabase, withTransaction } from "./db/postgres";
 
 export type LearningCategory = "sales" | "revenue" | "operations" | "customer_experience" | "b2b" | "c2b" | "risk" | "growth";
@@ -80,9 +80,11 @@ const categories: LearningCategory[] = ["sales", "revenue", "operations", "custo
 const insufficientLearningHistory = "Insufficient verified outcome history for adaptive learning.";
 
 export function registerAthenaLearningRoutes(app: Express) {
-  app.get("/api/prn/athena/learning", async (_req, res) => {
+  app.get("/api/prn/athena/learning", async (req, res) => {
     try {
-      const context = await loadAthenaLearningContext(PRN_BUSINESS_ID);
+      const scope = await authorizePrnRoute(req, res);
+      if (!scope) return;
+      const context = await loadAthenaLearningContext(scope.businessId);
       res.status(200).json({ ok: true, ...context });
     } catch (error) {
       handleLearningError(res, error, "Unable to load Athena Learning.");
@@ -91,7 +93,9 @@ export function registerAthenaLearningRoutes(app: Express) {
 
   app.post("/api/prn/athena/feedback", async (req, res) => {
     try {
-      const record = await createRecommendationFeedback(PRN_BUSINESS_ID, req.body);
+      const scope = await authorizePrnRoute(req, res, { write: true });
+      if (!scope) return;
+      const record = await createRecommendationFeedback(scope.businessId, req.body);
       res.status(201).json({ ok: true, record });
     } catch (error) {
       handleLearningError(res, error, "Unable to create recommendation feedback.");
@@ -100,7 +104,9 @@ export function registerAthenaLearningRoutes(app: Express) {
 
   app.post("/api/prn/athena/measurements", async (req, res) => {
     try {
-      const record = await createRecommendationMeasurement(PRN_BUSINESS_ID, req.body);
+      const scope = await authorizePrnRoute(req, res, { write: true });
+      if (!scope) return;
+      const record = await createRecommendationMeasurement(scope.businessId, req.body);
       res.status(201).json({ ok: true, record });
     } catch (error) {
       handleLearningError(res, error, "Unable to create recommendation measurement.");
@@ -109,7 +115,9 @@ export function registerAthenaLearningRoutes(app: Express) {
 
   app.post("/api/prn/athena/outcomes/review", async (req, res) => {
     try {
-      const review = await reviewRecommendationOutcome(PRN_BUSINESS_ID, req.body.recommendationId);
+      const scope = await authorizePrnRoute(req, res, { write: true });
+      if (!scope) return;
+      const review = await reviewRecommendationOutcome(scope.businessId, req.body.recommendationId);
       res.status(200).json(review);
     } catch (error) {
       handleLearningError(res, error, "Unable to review recommendation outcome.");
@@ -118,7 +126,9 @@ export function registerAthenaLearningRoutes(app: Express) {
 
   app.get("/api/prn/athena/recommendations/:recommendationId/history", async (req, res) => {
     try {
-      const history = await loadRecommendationHistory(PRN_BUSINESS_ID, req.params.recommendationId);
+      const scope = await authorizePrnRoute(req, res);
+      if (!scope) return;
+      const history = await loadRecommendationHistory(scope.businessId, req.params.recommendationId);
       res.status(200).json({ ok: true, recommendationId: req.params.recommendationId, ...history });
     } catch (error) {
       handleLearningError(res, error, "Unable to load recommendation history.");
@@ -127,7 +137,9 @@ export function registerAthenaLearningRoutes(app: Express) {
 
   app.post("/api/prn/athena/lessons/:lessonId/approve", async (req, res) => {
     try {
-      const record = await approveRecommendationLesson(PRN_BUSINESS_ID, req.params.lessonId, req.body.approved !== false);
+      const scope = await authorizePrnRoute(req, res, { write: true });
+      if (!scope) return;
+      const record = await approveRecommendationLesson(scope.businessId, req.params.lessonId, req.body.approved !== false);
       res.status(200).json({ ok: true, record });
     } catch (error) {
       handleLearningError(res, error, "Unable to update recommendation lesson approval.");

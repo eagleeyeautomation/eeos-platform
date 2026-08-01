@@ -1,6 +1,10 @@
-import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import {
+  ADMIN_SESSION_ABSOLUTE_TIMEOUT_MS,
+  COOKIE_NAME,
+  USER_SESSION_ABSOLUTE_TIMEOUT_MS,
+} from "@shared/const";
 import type { Express, Request, Response } from "express";
-import { randomUUID } from "crypto";
+import { createHmac, randomUUID } from "crypto";
 import { z } from "zod";
 import {
   createAuthInvitation,
@@ -10,10 +14,19 @@ import {
   getAuthInvitationByTokenHash,
   getGhlToken,
   getMembershipById,
+  getMfaFactor,
   getPasswordResetTokenByHash,
   getUserByEmail,
   getUserById,
   insertAuthAuditEvent,
+  consumeMfaRecoveryCode,
+  disableMfaFactor,
+  enableMfaFactor,
+  listActiveAuthSessions,
+  markSessionMfaVerified,
+  revokeAuthSessionById,
+  savePendingMfaFactor,
+  updateMfaCounter,
   inspectLegacyGhlBinding,
   markAuthInvitationAccepted,
   markPasswordResetTokenUsed,
@@ -41,6 +54,8 @@ import { hashPassword, validatePasswordPolicy, verifyPassword } from "./password
 import { buildPasswordResetUrl, sendPasswordResetEmail } from "./passwordResetEmail";
 import { createOpaqueToken, hashOpaqueToken, readClientIp } from "./sessionTokens";
 import { sdk } from "./sdk";
+import { AuthenticationRateLimiter, createProductionRateLimitStore, rateLimitIdentity } from "./distributedRateLimit";
+import { decryptMfaSecret, encryptMfaSecret, generateRecoveryCodes, generateTotpSecret, hashRecoveryCode, mfaRequiredForRole, verifyTotp } from "./mfa";
 
 const loginSchema = z.object({
   email: z.string().email().max(320),
@@ -71,7 +86,19 @@ const createInvitationSchema = z.object({
   expiresInDays: z.number().int().min(1).max(30).optional(),
 });
 
+const mfaCodeSchema = z.object({ code: z.string().trim().min(6).max(64) });
+const sessionRevokeSchema = z.object({ sessionId: z.string().regex(/^session_[a-f0-9]{32}$/) });
+const distributedLimiter = new AuthenticationRateLimiter(createProductionRateLimitStore());
+
+function sessionHandle(id: number) {
+  const key = process.env.JWT_SECRET;
+  if (!key) throw new Error("JWT_SECRET is required");
+  return `session_${createHmac("sha256", key).update(`eeos:session-handle:v1:${id}`).digest("hex").slice(0, 32)}`;
+}
+
 const failedLoginAttempts = new Map<string, { count: number; resetAt: number }>();
+const sensitiveRouteAttempts = new Map<string, { count: number; resetAt: number }>();
+export const AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60_000;
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -93,6 +120,23 @@ function invalidLogin(res: Response) {
 
 function rateLimitKey(req: Request, email: string) {
   return `${readClientIp(req) || "unknown"}:${email}`;
+}
+
+async function enforceDistributedLimit(req: Request, res: Response, route: string, account: string, limit: number, failClosed = false) {
+  if (process.env.NODE_ENV === "test") return true;
+  const decision = await distributedLimiter.consume({
+    route,
+    network: readClientIp(req) || "unknown",
+    account,
+    limit,
+    windowSeconds: AUTH_RATE_LIMIT_WINDOW_MS / 1000,
+    failClosed,
+  });
+  if (decision.allowed) return true;
+  await auditRateLimit(route, req);
+  res.set("Retry-After", String(decision.retryAfterSeconds)).status(429)
+    .json({ success: false, error: "Too many requests. Try again later." });
+  return false;
 }
 
 function isRateLimited(key: string) {
@@ -118,21 +162,60 @@ function clearFailedLogin(key: string) {
   failedLoginAttempts.delete(key);
 }
 
+export function consumeSensitiveRouteLimit(key: string, limit: number, now = Date.now()) {
+  const current = sensitiveRouteAttempts.get(key);
+  if (!current || current.resetAt <= now) {
+    sensitiveRouteAttempts.set(key, { count: 1, resetAt: now + AUTH_RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  current.count += 1;
+  return current.count > limit;
+}
+
+async function auditRateLimit(route: string, req: Request) {
+  await audit({
+    action: "auth.rate_limit.triggered",
+    targetType: "authentication_route",
+    targetId: route,
+    outcome: "denied",
+    reasonCode: "RATE_LIMIT_EXCEEDED",
+    severity: "warn",
+    correlationId: req.header("x-request-id") ?? req.header("x-eeos-request-id") ?? null,
+    metadata: { source: readClientIp(req) ? "network" : "unknown" },
+  });
+}
+
 async function audit(input: {
   actorUserId?: number | null;
   organizationId?: number | null;
+  locationId?: string | null;
+  actorRole?: string | null;
   action: string;
   targetType?: string | null;
   targetId?: string | null;
+  outcome?: "success" | "failure" | "denied";
+  reasonCode?: string | null;
+  correlationId?: string | null;
+  severity?: "info" | "warn" | "critical";
   metadata?: Record<string, unknown>;
 }) {
+  const inferredDenied = input.action.includes("failed") || input.action.includes("denied") || input.action.includes("rate_limit");
   await insertAuthAuditEvent({
     actorUserId: input.actorUserId ?? null,
     organizationId: input.organizationId ?? null,
     action: input.action,
     targetType: input.targetType ?? null,
     targetId: input.targetId ?? null,
-    metadata: input.metadata ?? null,
+    metadata: {
+      locationId: input.locationId ?? null,
+      role: input.actorRole ?? null,
+      outcome: input.outcome ?? (inferredDenied ? "denied" : "success"),
+      reasonCode: input.reasonCode ?? null,
+      correlationId: input.correlationId ?? null,
+      sourceService: "eeos-core",
+      securitySeverity: input.severity ?? (inferredDenied ? "warn" : "info"),
+      ...(input.metadata ?? {}),
+    },
   });
 }
 
@@ -181,7 +264,7 @@ async function buildSessionSummary(req: Request, res: Response) {
   };
 }
 
-function setSessionCookie(req: Request, res: Response, token: string, maxAge = ONE_YEAR_MS) {
+function setSessionCookie(req: Request, res: Response, token: string, maxAge: number) {
   res.cookie(COOKIE_NAME, token, {
     ...getSessionCookieOptions(req),
     maxAge,
@@ -437,13 +520,15 @@ export function registerFirstPartyAuthRoutes(app: Express) {
     }
 
     const email = normalizeEmail(parsed.data.email);
+    const user = await getUserByEmail(email);
+    if (!(await enforceDistributedLimit(req, res, "login", email, 8, user?.role === "admin"))) return;
     const limitKey = rateLimitKey(req, email);
     if (isRateLimited(limitKey)) {
+      await auditRateLimit("login", req);
       res.status(429).json({ success: false, error: "Too many failed attempts. Try again later." });
       return;
     }
 
-    const user = await getUserByEmail(email);
     if (!user || user.isActive === false || !(await verifyPassword(parsed.data.password, user.passwordHash))) {
       recordFailedLogin(limitKey);
       await audit({ action: "auth.login.failed", targetType: "user", targetId: email });
@@ -451,7 +536,8 @@ export function registerFirstPartyAuthRoutes(app: Express) {
       return;
     }
 
-    clearFailedLogin(limitKey);
+    // Successful authentication does not clear shared abuse evidence. The local
+    // fallback record is retained until its fixed window expires as well.
     await upsertUser({
       openId: user.openId,
       loginMethod: "eeos",
@@ -465,11 +551,21 @@ export function registerFirstPartyAuthRoutes(app: Express) {
     }
 
     const authorization = await resolveAuthorizationContext(refreshedUser);
+    const factor = await getMfaFactor(refreshedUser.id);
+    const requiresMfa = Boolean(factor?.enabledAt || mfaRequiredForRole(authorization.role));
+    if (mfaRequiredForRole(authorization.role) && !factor?.enabledAt) {
+      res.status(403).json({ success: false, error: "MFA enrollment is required before this role can sign in." });
+      return;
+    }
     const fallbackRoute = defaultRouteForRole(authorization.role);
     const redirectTo = safeReturnTo(parsed.data.returnTo, fallbackRoute);
-    const session = await sdk.createSessionForUser(refreshedUser, req, { expiresInMs: ONE_YEAR_MS });
+    const sessionMaxAge = authorization.role === "PLATFORM_ADMIN"
+      ? ADMIN_SESSION_ABSOLUTE_TIMEOUT_MS
+      : USER_SESSION_ABSOLUTE_TIMEOUT_MS;
+    const session = await sdk.createSessionForUser(refreshedUser, req, { expiresInMs: sessionMaxAge, mfaVerified: !requiresMfa });
 
-    setSessionCookie(req, res, session.token);
+    setSessionCookie(req, res, session.token, sessionMaxAge);
+    issueSessionCsrfToken(req, res, session.token);
     await audit({
       actorUserId: refreshedUser.id,
       organizationId: authorization.organizationId ? Number(authorization.organizationId) : null,
@@ -479,22 +575,153 @@ export function registerFirstPartyAuthRoutes(app: Express) {
     });
     res.status(200).json({
       success: true,
-      redirectTo,
+      redirectTo: requiresMfa ? "/mfa-challenge" : redirectTo,
+      requiresMfa,
       user: { id: String(refreshedUser.id), name: refreshedUser.name, email: refreshedUser.email },
       role: authorization.role,
     });
   });
 
   app.post("/api/auth/logout", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) {
+      res.status(403).json({ success: false, error: "A valid EEOS CSRF token is required." });
+      return;
+    }
     await sdk.revokeCurrentSession(req);
     clearSessionCookie(req, res);
     res.status(200).json({ success: true });
   });
 
+  app.get("/api/auth/mfa/pending", async (req: Request, res: Response) => {
+    try {
+      const user = await sdk.authenticatePendingMfaRequest(req);
+      const factor = await getMfaFactor(user.id);
+      const session = await sdk.currentSession(req);
+      if (!factor?.enabledAt || session?.mfaVerifiedAt) throw new Error("No pending challenge");
+      res.status(200).json({ success: true, csrfToken: issueSessionCsrfToken(req, res) });
+    } catch {
+      res.status(401).json({ success: false, error: "An MFA challenge session is required." });
+    }
+  });
+
+  app.post("/api/auth/mfa/challenge", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) return void res.status(403).json({ success: false, error: "A valid EEOS CSRF token is required." });
+    const parsed = mfaCodeSchema.safeParse(req.body);
+    if (!parsed.success) return void res.status(400).json({ success: false, error: "A valid authentication code is required." });
+    try {
+      const user = await sdk.authenticatePendingMfaRequest(req);
+      if (!(await enforceDistributedLimit(req, res, "mfa-challenge", String(user.id), 6, user.role === "admin"))) return;
+      const [factor, session] = await Promise.all([getMfaFactor(user.id), sdk.currentSession(req)]);
+      if (!factor?.enabledAt || !session) throw new Error("MFA unavailable");
+      const recoveryHash = hashRecoveryCode(parsed.data.code);
+      const recovered = await consumeMfaRecoveryCode(user.id, recoveryHash);
+      let counter: number | undefined;
+      if (!recovered) counter = verifyTotp(decryptMfaSecret(factor.encryptedSecret), parsed.data.code, Date.now(), factor.lastTotpCounter);
+      if (!recovered && counter === undefined) {
+        await audit({ actorUserId: user.id, action: "auth.mfa.challenge.failed", targetType: "user", targetId: String(user.id), outcome: "denied" });
+        return void res.status(401).json({ success: false, error: "Invalid authentication code." });
+      }
+      if (counter !== undefined && !(await updateMfaCounter(user.id, counter))) {
+        await audit({ actorUserId: user.id, action: "auth.mfa.challenge.replay_denied", targetType: "user", targetId: String(user.id), outcome: "denied" });
+        return void res.status(401).json({ success: false, error: "Invalid authentication code." });
+      }
+      await markSessionMfaVerified(session.id);
+      await audit({ actorUserId: user.id, action: recovered ? "auth.mfa.recovery.used" : "auth.mfa.challenge.succeeded", targetType: "user", targetId: String(user.id) });
+      res.status(200).json({ success: true, redirectTo: user.role === "admin" ? "/admin" : "/executive-home" });
+    } catch {
+      res.status(401).json({ success: false, error: "An MFA challenge session is required." });
+    }
+  });
+
+  app.post("/api/auth/mfa/enrollment/start", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) return void res.status(403).json({ success: false, error: "A valid EEOS CSRF token is required." });
+    try {
+      const user = await sdk.authenticateRequest(req);
+      const session = await sdk.currentSession(req);
+      if (!session?.recentAuthAt || session.recentAuthAt.getTime() < Date.now() - 10 * 60_000) {
+        return void res.status(403).json({ success: false, error: "Recent authentication is required." });
+      }
+      if (!(await enforceDistributedLimit(req, res, "mfa-enrollment", String(user.id), 5, user.role === "admin"))) return;
+      if ((await getMfaFactor(user.id))?.enabledAt) return void res.status(409).json({ success: false, error: "MFA is already enabled." });
+      const secret = generateTotpSecret();
+      await savePendingMfaFactor(user.id, encryptMfaSecret(secret));
+      const label = encodeURIComponent(user.email ?? `user-${user.id}`);
+      await audit({ actorUserId: user.id, action: "auth.mfa.enrollment.started", targetType: "user", targetId: String(user.id) });
+      res.status(200).json({ success: true, provisioningUri: `otpauth://totp/EEOS:${label}?secret=${secret}&issuer=EEOS&algorithm=SHA1&digits=6&period=30` });
+    } catch {
+      res.status(401).json({ success: false, error: "Authentication is required." });
+    }
+  });
+
+  app.post("/api/auth/mfa/enrollment/confirm", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) return void res.status(403).json({ success: false, error: "A valid EEOS CSRF token is required." });
+    const parsed = mfaCodeSchema.safeParse(req.body);
+    if (!parsed.success) return void res.status(400).json({ success: false, error: "A valid authentication code is required." });
+    try {
+      const user = await sdk.authenticateRequest(req);
+      const factor = await getMfaFactor(user.id);
+      if (!factor || factor.enabledAt) throw new Error("Enrollment unavailable");
+      const counter = verifyTotp(decryptMfaSecret(factor.encryptedSecret), parsed.data.code);
+      if (counter === undefined) return void res.status(401).json({ success: false, error: "Invalid authentication code." });
+      const recoveryCodes = generateRecoveryCodes();
+      await enableMfaFactor(user.id, recoveryCodes.map(hashRecoveryCode), counter);
+      await audit({ actorUserId: user.id, action: "auth.mfa.enrollment.completed", targetType: "user", targetId: String(user.id) });
+      res.status(200).json({ success: true, recoveryCodes });
+    } catch {
+      res.status(400).json({ success: false, error: "MFA enrollment could not be completed." });
+    }
+  });
+
+  app.post("/api/auth/mfa/disable", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) return void res.status(403).json({ success: false, error: "A valid EEOS CSRF token is required." });
+    const parsed = z.object({ password: z.string().min(1).max(512) }).safeParse(req.body);
+    if (!parsed.success) return void res.status(400).json({ success: false, error: "Password confirmation is required." });
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!(await verifyPassword(parsed.data.password, user.passwordHash))) return void res.status(403).json({ success: false, error: "Strong authorization is required." });
+      if (mfaRequiredForRole((await resolveAuthorizationContext(user)).role)) return void res.status(409).json({ success: false, error: "MFA is required for this role." });
+      await disableMfaFactor(user.id);
+      await revokeUserAuthSessions(user.id);
+      await audit({ actorUserId: user.id, action: "auth.mfa.disabled", targetType: "user", targetId: String(user.id) });
+      clearSessionCookie(req, res);
+      res.status(200).json({ success: true });
+    } catch {
+      res.status(401).json({ success: false, error: "Authentication is required." });
+    }
+  });
+
+  app.get("/api/auth/sessions", async (req: Request, res: Response) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      const sessions = await listActiveAuthSessions(user.id);
+      res.status(200).json({ sessions: sessions.map((session) => ({ ...session, id: sessionHandle(session.id), ipAddress: undefined })) });
+    } catch { res.status(401).json({ success: false, error: "Authentication is required." }); }
+  });
+
+  app.post("/api/auth/sessions/revoke", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) return void res.status(403).json({ success: false, error: "A valid EEOS CSRF token is required." });
+    const parsed = sessionRevokeSchema.safeParse(req.body);
+    if (!parsed.success) return void res.status(400).json({ success: false, error: "A valid session is required." });
+    try {
+      const user = await sdk.authenticateRequest(req);
+      const target = (await listActiveAuthSessions(user.id)).find((session) => sessionHandle(session.id) === parsed.data.sessionId);
+      const revoked = target ? await revokeAuthSessionById(user.id, target.id) : false;
+      await audit({ actorUserId: user.id, action: "auth.session.revoked", targetType: "session", targetId: parsed.data.sessionId.slice(0, 12) + "****", outcome: revoked ? "success" : "denied" });
+      res.status(revoked ? 200 : 404).json({ success: revoked });
+    } catch { res.status(401).json({ success: false, error: "Authentication is required." }); }
+  });
+
   app.post("/api/auth/forgot-password", async (req: Request, res: Response) => {
     const parsed = forgotPasswordSchema.safeParse(req.body);
+    const email = parsed.success ? normalizeEmail(parsed.data.email) : "invalid";
+    if (!(await enforceDistributedLimit(req, res, "forgot-password", email, 5))) return;
+    if (consumeSensitiveRouteLimit(`forgot-password:${readClientIp(req) || "unknown"}:${email}`, 5)) {
+      await auditRateLimit("forgot-password", req);
+      res.status(429).json({ success: false, error: "Too many requests. Try again later." });
+      return;
+    }
     if (parsed.success) {
-      const user = await getUserByEmail(normalizeEmail(parsed.data.email));
+      const user = await getUserByEmail(email);
       if (user?.isActive) {
         const token = createOpaqueToken();
         await createPasswordResetToken({
@@ -526,6 +753,13 @@ export function registerFirstPartyAuthRoutes(app: Express) {
 
   app.post("/api/auth/reset-password", async (req: Request, res: Response) => {
     const parsed = resetPasswordSchema.safeParse(req.body);
+    const resetLimitIdentity = parsed.success ? hashOpaqueToken(parsed.data.token) : "invalid";
+    if (!(await enforceDistributedLimit(req, res, "reset-password", resetLimitIdentity, 8))) return;
+    if (consumeSensitiveRouteLimit(`reset-password:${readClientIp(req) || "unknown"}:${resetLimitIdentity}`, 8)) {
+      await auditRateLimit("reset-password", req);
+      res.status(429).json({ success: false, error: "Too many requests. Try again later." });
+      return;
+    }
     if (!parsed.success) {
       res.status(400).json({ success: false, error: "A valid reset token and password are required." });
       return;
@@ -606,6 +840,10 @@ export function registerFirstPartyAuthRoutes(app: Express) {
   });
 
   app.post("/api/admin/invitations", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) {
+      res.status(403).json({ success: false, error: "A valid EEOS CSRF token is required." });
+      return;
+    }
     let actor;
     try {
       actor = await sdk.authenticateRequest(req);

@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import "./index.css";
+import { sessionCsrfHeaders } from "./lib/csrf";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,9 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
+      headers() {
+        return sessionCsrfHeaders();
+      },
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),

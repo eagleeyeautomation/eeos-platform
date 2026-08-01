@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { sessionCsrfHeaders } from "@/lib/csrf";
 import type { ReactNode } from "react";
 import { BookOpen, CheckCircle2, ClipboardCheck, FlaskConical, RefreshCw, Save, TrendingUp } from "lucide-react";
 
@@ -131,7 +132,7 @@ export default function AthenaLearningLoop() {
     setError(null);
     const response = await fetch(path, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json", ...sessionCsrfHeaders() },
       body: JSON.stringify(payload),
     });
     const responsePayload = await response.json() as { error?: string; detail?: string };

@@ -33,4 +33,23 @@ describe("session-bound CSRF", () => {
     sessionToken = "session-b";
     expect(hasValidSessionCsrf(request)).toBe(false);
   });
+
+  it("can issue the session-bound value alongside a newly created session", () => {
+    process.env.JWT_SECRET = "test-session-signing-secret-at-least-32-characters";
+    const cookie = vi.fn();
+    const req = {
+      secure: true,
+      header: () => "https",
+      headers: {},
+    } as never;
+    const res = { cookie } as never;
+
+    const token = issueSessionCsrfToken(req, res, "newly-created-session-token");
+    expect(token).toMatch(/^[A-Za-z0-9_-]{32,}$/);
+    expect(cookie).toHaveBeenCalledWith("eeos_csrf", token, expect.objectContaining({
+      sameSite: "lax",
+      secure: true,
+      httpOnly: false,
+    }));
+  });
 });

@@ -18,6 +18,7 @@ import {
   timelineEvents, TimelineEvent,
   auditLog,
   authSessions,
+  authMfaFactors,
   passwordResetTokens,
   authInvitations,
   authAuditEvents,
@@ -147,6 +148,73 @@ export async function createAuthSession(session: InsertAuthSession): Promise<voi
     createdAt: session.createdAt ?? new Date(),
     lastSeenAt: session.lastSeenAt ?? new Date(),
   });
+}
+
+export async function listActiveAuthSessions(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: authSessions.id, createdAt: authSessions.createdAt, lastSeenAt: authSessions.lastSeenAt,
+    expiresAt: authSessions.expiresAt, ipAddress: authSessions.ipAddress, userAgent: authSessions.userAgent })
+    .from(authSessions).where(and(eq(authSessions.userId, userId), sql`${authSessions.revokedAt} is null`, gte(authSessions.expiresAt, new Date())))
+    .orderBy(desc(authSessions.lastSeenAt));
+}
+
+export async function revokeAuthSessionById(userId: number, sessionId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.update(authSessions).set({ revokedAt: new Date() })
+    .where(and(eq(authSessions.id, sessionId), eq(authSessions.userId, userId), sql`${authSessions.revokedAt} is null`));
+  return Number(result[0].affectedRows) > 0;
+}
+
+export async function markSessionMfaVerified(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(authSessions).set({ mfaVerifiedAt: new Date() }).where(eq(authSessions.id, id));
+}
+
+export async function getMfaFactor(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(authMfaFactors).where(eq(authMfaFactors.userId, userId)).limit(1))[0];
+}
+
+export async function savePendingMfaFactor(userId: number, encryptedSecret: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(authMfaFactors).values({ userId, encryptedSecret, recoveryCodeHashes: [] })
+    .onDuplicateKeyUpdate({ set: { encryptedSecret, recoveryCodeHashes: [], enabledAt: null, lastTotpCounter: null } });
+}
+
+export async function enableMfaFactor(userId: number, recoveryCodeHashes: string[], counter: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(authMfaFactors).set({ recoveryCodeHashes, lastTotpCounter: counter, enabledAt: new Date() })
+    .where(eq(authMfaFactors.userId, userId));
+}
+
+export async function updateMfaCounter(userId: number, counter: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.update(authMfaFactors).set({ lastTotpCounter: counter })
+    .where(and(eq(authMfaFactors.userId, userId), sql`(${authMfaFactors.lastTotpCounter} is null or ${authMfaFactors.lastTotpCounter} < ${counter})`));
+  return Number(result[0].affectedRows) > 0;
+}
+
+export async function consumeMfaRecoveryCode(userId: number, hash: string) {
+  const factor = await getMfaFactor(userId);
+  if (!factor || !factor.recoveryCodeHashes.includes(hash)) return false;
+  const db = await getDb();
+  if (!db) return false;
+  const remaining = factor.recoveryCodeHashes.filter((candidate) => candidate !== hash);
+  const result = await db.update(authMfaFactors).set({ recoveryCodeHashes: remaining }).where(and(eq(authMfaFactors.userId, userId), sql`JSON_CONTAINS(${authMfaFactors.recoveryCodeHashes}, JSON_QUOTE(${hash}))`));
+  return Number(result[0].affectedRows) > 0;
+}
+
+export async function disableMfaFactor(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(authMfaFactors).where(eq(authMfaFactors.userId, userId));
 }
 
 export async function getAuthSessionByTokenHash(tokenHash: string): Promise<AuthSession | undefined> {
@@ -595,13 +663,18 @@ export async function getActiveRecommendations(tenantId: string): Promise<Recomm
 
 export async function updateRecommendationStatus(
   id: number,
-  status: "active" | "accepted" | "rejected" | "expired" | "superseded"
+  status: "active" | "accepted" | "rejected" | "expired" | "superseded",
+  authorizedTenantId?: string,
 ): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await ensureRecommendationHistorySchema();
-  const recommendation = (await db.select().from(recommendations).where(eq(recommendations.id, id)).limit(1))[0];
-  await db.update(recommendations).set({ status, updatedAt: new Date() }).where(eq(recommendations.id, id));
+  const recordScope = authorizedTenantId
+    ? and(eq(recommendations.id, id), eq(recommendations.tenantId, authorizedTenantId))
+    : eq(recommendations.id, id);
+  const recommendation = (await db.select().from(recommendations).where(recordScope).limit(1))[0];
+  if (!recommendation) return;
+  await db.update(recommendations).set({ status, updatedAt: new Date() }).where(recordScope);
   const latest = (await db.select().from(recommendationHistory)
     .where(eq(recommendationHistory.recommendationId, id))
     .orderBy(desc(recommendationHistory.occurredAt)).limit(1))[0];
@@ -626,10 +699,13 @@ export async function expireOldRecommendations(tenantId: string): Promise<void> 
   );
 }
 
-export async function getRecommendationById(id: number): Promise<Recommendation | undefined> {
+export async function getRecommendationById(id: number, authorizedTenantId?: string): Promise<Recommendation | undefined> {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(recommendations).where(eq(recommendations.id, id)).limit(1);
+  const recordScope = authorizedTenantId
+    ? and(eq(recommendations.id, id), eq(recommendations.tenantId, authorizedTenantId))
+    : eq(recommendations.id, id);
+  const result = await db.select().from(recommendations).where(recordScope).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 

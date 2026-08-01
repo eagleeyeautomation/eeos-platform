@@ -1,5 +1,6 @@
 import type { Express } from "express";
-import { loadBusinessMemorySnapshot, PRN_BUSINESS_ID, type BusinessMemorySnapshot } from "./business-memory";
+import { loadBusinessMemorySnapshot, type BusinessMemorySnapshot } from "./business-memory";
+import { authorizePrnRoute } from "./prn-route-authorization";
 
 type GhlFetchResult = {
   ok: boolean;
@@ -162,9 +163,11 @@ export type C2BIntelligence = {
 const ghlBaseUrl = "https://services.leadconnectorhq.com";
 
 export function registerPrnPrivateGhlRoutes(app: Express) {
-  app.get("/api/prn/gohighlevel/live-dashboard", async (_req, res) => {
+  app.get("/api/prn/gohighlevel/live-dashboard", async (req, res) => {
     try {
-      const liveData = await loadPrnLiveData();
+      const scope = await authorizePrnRoute(req, res);
+      if (!scope) return;
+      const liveData = await loadPrnLiveData(scope.locationId);
       const { records: _records, ...safePayload } = liveData;
 
       res.status(liveData.ok ? 200 : 502).json(safePayload);
@@ -184,9 +187,11 @@ export function registerPrnPrivateGhlRoutes(app: Express) {
     }
   });
 
-  app.get("/api/prn/executive-recommendations", async (_req, res) => {
+  app.get("/api/prn/executive-recommendations", async (req, res) => {
     try {
-      const liveData = await loadPrnLiveData();
+      const scope = await authorizePrnRoute(req, res);
+      if (!scope) return;
+      const liveData = await loadPrnLiveData(scope.locationId);
       const recommendations = buildExecutiveRecommendations(liveData);
 
       res.status(liveData.ok ? 200 : 207).json({
@@ -214,10 +219,12 @@ export function registerPrnPrivateGhlRoutes(app: Express) {
     }
   });
 
-  app.get("/api/prn/intelligence-engine", async (_req, res) => {
+  app.get("/api/prn/intelligence-engine", async (req, res) => {
     try {
-      const liveData = await loadPrnLiveData();
-      const memory = await loadBusinessMemorySnapshot(PRN_BUSINESS_ID);
+      const scope = await authorizePrnRoute(req, res);
+      if (!scope) return;
+      const liveData = await loadPrnLiveData(scope.locationId);
+      const memory = await loadBusinessMemorySnapshot(scope.businessId);
       const intelligence = buildPrnIntelligenceEngine(liveData, memory);
 
       res.status(liveData.ok ? 200 : 207).json({
@@ -241,9 +248,11 @@ export function registerPrnPrivateGhlRoutes(app: Express) {
     }
   });
 
-  app.get("/api/prn/b2b-intelligence", async (_req, res) => {
+  app.get("/api/prn/b2b-intelligence", async (req, res) => {
     try {
-      const liveData = await loadPrnLiveData();
+      const scope = await authorizePrnRoute(req, res);
+      if (!scope) return;
+      const liveData = await loadPrnLiveData(scope.locationId);
       const b2bIntelligence = buildB2BIntelligence(liveData);
 
       res.status(liveData.ok ? 200 : 207).json({
@@ -276,9 +285,11 @@ export function registerPrnPrivateGhlRoutes(app: Express) {
     }
   });
 
-  app.get("/api/prn/c2b-intelligence", async (_req, res) => {
+  app.get("/api/prn/c2b-intelligence", async (req, res) => {
     try {
-      const liveData = await loadPrnLiveData();
+      const scope = await authorizePrnRoute(req, res);
+      if (!scope) return;
+      const liveData = await loadPrnLiveData(scope.locationId);
       const c2bIntelligence = buildC2BIntelligence(liveData);
 
       res.status(liveData.ok ? 200 : 207).json({
@@ -312,12 +323,15 @@ export function registerPrnPrivateGhlRoutes(app: Express) {
   });
 }
 
-export async function loadPrnLiveData(): Promise<PrnLiveData> {
+export async function loadPrnLiveData(authorizedLocationId?: string): Promise<PrnLiveData> {
   const token = process.env.GHL_PRN_SOUTH_CAROLINA_PRIVATE_TOKEN;
   const locationId = process.env.GHL_PRN_SOUTH_CAROLINA_LOCATION_ID;
 
   if (!token || !locationId) {
     throw new Error("PRN Staffers South Carolina private-token integration is not configured.");
+  }
+  if (authorizedLocationId && authorizedLocationId !== locationId) {
+    throw new Error("The configured integration is outside the authorized location scope.");
   }
 
   const client = createPrivateGhlClient(token);
@@ -771,9 +785,9 @@ function summarizeMemoryContext(memory: BusinessMemorySnapshot | undefined, data
   };
 }
 
-function emptyMemoryContext(): IntelligenceMemoryContext {
+function emptyMemoryContext(businessId = "unavailable"): IntelligenceMemoryContext {
   return {
-    businessId: PRN_BUSINESS_ID,
+    businessId,
     activeGoals: [],
     activeStrategicPriorities: [],
     activeDecisions: [],

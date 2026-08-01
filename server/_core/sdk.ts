@@ -1,4 +1,8 @@
-import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import {
+  COOKIE_NAME,
+  SESSION_IDLE_TIMEOUT_MS,
+  USER_SESSION_ABSOLUTE_TIMEOUT_MS,
+} from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import { parse as parseCookieHeader } from "cookie";
 import type { Request } from "express";
@@ -23,16 +27,18 @@ class SDKServer {
   async createSessionForUser(
     user: Pick<User, "id" | "openId" | "name" | "email">,
     req: Request,
-    options: { expiresInMs?: number } = {},
+    options: { expiresInMs?: number; mfaVerified?: boolean } = {},
   ) {
     const token = createOpaqueToken();
-    const expiresAt = new Date(Date.now() + (options.expiresInMs ?? ONE_YEAR_MS));
+    const expiresAt = new Date(Date.now() + (options.expiresInMs ?? USER_SESSION_ABSOLUTE_TIMEOUT_MS));
     await db.createAuthSession({
       userId: user.id,
       tokenHash: hashOpaqueToken(token),
       expiresAt,
       ipAddress: readClientIp(req),
       userAgent: readUserAgent(req),
+      recentAuthAt: new Date(),
+      mfaVerifiedAt: options.mfaVerified ? new Date() : null,
     });
     return { token, expiresAt };
   }
@@ -44,6 +50,14 @@ class SDKServer {
   }
 
   async authenticateRequest(req: Request): Promise<AuthenticatedUser> {
+    return this.authenticateSession(req, false);
+  }
+
+  async authenticatePendingMfaRequest(req: Request) {
+    return this.authenticateSession(req, true);
+  }
+
+  private async authenticateSession(req: Request, allowPendingMfa: boolean) {
     const sessionToken = this.readSessionToken(req);
     if (!sessionToken) {
       throw ForbiddenError("Invalid session cookie");
@@ -51,13 +65,23 @@ class SDKServer {
 
     const tokenHash = hashOpaqueToken(sessionToken);
     const session = await db.getAuthSessionByTokenHash(tokenHash);
-    if (!session || session.revokedAt || session.expiresAt.getTime() <= Date.now()) {
+    if (
+      !session
+      || session.revokedAt
+      || session.expiresAt.getTime() <= Date.now()
+      || session.lastSeenAt.getTime() + SESSION_IDLE_TIMEOUT_MS <= Date.now()
+    ) {
       throw ForbiddenError("Invalid session cookie");
     }
 
     const userById = await db.getUserById(session.userId);
     if (!userById || userById.isActive === false) {
       throw ForbiddenError("User not found");
+    }
+
+    const factor = await db.getMfaFactor(userById.id);
+    if (!allowPendingMfa && factor?.enabledAt && !session.mfaVerifiedAt) {
+      throw ForbiddenError("MFA challenge required");
     }
 
     await Promise.all([
@@ -70,6 +94,11 @@ class SDKServer {
 
     observeIdentityShadow(req, userById, { cookie: sessionToken });
     return userById;
+  }
+
+  async currentSession(req: Request) {
+    const token = this.readSessionToken(req);
+    return token ? db.getAuthSessionByTokenHash(hashOpaqueToken(token)) : undefined;
   }
 }
 

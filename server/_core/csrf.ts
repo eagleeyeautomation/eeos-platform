@@ -4,8 +4,8 @@ import { sdk } from "./sdk";
 
 const EEOS_CSRF_COOKIE = "eeos_csrf";
 
-function deriveSessionCsrfToken(req: Request) {
-  const sessionToken = sdk.readSessionToken(req);
+function deriveSessionCsrfToken(req: Request, explicitSessionToken?: string) {
+  const sessionToken = explicitSessionToken ?? sdk.readSessionToken(req);
   const signingSecret = process.env.JWT_SECRET;
   if (!sessionToken || !signingSecret) return "";
 
@@ -21,14 +21,14 @@ function safeEqual(left: string, right: string) {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-export function issueSessionCsrfToken(req: Request, res: Response) {
-  const csrfToken = deriveSessionCsrfToken(req);
+export function issueSessionCsrfToken(req: Request, res: Response, sessionToken?: string) {
+  const csrfToken = deriveSessionCsrfToken(req, sessionToken);
   if (!csrfToken) return null;
 
   res.cookie(EEOS_CSRF_COOKIE, csrfToken, {
     httpOnly: false,
     path: "/",
-    sameSite: req.secure || req.header("x-forwarded-proto") === "https" ? "none" : "lax",
+    sameSite: "lax",
     secure: req.secure || req.header("x-forwarded-proto") === "https",
     maxAge: 10 * 60 * 1000,
   });

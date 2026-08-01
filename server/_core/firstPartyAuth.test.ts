@@ -17,6 +17,7 @@ const dbMocks = vi.hoisted(() => ({
   getAuthSessionByTokenHash: vi.fn(),
   getGhlToken: vi.fn(),
   getMembershipById: vi.fn(),
+  getMfaFactor: vi.fn(),
   getPasswordResetTokenByHash: vi.fn(),
   getUserByEmail: vi.fn(),
   getUserById: vi.fn(),
@@ -27,6 +28,14 @@ const dbMocks = vi.hoisted(() => ({
   revokeAuthSession: vi.fn(),
   revokeUserAuthSessions: vi.fn(),
   touchAuthSession: vi.fn(),
+  consumeMfaRecoveryCode: vi.fn(),
+  disableMfaFactor: vi.fn(),
+  enableMfaFactor: vi.fn(),
+  listActiveAuthSessions: vi.fn(),
+  markSessionMfaVerified: vi.fn(),
+  revokeAuthSessionById: vi.fn(),
+  savePendingMfaFactor: vi.fn(),
+  updateMfaCounter: vi.fn(),
   upsertMembershipUser: vi.fn(),
   upsertUser: vi.fn(),
 }));
@@ -97,6 +106,7 @@ describe("EEOS first-party authentication", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.JWT_SECRET = "test-session-signing-secret-at-least-32-characters";
+    process.env.EEOS_MFA_REQUIRED_ROLES = "disabled";
     dbMocks.createAuthSession.mockResolvedValue(undefined);
     dbMocks.createPasswordResetToken.mockResolvedValue(undefined);
     dbMocks.createAuthInvitation.mockResolvedValue(undefined);
@@ -104,6 +114,7 @@ describe("EEOS first-party authentication", () => {
     dbMocks.deleteVerifiedGhlSubaccount.mockResolvedValue(undefined);
     dbMocks.getGhlToken.mockResolvedValue({ isActive: true, scope: "private_integration" });
     dbMocks.getMembershipById.mockResolvedValue({ id: 100, organizationId: 10 });
+    dbMocks.getMfaFactor.mockResolvedValue(undefined);
     dbMocks.insertAuthAuditEvent.mockResolvedValue(undefined);
     dbMocks.inspectLegacyGhlBinding.mockResolvedValue({
       connection: {
@@ -236,6 +247,29 @@ describe("EEOS first-party authentication", () => {
       const payload = await response.json();
       expect(payload).toMatchObject({ success: true, redirectTo: "/admin", role: "PLATFORM_ADMIN" });
       expect(response.headers.get("set-cookie")).toContain(`${COOKIE_NAME}=`);
+    });
+  }, 15_000);
+
+  it("creates only a pending session when an enabled MFA factor exists", async () => {
+    const stored = await hashPassword("valid-password");
+    const account = user({ passwordHash: stored });
+    dbMocks.getUserByEmail.mockResolvedValue(account); dbMocks.getUserById.mockResolvedValue(account);
+    dbMocks.getMfaFactor.mockResolvedValue({ enabledAt: now });
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: account.email, password: "valid-password" }) });
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({ requiresMfa: true, redirectTo: "/mfa-challenge" });
+      expect(dbMocks.createAuthSession).toHaveBeenCalledWith(expect.objectContaining({ mfaVerifiedAt: null }));
+    });
+  }, 15_000);
+
+  it("fails safely when role enforcement is enabled before enrollment", async () => {
+    process.env.EEOS_MFA_REQUIRED_ROLES = "PLATFORM_ADMIN";
+    const stored = await hashPassword("valid-password"); const account = user({ role: "admin", passwordHash: stored });
+    dbMocks.getUserByEmail.mockResolvedValue(account); dbMocks.getUserById.mockResolvedValue(account);
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: account.email, password: "valid-password" }) });
+      expect(response.status).toBe(403); expect(dbMocks.createAuthSession).not.toHaveBeenCalled();
     });
   }, 15_000);
 
@@ -373,7 +407,7 @@ describe("EEOS first-party authentication", () => {
       expiresAt: new Date(Date.now() + 60_000),
       revokedAt: null,
       createdAt: now,
-      lastSeenAt: now,
+      lastSeenAt: new Date(),
       ipAddress: null,
       userAgent: null,
     });
@@ -405,7 +439,7 @@ describe("EEOS first-party authentication", () => {
       expiresAt: new Date(Date.now() + 60_000),
       revokedAt: null,
       createdAt: now,
-      lastSeenAt: now,
+      lastSeenAt: new Date(),
       ipAddress: null,
       userAgent: null,
     });
@@ -447,7 +481,7 @@ describe("EEOS first-party authentication", () => {
       expiresAt: new Date(Date.now() + 60_000),
       revokedAt: null,
       createdAt: now,
-      lastSeenAt: now,
+      lastSeenAt: new Date(),
       ipAddress: null,
       userAgent: null,
     });
@@ -514,7 +548,7 @@ describe("EEOS first-party authentication", () => {
       expiresAt: new Date(Date.now() + 60_000),
       revokedAt: null,
       createdAt: now,
-      lastSeenAt: now,
+      lastSeenAt: new Date(),
       ipAddress: null,
       userAgent: null,
     });
@@ -592,7 +626,7 @@ describe("EEOS first-party authentication", () => {
     dbMocks.getAuthSessionByTokenHash.mockResolvedValue({
       id: 24, userId: account.id, tokenHash: hashOpaqueToken(token),
       expiresAt: new Date(Date.now() + 60_000), revokedAt: null,
-      createdAt: now, lastSeenAt: now, ipAddress: null, userAgent: null,
+      createdAt: now, lastSeenAt: new Date(), ipAddress: null, userAgent: null,
     });
     dbMocks.getUserById.mockResolvedValue(account);
     authorizationMocks.resolveOrganizationAuthorizationContext.mockResolvedValue({
@@ -676,6 +710,41 @@ describe("EEOS first-party authentication", () => {
 
     expect(dbMocks.createPasswordResetToken).not.toHaveBeenCalled();
     expect(passwordResetEmailMocks.sendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+
+  it("returns 429 and records a sanitized security event after the password-reset request threshold", async () => {
+    const email = "phase-one-rate-limit@example.com";
+    dbMocks.getUserByEmail.mockResolvedValue(undefined);
+
+    await withServer(async (baseUrl) => {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const response = await fetch(`${baseUrl}/api/auth/forgot-password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        expect(response.status).toBe(200);
+      }
+      const limited = await fetch(`${baseUrl}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      expect(limited.status).toBe(429);
+    });
+
+    expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({
+      action: "auth.rate_limit.triggered",
+      targetType: "authentication_route",
+      targetId: "forgot-password",
+      metadata: expect.objectContaining({
+        outcome: "denied",
+        reasonCode: "RATE_LIMIT_EXCEEDED",
+        sourceService: "eeos-core",
+        securitySeverity: "warn",
+      }),
+    }));
+    expect(JSON.stringify(dbMocks.insertAuthAuditEvent.mock.calls)).not.toContain(email);
   });
 
   it("preserves the neutral response and logs only a sanitized reason when delivery fails", async () => {
@@ -821,18 +890,23 @@ describe("EEOS first-party authentication", () => {
       expiresAt: new Date(Date.now() + 60_000),
       revokedAt: null,
       createdAt: now,
-      lastSeenAt: now,
+      lastSeenAt: new Date(),
       ipAddress: null,
       userAgent: null,
     });
     dbMocks.getUserById.mockResolvedValue(admin);
 
     await withServer(async (baseUrl) => {
+      const sessionResponse = await fetch(`${baseUrl}/api/auth/session`, {
+        headers: { Cookie: `${COOKIE_NAME}=${token}` },
+      });
+      const session = await sessionResponse.json();
       const response = await fetch(`${baseUrl}/api/admin/invitations`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Cookie: `${COOKIE_NAME}=${token}`,
+          "x-eeos-csrf-token": session.csrfToken,
         },
         body: JSON.stringify({
           email: "owner@example.com",
@@ -851,6 +925,25 @@ describe("EEOS first-party authentication", () => {
         role: "owner",
         tokenHash: expect.any(String),
       }));
+    });
+  });
+
+  it("rejects administrator invitation creation before authentication when CSRF is missing", async () => {
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/admin/invitations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "owner@example.com",
+          organizationId: 10,
+          membershipId: 100,
+          role: "owner",
+        }),
+      });
+
+      expect(response.status).toBe(403);
+      expect(dbMocks.createAuthInvitation).not.toHaveBeenCalled();
+      expect(authorizationMocks.requirePlatformAdmin).not.toHaveBeenCalled();
     });
   });
 });

@@ -2,6 +2,7 @@ import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
+import { hasValidSessionCsrf } from "./csrf";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
@@ -25,7 +26,18 @@ const requireUser = t.middleware(async opts => {
   });
 });
 
-export const protectedProcedure = t.procedure.use(requireUser);
+const requireMutationCsrf = t.middleware(async opts => {
+  if (opts.type === "mutation" && !hasValidSessionCsrf(opts.ctx.req)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "A valid EEOS CSRF token is required.",
+    });
+  }
+
+  return opts.next();
+});
+
+export const protectedProcedure = t.procedure.use(requireUser).use(requireMutationCsrf);
 
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
@@ -42,4 +54,4 @@ export const adminProcedure = t.procedure.use(
       },
     });
   }),
-);
+).use(requireMutationCsrf);
