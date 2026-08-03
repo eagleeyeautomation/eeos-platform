@@ -74,6 +74,7 @@ export const AVAILABLE_NAV_ROUTES = new Set([
   "/admin/ai-recommendations",
   "/admin/marketplace",
   "/admin/intelligence-governance",
+  "/admin/licensing",
   "/access-denied",
   "/admin/demo-center",
   "/404",
@@ -167,6 +168,7 @@ export const ADMIN_NAV_LINKS: NavItem[] = [
   { label: "AI Recommendations", href: "/admin/ai-recommendations" },
   { label: "Marketplace", href: "/admin/marketplace" },
   { label: "Intelligence Governance", href: "/admin/intelligence-governance" },
+  { label: "Commercial Licensing", href: "/admin/licensing" },
   {
     label: "Global Intelligence",
     href: "#",

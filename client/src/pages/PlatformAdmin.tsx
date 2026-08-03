@@ -1,4 +1,4 @@
-import { Activity, Brain, Building2, ClipboardList, FileClock, LifeBuoy, Network, ShieldCheck } from "lucide-react";
+import { Activity, Brain, Building2, ClipboardList, FileClock, LifeBuoy, Network, ShieldCheck, WalletCards } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { trpc } from "@/lib/trpc";
@@ -23,6 +23,7 @@ const ADMIN_MODULES = [
   { label: "AI Recommendations", href: "/admin/ai-recommendations", icon: Brain },
   { label: "Marketplace", href: "/admin/marketplace", icon: Building2 },
   { label: "Intelligence Governance", href: "/admin/intelligence-governance", icon: ShieldCheck },
+  { label: "Commercial Licensing", href: "/admin/licensing", icon: WalletCards },
 ];
 
 const ADMIN_SCREENS = {
@@ -109,6 +110,12 @@ const ADMIN_SCREENS = {
     title: "Intelligence Governance",
     description: "Monitor anonymous learning adoption and approved evidence without exposing customer Intelligence Memory.",
     sectionTitle: "Anonymous Platform Learning",
+  },
+  "/admin/licensing": {
+    eyebrow: "Commercial Governance",
+    title: "Commercial Licensing",
+    description: "Review base-plan mapping and optional intelligence add-ons without charging organizations or enabling external execution.",
+    sectionTitle: "New-Customer Billing Policy",
   },
 } as const;
 
@@ -643,6 +650,119 @@ function IntelligenceGovernanceAdmin() {
   );
 }
 
+function CommercialLicensingAdmin() {
+  const utils = trpc.useUtils();
+  const { data, isLoading, error } = trpc.admin.licensing.useQuery(undefined, { retry: false });
+  const grantMutation = trpc.admin.grantCommercialAddon.useMutation({
+    onSuccess: () => utils.admin.licensing.invalidate(),
+  });
+  const removeMutation = trpc.admin.removeCommercialAddon.useMutation({
+    onSuccess: () => utils.admin.licensing.invalidate(),
+  });
+
+  if (error) return <EmptyState>Commercial licensing could not be loaded for this administrator session.</EmptyState>;
+  if (isLoading || !data) return <EmptyState>Loading commercial licensing...</EmptyState>;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Base Plan Version" value={`v${data.basePlanVersion}`} detail="Starter, Growth, Scale mapping" />
+        <StatCard label="Payment Provider" value={data.controls.paymentProviderIntegrated ? "Connected" : "Not connected"} detail="No organization is charged" />
+        <StatCard label="Execution" value={data.controls.externalExecutionStatus} detail="External execution remains blocked" />
+        <StatCard label="Commercial Organizations" value={data.organizations.filter((org) => org.billingClassification === "COMMERCIAL").length} detail="Only new external organizations" />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] p-4">
+          <div className="text-sm font-semibold">Base-plan mapping</div>
+          <div className="mt-3 space-y-2">
+            {data.basePlans.map((plan) => (
+              <div key={plan.code} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-white/55">
+                <span className="font-semibold text-white">{plan.marketingName}</span> / {plan.code} · ${plan.monthlyPrice}/month
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] p-4">
+          <div className="text-sm font-semibold">Optional Intelligence and Growth Add-ons</div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {data.addons.map((addon) => (
+              <div key={addon.key} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-white/55">
+                <div className="font-semibold text-white">{addon.name}</div>
+                <div>${addon.monthlyPrice}/month</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {data.organizations.map((organization) => {
+          const activeKeys = new Set(organization.addons.map((addon) => addon.key));
+          const canManage = organization.billingClassification === "COMMERCIAL" && organization.membershipId !== null;
+          return (
+            <div key={`${organization.organizationId}:${organization.membershipId ?? "none"}`} className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold">{organization.organizationName}</div>
+                  <div className="mt-1 text-[10px] uppercase tracking-[0.16em] text-white/35">
+                    {organization.organizationSlug} · {organization.billingClassification}
+                  </div>
+                </div>
+                <StatusPill tone={organization.billingClassification === "COMMERCIAL" ? "good" : "neutral"}>
+                  {organization.billingClassification === "COMMERCIAL" ? "Commercial" : "Non-billed"}
+                </StatusPill>
+              </div>
+              <div className="mt-3 grid gap-2 text-xs text-white/48 sm:grid-cols-4">
+                <div>Base plan: {organization.basePlanCode ?? "Not assigned"}</div>
+                <div>Base price: ${organization.basePlanMonthlyPrice}/month</div>
+                <div>Total: ${organization.totalMonthlyPrice}/month</div>
+                <div>Execution: {organization.externalExecutionStatus}</div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {organization.addons.length === 0 ? (
+                  <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/40">No active add-ons</span>
+                ) : organization.addons.map((addon) => (
+                  <span key={addon.key} className="rounded-full border border-[#C9A227]/30 bg-[#C9A227]/10 px-3 py-1 text-xs text-[#C9A227]">
+                    {addon.name} · {addon.source}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {data.addons.map((addon) => {
+                  const active = activeKeys.has(addon.key);
+                  const pending = grantMutation.isPending || removeMutation.isPending;
+                  return (
+                    <button
+                      key={addon.key}
+                      type="button"
+                      disabled={!canManage || pending}
+                      onClick={() => {
+                        if (!organization.membershipId) return;
+                        if (active) {
+                          removeMutation.mutate({ organizationId: organization.organizationId, membershipId: organization.membershipId, addonKey: addon.key });
+                        } else {
+                          grantMutation.mutate({ organizationId: organization.organizationId, membershipId: organization.membershipId, addonKey: addon.key });
+                        }
+                      }}
+                      className="rounded-lg border border-white/12 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-35"
+                    >
+                      {active ? `Remove ${addon.name}` : `Grant ${addon.name}`}
+                    </button>
+                  );
+                })}
+              </div>
+              {!canManage ? (
+                <p className="mt-3 text-xs text-white/38">Commercial add-ons are intentionally blocked for internal founder and demo organizations.</p>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function AdminRouteContent({ location }: { location: string }) {
   switch (location) {
     case "/admin/organizations":
@@ -661,6 +781,8 @@ function AdminRouteContent({ location }: { location: string }) {
       return <AiOperationsAdmin />;
     case "/admin/intelligence-governance":
       return <IntelligenceGovernanceAdmin />;
+    case "/admin/licensing":
+      return <CommercialLicensingAdmin />;
     default:
       return <AdminOverview />;
   }

@@ -7,6 +7,7 @@ import {
   EEOS_BRAIN_QUESTIONS,
   FOUNDING_CUSTOMER_PLANS,
   FOUNDING_CUSTOMER_PROMO_ENABLED,
+  OPTIONAL_INTELLIGENCE_ADDONS,
   PUBLIC_CONTACT,
   SETUP_FEE,
 } from "@/lib/public-site";
@@ -135,7 +136,7 @@ export default function Pricing() {
                     </div>
                   ) : null}
                   <div className="text-xs uppercase tracking-[0.16em] text-[#C0C7D1]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    Founding Customer Pricing
+                    {plan.name} / {plan.planCode}
                   </div>
                   <h3 className="mt-3 text-3xl font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                     {plan.name}
@@ -171,6 +172,37 @@ export default function Pricing() {
                     {plan.cta}
                     <ArrowRight className="h-4 w-4" />
                   </Link>
+                </article>
+              </AnimatedSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#0B0B0B] py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <AnimatedSection className="mb-10 text-center">
+            <div className="section-label mb-3">Optional Intelligence and Growth Add-ons</div>
+            <h2 className="text-3xl font-bold text-[#FFFFFF]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              Add intelligence only when the business is ready.
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[#FFFFFF]/55">
+              Commercial add-ons are administrator-approved entitlements. No payment provider is connected and no organization is charged automatically.
+            </p>
+          </AnimatedSection>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {OPTIONAL_INTELLIGENCE_ADDONS.map((addon, index) => (
+              <AnimatedSection key={addon.key} delay={index * 80}>
+                <article className="flex h-full flex-col rounded-2xl border border-[#C9A227]/16 bg-[#141414] p-5">
+                  <div className="text-[10px] uppercase tracking-[0.16em] text-[#C0C7D1]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    {addon.key}
+                  </div>
+                  <h3 className="mt-3 text-xl font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{addon.name}</h3>
+                  <div className="mt-4 flex items-end gap-1">
+                    <span className="text-3xl font-bold text-[#C9A227]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{addon.price}</span>
+                    <span className="pb-1 text-xs text-white/45">{addon.cadence}</span>
+                  </div>
+                  <p className="mt-4 text-sm leading-6 text-white/55">{addon.description}</p>
                 </article>
               </AnimatedSection>
             ))}

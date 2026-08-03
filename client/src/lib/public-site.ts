@@ -27,6 +27,7 @@ export const FOUNDING_CUSTOMER_PLANS = [
   {
     id: "starter",
     name: "Starter",
+    planCode: "FOUNDATION",
     price: "$99",
     cadence: "/month",
     customerType: "For a single-location business beginning with executive visibility.",
@@ -44,6 +45,7 @@ export const FOUNDING_CUSTOMER_PLANS = [
   {
     id: "growth",
     name: "Growth",
+    planCode: "INTELLIGENCE",
     price: "$199",
     cadence: "/month",
     customerType: "For a growing business that needs clearer follow-up and operating visibility.",
@@ -62,6 +64,7 @@ export const FOUNDING_CUSTOMER_PLANS = [
   {
     id: "scale",
     name: "Scale",
+    planCode: "ENTERPRISE",
     price: "$299",
     cadence: "/month",
     customerType: "For a multi-location operator preparing for deeper executive intelligence.",
@@ -75,6 +78,37 @@ export const FOUNDING_CUSTOMER_PLANS = [
       "Workflow automation planning",
       "GoHighLevel-first operating system roadmap",
     ],
+  },
+];
+
+export const OPTIONAL_INTELLIGENCE_ADDONS = [
+  {
+    key: "ADDON_C2C_INTELLIGENCE",
+    name: "C2C Intelligence",
+    price: "$99",
+    cadence: "/month",
+    description: "Customer-to-customer referral and relationship intelligence.",
+  },
+  {
+    key: "ADDON_C2B_INTELLIGENCE",
+    name: "C2B Intelligence",
+    price: "$149",
+    cadence: "/month",
+    description: "Customer-to-business intake and opportunity intelligence.",
+  },
+  {
+    key: "ADDON_B2B_INTELLIGENCE",
+    name: "B2B Intelligence",
+    price: "$149",
+    cadence: "/month",
+    description: "Partner, referral-source, and business-to-business intelligence.",
+  },
+  {
+    key: "ADDON_GROWTH_INTELLIGENCE_SUITE",
+    name: "Growth Intelligence Suite",
+    price: "$299",
+    cadence: "/month",
+    description: "Bundled C2C, C2B, and B2B intelligence for commercial organizations.",
   },
 ];
 

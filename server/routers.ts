@@ -76,6 +76,12 @@ import { createBusinessGoal, decideWorkflow, getAutomationDashboard, prepareDeci
 import { INDUSTRY_KEYS, scoreIndustryOpportunity } from "./industry-intelligence/core";
 import { configureOrganizationIndustryPacks, getOrganizationIndustryContext, listIndustryCatalog, recordIndustryKpi } from "./industry-intelligence/service";
 import { advancePresentation, approvePresentationWorkflow, completePresentation, getDemoCenter, getDemoReadiness, getPresentationDefinition, getPresentationState, presentationCopilot, previousPresentation, replayDemo, resetDemo, restartPresentation, seedDemo, startDemoScenario, startPresentation } from "./demo/service";
+import {
+  grantCommercialAddon,
+  listCommercialLicensing,
+  parseCommercialAddonKey,
+  removeCommercialAddon,
+} from "./commercial-addons-store";
 
 export const appRouter = router({
   system: systemRouter,
@@ -867,6 +873,42 @@ export const appRouter = router({
       await requirePlatformAdmin(ctx.user);
       return getPlatformAiOperationsSummary();
     }),
+    licensing: protectedProcedure.query(async ({ ctx }) => {
+      await requirePlatformAdmin(ctx.user);
+      return listCommercialLicensing();
+    }),
+    grantCommercialAddon: protectedProcedure
+      .input(z.object({
+        organizationId: z.number().int().positive(),
+        membershipId: z.number().int().positive(),
+        addonKey: z.string(),
+        endsAt: z.string().datetime().nullable().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const admin = await requirePlatformAdmin(ctx.user);
+        return grantCommercialAddon({
+          organizationId: input.organizationId,
+          membershipId: input.membershipId,
+          actorUserId: Number(admin.userId),
+          addonKey: parseCommercialAddonKey(input.addonKey),
+          endsAt: input.endsAt ? new Date(input.endsAt) : null,
+        });
+      }),
+    removeCommercialAddon: protectedProcedure
+      .input(z.object({
+        organizationId: z.number().int().positive(),
+        membershipId: z.number().int().positive(),
+        addonKey: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const admin = await requirePlatformAdmin(ctx.user);
+        return removeCommercialAddon({
+          organizationId: input.organizationId,
+          membershipId: input.membershipId,
+          actorUserId: Number(admin.userId),
+          addonKey: parseCommercialAddonKey(input.addonKey),
+        });
+      }),
   }),
 });
 

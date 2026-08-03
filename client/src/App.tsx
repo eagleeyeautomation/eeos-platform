@@ -255,6 +255,7 @@ function Router() {
       <Route path="/admin/ai-recommendations" component={admin(PlatformAdmin)} />
       <Route path="/admin/marketplace" component={admin(PlatformAdmin)} />
       <Route path="/admin/intelligence-governance" component={admin(PlatformAdmin)} />
+      <Route path="/admin/licensing" component={admin(PlatformAdmin)} />
       <Route path="/admin/demo-center" component={admin(DemoCenter)} />
       <Route path="/demo/presentation" component={admin(DemoPresentation)} />
       <Route path="/access-denied" component={AccessDenied} />
