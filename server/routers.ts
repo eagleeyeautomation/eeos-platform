@@ -7,6 +7,7 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { sdk } from "./_core/sdk";
@@ -73,7 +74,7 @@ import { GOAL_TYPES } from "./decision-orchestration/core";
 import { createBusinessGoal, decideWorkflow, getAutomationDashboard, prepareDecisionWorkflow, updateBusinessGoal } from "./decision-orchestration/service";
 import { INDUSTRY_KEYS, scoreIndustryOpportunity } from "./industry-intelligence/core";
 import { configureOrganizationIndustryPacks, getOrganizationIndustryContext, listIndustryCatalog, recordIndustryKpi } from "./industry-intelligence/service";
-import { getDemoCenter, replayDemo, resetDemo, seedDemo, startDemoScenario } from "./demo/service";
+import { advancePresentation, approvePresentationWorkflow, completePresentation, getDemoCenter, getPresentationDefinition, getPresentationState, presentationCopilot, previousPresentation, replayDemo, resetDemo, restartPresentation, seedDemo, startDemoScenario, startPresentation } from "./demo/service";
 
 export const appRouter = router({
   system: systemRouter,
@@ -790,6 +791,16 @@ export const appRouter = router({
     start: protectedProcedure.mutation(async({ctx})=>{const authorization=await requirePlatformAdmin(ctx.user);return startDemoScenario(authorization.userId);}),
     reset: protectedProcedure.mutation(async({ctx})=>{const authorization=await requirePlatformAdmin(ctx.user);return resetDemo(authorization.userId);}),
     replay: protectedProcedure.mutation(async({ctx})=>{const authorization=await requirePlatformAdmin(ctx.user);return replayDemo(authorization.userId);}),
+    presentation: protectedProcedure.query(async({ctx})=>{await requirePlatformAdmin(ctx.user);return getPresentationDefinition(false);}),
+    presenterNotes: protectedProcedure.query(async({ctx})=>{await requirePlatformAdmin(ctx.user);return getPresentationDefinition(true);}),
+    presentationState: protectedProcedure.query(async({ctx})=>{await requirePlatformAdmin(ctx.user);return getPresentationState();}),
+    startPresentation: protectedProcedure.input(z.object({mode:z.enum(["guided","self-guided"])})).mutation(async({ctx,input})=>{const authorization=await requirePlatformAdmin(ctx.user);return startPresentation(authorization.userId,input.mode);}),
+    advancePresentation: protectedProcedure.input(z.object({currentStep:z.number().int().min(0).max(13)})).mutation(async({ctx,input})=>{const authorization=await requirePlatformAdmin(ctx.user);return advancePresentation(authorization.userId,input.currentStep);}),
+    previousPresentation: protectedProcedure.input(z.object({currentStep:z.number().int().min(0).max(13)})).mutation(async({ctx,input})=>{const authorization=await requirePlatformAdmin(ctx.user);return previousPresentation(authorization.userId,input.currentStep);}),
+    completePresentation: protectedProcedure.mutation(async({ctx})=>{const authorization=await requirePlatformAdmin(ctx.user);return completePresentation(authorization.userId);}),
+    restartPresentation: protectedProcedure.input(z.object({confirmed:z.literal(true)})).mutation(async({ctx,input})=>{const authorization=await requirePlatformAdmin(ctx.user);return restartPresentation(authorization.userId,input.confirmed);}),
+    presentationCopilot: protectedProcedure.input(z.object({question:z.string().min(1).max(300)})).query(async({ctx,input})=>{await requirePlatformAdmin(ctx.user);return presentationCopilot(input.question);}),
+    approvePresentationWorkflow: protectedProcedure.mutation(async({ctx})=>{const authorization=await requirePlatformAdmin(ctx.user);const session=await sdk.currentSession(ctx.req);if(!session?.mfaVerifiedAt||!session.recentAuthAt||session.recentAuthAt.getTime()<Date.now()-10*60_000) throw new TRPCError({code:"FORBIDDEN",message:"Recent MFA-verified authentication is required to approve this presentation workflow."});return approvePresentationWorkflow(authorization.userId);}),
   }),
 
   admin: router({

@@ -46,6 +46,7 @@ import ExecutiveMissionControl from "./pages/ExecutiveMissionControl";
 import ExecutiveAutomation from "./pages/ExecutiveAutomation";
 import IndustryIntelligence from "./pages/IndustryIntelligence";
 import DemoCenter from "./pages/DemoCenter";
+import DemoPresentation from "./pages/DemoPresentation";
 import ExecutiveCopilot from "./components/ExecutiveCopilot";
 
 function owner(component: ComponentType) {
@@ -255,6 +256,7 @@ function Router() {
       <Route path="/admin/marketplace" component={admin(PlatformAdmin)} />
       <Route path="/admin/intelligence-governance" component={admin(PlatformAdmin)} />
       <Route path="/admin/demo-center" component={admin(DemoCenter)} />
+      <Route path="/demo/presentation" component={admin(DemoPresentation)} />
       <Route path="/access-denied" component={AccessDenied} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
