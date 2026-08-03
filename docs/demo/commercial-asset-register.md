@@ -15,3 +15,30 @@ Certification state: **Media package derived and validated; commercial-use music
 Do not deploy cinematic integration until the commercial-use music-license evidence is registered. Do not commit the master to Git; use approved asset storage and retain its immutable storage identifier.
 
 Approved narration baseline is the exact Sprint 3 copy beginning “Every day, executives make hundreds of decisions” and ending “Stop Managing. Start Leading.”
+
+## Provenance and license evidence
+
+### Video
+
+- Platform: Runway
+- Asset type: AI-generated video
+- Asset identifier: Not supplied
+- Ownership/provenance: Original EEOS commercial created through Eagle's Runway workspace for EEOS
+- Technical creation timestamp: July 31, 2026, 15:38:51 UTC (embedded master metadata)
+- Account tier at creation: Not supplied
+- Applicable platform terms reviewed: Runway Terms of Use, last updated May 11, 2026, state that Runway does not claim ownership of user outputs and does not restrict their commercial use, subject to compliance with the agreement: https://runwayml.com/terms-of-use
+- Commercial-use status: Platform terms support commercial use; account record and asset identifier remain desirable provenance evidence
+- Attribution: No attribution requirement identified for ordinary generated output. The separate “Powered by Runway” condition applies to customer applications using purchased Runway APIs, not use of a rendered output.
+
+### Embedded music
+
+- Platform: Donna — AI Song & Music Maker (`musicdonna.com` assumed; exact Donna product/account must be confirmed by Eagle)
+- Asset type: Music track embedded in the approved commercial master
+- Asset identifier: Not supplied
+- Date acquired or generated: Not supplied
+- Account tier at generation: Not supplied
+- Applicable platform terms reviewed: Donna Legal Terms section 29 grants active paid subscribers a perpetual, worldwide, royalty-free license for commercial and non-commercial use of their generated AI outputs. Free/trial outputs are restricted to personal, non-commercial use: https://www.musicdonna.com/terms
+- License type if generated under an active paid subscription: Perpetual, worldwide, royalty-free commercial-use license
+- Attribution: Section 29 does not state an attribution requirement for qualifying generated AI outputs; account-specific confirmation remains pending
+- Exact-track verification: Pending Donna track identifier or account generation record linking the embedded track to a qualifying paid subscription
+- Deployment status: **Blocked** until Eagle supplies the exact Donna product/account, track or generation record, paid tier active on the generation date, and date acquired or generated
