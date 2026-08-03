@@ -91,4 +91,11 @@ describe("Navigation dropdown route inventory", () => {
     expect(source).toContain('session.role === "PLATFORM_ADMIN"');
     expect(source).toContain("Back to Admin");
   });
+
+  it("provides authenticated sign-out through the CSRF-protected session endpoint", () => {
+    const source = readFileSync("client/src/components/Navigation.tsx", "utf8");
+    expect(source).toContain('fetch("/api/auth/logout"');
+    expect(source).toContain('"x-eeos-csrf-token": session.csrfToken');
+    expect(source).toContain("Sign out");
+  });
 });

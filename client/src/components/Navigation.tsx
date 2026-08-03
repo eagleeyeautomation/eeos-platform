@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, ChevronDown, ArrowRight, Zap } from "lucide-react";
+import { Menu, X, ChevronDown, ArrowRight, LogOut, Zap } from "lucide-react";
 import { startLogin } from "@/const";
 import { isCustomerRole, useProductSession } from "@/contexts/ProductSessionContext";
 import { useOrganizationTheme } from "@/contexts/OrganizationThemeContext";
@@ -221,6 +221,14 @@ export default function Navigation() {
   const [location] = useLocation();
   const headerRef = useRef<HTMLElement | null>(null);
   const isAdminExperience = location.startsWith("/admin");
+  async function signOut() {
+    const response = await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+      headers: { "x-eeos-csrf-token": session.csrfToken ?? "" },
+    });
+    if (response.ok) window.location.href = "/login";
+  }
   const isOwnerExperience = !isAdminExperience && (location.startsWith("/executive")
     || location.startsWith("/industry-intelligence")
     || location.startsWith("/business-health")
@@ -431,13 +439,18 @@ export default function Navigation() {
                 </Link>
               ) : null}
               {isOwnerExperience || isAdminExperience ? (
-                <Link
-                  href={isAdminExperience ? "/admin" : "/executive-home"}
-                  className="px-4 py-2 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-md hover:bg-[rgba(201,162,39,0.08)] hover:border-[rgba(201,162,39,0.6)] transition-all duration-200"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  {isAdminExperience ? "Admin Console" : session.organization?.name ?? "Command Center"}
-                </Link>
+                <>
+                  <Link
+                    href={isAdminExperience ? "/admin" : "/executive-home"}
+                    className="px-4 py-2 text-sm font-semibold text-[#C9A227] border border-[rgba(201,162,39,0.3)] rounded-md hover:bg-[rgba(201,162,39,0.08)] hover:border-[rgba(201,162,39,0.6)] transition-all duration-200"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    {isAdminExperience ? "Admin Console" : session.organization?.name ?? "Command Center"}
+                  </Link>
+                  <button type="button" onClick={signOut} className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white/70 hover:text-white">
+                    <LogOut className="h-4 w-4" /> Sign out
+                  </button>
+                </>
               ) : (
                 <>
                   <Link
@@ -564,14 +577,19 @@ export default function Navigation() {
               </Link>
             ) : null}
             {isOwnerExperience || isAdminExperience ? (
-              <Link
-                href={isAdminExperience ? "/admin" : "/executive-home"}
-                className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-xl hover:bg-[#D8B84A] transition-all shadow-[0_0_20px_rgba(201,162,39,0.4)]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                {isAdminExperience ? "Open Admin Console" : "Open Owner Command Center"}
-                <ArrowRight className="w-4 h-4" />
-              </Link>
+              <>
+                <Link
+                  href={isAdminExperience ? "/admin" : "/executive-home"}
+                  className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-[#0B0B0B] bg-[#C9A227] rounded-xl hover:bg-[#D8B84A] transition-all shadow-[0_0_20px_rgba(201,162,39,0.4)]"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  {isAdminExperience ? "Open Admin Console" : "Open Owner Command Center"}
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <button type="button" onClick={signOut} className="flex w-full items-center justify-center gap-2 py-3 text-sm font-semibold text-white/70">
+                  <LogOut className="h-4 w-4" /> Sign out
+                </button>
+              </>
             ) : (
               <>
                 <Link
