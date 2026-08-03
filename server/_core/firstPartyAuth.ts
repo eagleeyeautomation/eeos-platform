@@ -57,7 +57,6 @@ import { createOpaqueToken, hashOpaqueToken, readClientIp } from "./sessionToken
 import { sdk } from "./sdk";
 import { AuthenticationRateLimiter, createProductionRateLimitStore, rateLimitIdentity } from "./distributedRateLimit";
 import { decryptMfaSecret, encryptMfaSecret, generateRecoveryCodes, generateTotpSecret, hashRecoveryCode, mfaRequiredForRole, verifyTotp } from "./mfa";
-import { sanitizedRecentMfaState } from "./recentMfa";
 
 const loginSchema = z.object({
   email: z.string().email().max(320),
@@ -632,15 +631,7 @@ export function registerFirstPartyAuthRoutes(app: Express) {
         await audit({ actorUserId: user.id, action: "auth.mfa.challenge.replay_denied", targetType: "user", targetId: String(user.id), outcome: "denied" });
         return void res.status(401).json({ success: false, error: "Invalid authentication code." });
       }
-      const updatedSession = await markSessionMfaVerifiedAndRecent(session.id);
-      console.info("[auth.recent_mfa]", {
-        phase: "mfa_post_update",
-        sameSessionId: updatedSession.id === session.id,
-        updateRowCount: 1,
-        sessionRotated: false,
-        adapter: "first_party_mysql",
-        ...sanitizedRecentMfaState(updatedSession),
-      });
+      await markSessionMfaVerifiedAndRecent(session.id);
       await audit({ actorUserId: user.id, action: recovered ? "auth.mfa.recovery.used" : "auth.mfa.challenge.succeeded", targetType: "user", targetId: String(user.id) });
       res.status(200).json({ success: true, redirectTo: user.role === "admin" ? "/admin" : "/executive-home" });
     } catch {

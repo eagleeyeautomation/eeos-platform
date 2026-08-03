@@ -34,18 +34,3 @@ export function evaluateRecentMfa(
     ageSeconds: Math.floor(ageMs / 1000),
   };
 }
-
-export function sanitizedRecentMfaState(
-  session: Pick<AuthSession, "id" | "mfaVerifiedAt" | "recentAuthAt"> | undefined,
-  nowMs = Date.now(),
-) {
-  const result = evaluateRecentMfa(session, nowMs);
-  return {
-    sessionId: session?.id ?? null,
-    mfaVerifiedAtPresent: Boolean(session?.mfaVerifiedAt),
-    recentAuthAtPresent: Boolean(session?.recentAuthAt),
-    timestampPrecision: session?.recentAuthAt instanceof Date ? "date-ms" : typeof session?.recentAuthAt,
-    recentAuthAgeSeconds: result.ageSeconds,
-    recentMfaReason: result.reason,
-  };
-}

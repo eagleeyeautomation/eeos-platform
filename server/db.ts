@@ -178,9 +178,6 @@ export async function markSessionMfaVerifiedAndRecent(id: number) {
   if (Number(result[0].affectedRows) !== 1) {
     throw new Error("Active MFA session update did not match exactly one row");
   }
-  const reloaded = (await db.select().from(authSessions).where(eq(authSessions.id, id)).limit(1))[0];
-  if (!reloaded) throw new Error("Updated MFA session could not be reloaded");
-  return reloaded;
 }
 
 export async function markSessionRecentlyAuthenticated(id: number) {

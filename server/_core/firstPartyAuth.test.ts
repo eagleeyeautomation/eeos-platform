@@ -588,12 +588,7 @@ describe("EEOS first-party authentication", () => {
     dbMocks.getMfaFactor.mockResolvedValue({ encryptedSecret: encryptMfaSecret(secret), enabledAt: now, lastTotpCounter: counter - 1 });
     dbMocks.consumeMfaRecoveryCode.mockResolvedValue(false);
     dbMocks.updateMfaCounter.mockResolvedValue(true);
-    dbMocks.markSessionMfaVerifiedAndRecent.mockResolvedValue({
-      id: 34, userId: account.id, tokenHash: hashOpaqueToken(token),
-      expiresAt: new Date(Date.now() + 60_000), revokedAt: null, createdAt: now,
-      lastSeenAt: new Date(), recentAuthAt: new Date(), mfaVerifiedAt: new Date(),
-      ipAddress: null, userAgent: null,
-    });
+    dbMocks.markSessionMfaVerifiedAndRecent.mockResolvedValue(undefined);
 
     await withServer(async (baseUrl) => {
       const pending = await fetch(`${baseUrl}/api/auth/mfa/pending`, { headers: { Cookie: `${COOKIE_NAME}=${token}` } });
@@ -621,12 +616,7 @@ describe("EEOS first-party authentication", () => {
     dbMocks.getUserById.mockResolvedValue(account);
     dbMocks.getMfaFactor.mockResolvedValue({ encryptedSecret: encryptMfaSecret("JBSWY3DPEHPK3PXP"), enabledAt: now, lastTotpCounter: null });
     dbMocks.consumeMfaRecoveryCode.mockResolvedValue(true);
-    dbMocks.markSessionMfaVerifiedAndRecent.mockResolvedValue({
-      id: 32, userId: account.id, tokenHash: hashOpaqueToken(token),
-      expiresAt: new Date(Date.now() + 60_000), revokedAt: null, createdAt: now,
-      lastSeenAt: new Date(), recentAuthAt: new Date(), mfaVerifiedAt: new Date(),
-      ipAddress: null, userAgent: null,
-    });
+    dbMocks.markSessionMfaVerifiedAndRecent.mockResolvedValue(undefined);
 
     await withServer(async (baseUrl) => {
       const pending = await fetch(`${baseUrl}/api/auth/mfa/pending`, { headers: { Cookie: `${COOKIE_NAME}=${token}` } });
