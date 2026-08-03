@@ -171,10 +171,16 @@ export async function markSessionMfaVerifiedAndRecent(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const verifiedAt = new Date();
-  await db.update(authSessions).set({
+  const result = await db.update(authSessions).set({
     mfaVerifiedAt: verifiedAt,
     recentAuthAt: verifiedAt,
   }).where(eq(authSessions.id, id));
+  if (Number(result[0].affectedRows) !== 1) {
+    throw new Error("Active MFA session update did not match exactly one row");
+  }
+  const reloaded = (await db.select().from(authSessions).where(eq(authSessions.id, id)).limit(1))[0];
+  if (!reloaded) throw new Error("Updated MFA session could not be reloaded");
+  return reloaded;
 }
 
 export async function markSessionRecentlyAuthenticated(id: number) {

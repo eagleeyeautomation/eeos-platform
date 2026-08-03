@@ -11,6 +11,7 @@ import { TRPCError } from "@trpc/server";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { sdk } from "./_core/sdk";
+import { evaluateRecentMfa, sanitizedRecentMfaState } from "./_core/recentMfa";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { COOKIE_NAME } from "@shared/const";
 import {
@@ -800,7 +801,7 @@ export const appRouter = router({
     completePresentation: protectedProcedure.mutation(async({ctx})=>{const authorization=await requirePlatformAdmin(ctx.user);return completePresentation(authorization.userId);}),
     restartPresentation: protectedProcedure.input(z.object({confirmed:z.literal(true)})).mutation(async({ctx,input})=>{const authorization=await requirePlatformAdmin(ctx.user);return restartPresentation(authorization.userId,input.confirmed);}),
     presentationCopilot: protectedProcedure.input(z.object({question:z.string().min(1).max(300)})).query(async({ctx,input})=>{await requirePlatformAdmin(ctx.user);return presentationCopilot(input.question);}),
-    approvePresentationWorkflow: protectedProcedure.mutation(async({ctx})=>{const authorization=await requirePlatformAdmin(ctx.user);const session=await sdk.currentSession(ctx.req);if(!session?.mfaVerifiedAt||!session.recentAuthAt||session.recentAuthAt.getTime()<Date.now()-10*60_000) throw new TRPCError({code:"FORBIDDEN",message:"Recent MFA-verified authentication is required to approve this presentation workflow."});return approvePresentationWorkflow(authorization.userId);}),
+    approvePresentationWorkflow: protectedProcedure.mutation(async({ctx})=>{const authorization=await requirePlatformAdmin(ctx.user);const session=await sdk.currentSession(ctx.req);const recentMfa=evaluateRecentMfa(session);console.info("[auth.recent_mfa]",{phase:"approval_reload",adapter:"first_party_mysql",sessionRotated:false,...sanitizedRecentMfaState(session)});if(!recentMfa.allowed) throw new TRPCError({code:"FORBIDDEN",message:"Recent MFA-verified authentication is required to approve this presentation workflow."});return approvePresentationWorkflow(authorization.userId);}),
   }),
 
   admin: router({
