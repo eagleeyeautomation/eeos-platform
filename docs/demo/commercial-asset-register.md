@@ -1,6 +1,6 @@
 # Commercial asset register
 
-Certification state: **Media package derived and validated; commercial-use music-license evidence pending**.
+Certification state: **Media package and commercial-use provenance validated; cleared for Sprint 3 integration and rehearsal**.
 
 | Asset | Required evidence | Current state |
 |---|---|---|
@@ -9,10 +9,10 @@ Certification state: **Media package derived and validated; commercial-use music
 | Poster | `eeos-commercial-poster.jpg`; approved final EEOS brand frame, 1920×1080 | SHA-256 `285a5434669b65ceca4a89f0903e9b402dd147134ddde64cd095aa8c5acabaaa` |
 | Captions | `eeos-commercial.en.vtt`; English spoken narration, locally transcribed and corrected to approved wording | SHA-256 `965d4764b7e1aca5b897b76c2e21bbb6d84ae17c494781c8c550f5262f64e352` |
 | Narration | Embedded in master; detected speech 00:00–00:54.200 matches the approved baseline through “EEOS. Fortune 500 Intelligence.” The repeated closing slogans are visual, not spoken. | Final embedded track; master unchanged |
-| Music | Embedded continuously beneath narration and through the closing tail | License evidence pending from Eagle |
+| Music | “Eagle Eye Rising,” embedded continuously beneath narration and through the closing tail | Donna PRO commercial-use evidence verified |
 | Final mix | Stereo AAC 48 kHz, approximately 128 kbps; peak −1.34 dBFS, RMS −18.40 dBFS; no clipping detected | Treated as final embedded mix |
 
-Do not deploy cinematic integration until the commercial-use music-license evidence is registered. Do not commit the master to Git; use approved asset storage and retain its immutable storage identifier.
+Do not commit the master to Git; use approved asset storage and retain its immutable storage identifier.
 
 Approved narration baseline is the exact Sprint 3 copy beginning “Every day, executives make hundreds of decisions” and ending “Stop Managing. Start Leading.”
 
@@ -32,13 +32,20 @@ Approved narration baseline is the exact Sprint 3 copy beginning “Every day, e
 
 ### Embedded music
 
-- Platform: Donna — AI Song & Music Maker (`musicdonna.com` assumed; exact Donna product/account must be confirmed by Eagle)
+- Platform: Donna — AI Song & Music Maker
 - Asset type: Music track embedded in the approved commercial master
-- Asset identifier: Not supplied
-- Date acquired or generated: Not supplied
-- Account tier at generation: Not supplied
+- Track title: Eagle Eye Rising
+- Creator: George Brown
+- Donna document number: `1253c992-e3d7-42fc-b493-aa2e9db5caa1`
+- Date created: July 31, 2026
+- Platform/region recorded by Donna: Android / US
+- Account/library: Eagleeye1's Library
+- Account tier: Donna PRO
+- Proof of Creation: `/Users/georg/Downloads/eagle-eye-rising.pdf`; SHA-256 `c9f731906c377f02314a5d7701f8f6fd44ee7f6636a89f5d0ab2984d5aea3764`
+- PRO library evidence: `/Users/georg/Downloads/Screenshot_20260803_115453.jpg`; SHA-256 `f56b48b2c0904a09089a9c5d14221b3d7e72e4ac9453f982e20ba9254834ef2f`
 - Applicable platform terms reviewed: Donna Legal Terms section 29 grants active paid subscribers a perpetual, worldwide, royalty-free license for commercial and non-commercial use of their generated AI outputs. Free/trial outputs are restricted to personal, non-commercial use: https://www.musicdonna.com/terms
-- License type if generated under an active paid subscription: Perpetual, worldwide, royalty-free commercial-use license
-- Attribution: Section 29 does not state an attribution requirement for qualifying generated AI outputs; account-specific confirmation remains pending
-- Exact-track verification: Pending Donna track identifier or account generation record linking the embedded track to a qualifying paid subscription
-- Deployment status: **Blocked** until Eagle supplies the exact Donna product/account, track or generation record, paid tier active on the generation date, and date acquired or generated
+- License type: Perpetual, worldwide, royalty-free commercial-use license for a qualifying Donna PRO-generated output
+- Attribution: Donna section 29 states no attribution requirement for qualifying generated AI outputs
+- Evidence reconciliation: The Proof of Creation identifies the title, creator, creation date, platform, region, and document number. The Donna PRO screenshot shows the same title in Eagleeye1's My Songs library. Eagle supplied the provenance attestation that this track is the soundtrack embedded in the approved commercial master.
+- Exact-track verification: Satisfied by the matching Donna creation certificate, Donna PRO library record, and Eagle provenance attestation. An original isolated Donna audio export was not required and was not used to alter the approved master.
+- Deployment status: **Commercial-use documentation gate passed**
