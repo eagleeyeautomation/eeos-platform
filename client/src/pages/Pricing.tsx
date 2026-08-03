@@ -4,6 +4,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/AnimatedSection";
 import {
+  ADDON_DISPLAY_DISCLOSURES,
   EEOS_BRAIN_QUESTIONS,
   FOUNDING_CUSTOMER_PLANS,
   FOUNDING_CUSTOMER_PROMO_ENABLED,
@@ -190,7 +191,7 @@ export default function Pricing() {
               Commercial add-ons are administrator-approved entitlements. No payment provider is connected and no organization is charged automatically.
             </p>
           </AnimatedSection>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {OPTIONAL_INTELLIGENCE_ADDONS.map((addon, index) => (
               <AnimatedSection key={addon.key} delay={index * 80}>
                 <article className="flex h-full flex-col rounded-2xl border border-[#C9A227]/16 bg-[#141414] p-5">
@@ -200,13 +201,59 @@ export default function Pricing() {
                   <h3 className="mt-3 text-xl font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{addon.name}</h3>
                   <div className="mt-4 flex items-end gap-1">
                     <span className="text-3xl font-bold text-[#C9A227]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{addon.price}</span>
-                    <span className="pb-1 text-xs text-white/45">{addon.cadence}</span>
+                    {addon.cadence ? <span className="pb-1 text-xs text-white/45">{addon.cadence}</span> : null}
                   </div>
-                  <p className="mt-4 text-sm leading-6 text-white/55">{addon.description}</p>
+                  <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#A8E7FF]">{addon.billingType}</p>
+                  <p className="mt-4 text-sm leading-6 text-white/62">{addon.description}</p>
+                  <div className="mt-5 space-y-4 text-sm leading-6 text-white/58">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-white/42">What it does</div>
+                      <p className="mt-1">{addon.whatItDoes}</p>
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-white/42">Who it helps</div>
+                      <p className="mt-1">{addon.whoItHelps}</p>
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-white/42">Example use case</div>
+                      <p className="mt-1">{addon.exampleUseCase}</p>
+                    </div>
+                  </div>
+                  <div className="mt-5">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-white/42">Included capabilities</div>
+                    <ul className="mt-2 space-y-2">
+                      {addon.includedCapabilities.map((capability) => (
+                        <li key={capability} className="flex gap-2 text-sm text-white/62">
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A227]" />
+                          <span>{capability}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-white/42">Not included</div>
+                    <p className="mt-1 text-sm leading-6 text-white/55">{addon.exclusions}</p>
+                  </div>
+                  <p className="mt-4 text-xs font-semibold text-[#C9A227]">{addon.basePlanRequirement}</p>
                 </article>
               </AnimatedSection>
             ))}
           </div>
+          <AnimatedSection delay={240}>
+            <div className="mt-8 rounded-2xl border border-[#C9A227]/18 bg-[#C9A227]/8 p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#C9A227]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                Add-on terms
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {ADDON_DISPLAY_DISCLOSURES.map((disclosure) => (
+                  <div key={disclosure} className="flex gap-2 text-sm leading-6 text-white/64">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A227]" />
+                    <span>{disclosure}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </AnimatedSection>
         </div>
       </section>
 
