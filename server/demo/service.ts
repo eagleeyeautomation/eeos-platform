@@ -7,6 +7,8 @@ import { createBusinessGoal, decideWorkflow, prepareDecisionWorkflow } from "../
 import { assertDemoClassification, DEMO_LOCATIONS, DEMO_NAME, DEMO_SCENARIO_ID, DEMO_SLUG, DEMO_VERSION } from "./contract";
 import { MONDAY_EXECUTIVE_BRIEFING, SYNTHETIC_METRICS } from "./scenarios";
 import { FLAGSHIP_PRESENTATION, presentationStep, safeCopilotAnswer } from "./presentation";
+import { buildDemoReadiness } from "./readiness";
+import { getCoreReadiness } from "../_core/startup";
 
 async function provisionDemoIdentity(actorId:string){
   let organization=await getOrganizationBySlug(DEMO_SLUG);
@@ -27,6 +29,8 @@ export async function getDemoCenter(){
     client.query(`select run_key as "runKey",action,status,details,created_at as "createdAt" from demo_scenario_runs where organization_id=$1 order by created_at desc limit 20`,[String(organization.id)]),
   ]);return {provisioned:true,environment:environment.rows[0]??null,scenario:scenario.rows[0]??null,locations:DEMO_LOCATIONS,metrics:metrics.rows,runs:runs.rows};});
 }
+export async function getDemoReadiness(){const [center,core,identity]=await Promise.all([getDemoCenter(),getCoreReadiness(),identityReadiness()]);const organizationId=center.environment?.organizationId;const states=organizationId?await withDatabase(async client=>{const [recommendation,workflow]=await Promise.all([client.query(`select count(*)::int as count from executive_priority_queue where organization_id=$1`,[organizationId]),client.query<{status:string}>(`select status from decision_workflows where organization_id=$1 order by created_at desc limit 1`,[organizationId])]);return {recommendation:Number(recommendation.rows[0]?.count)>0?"available":"unavailable",workflow:workflow.rows[0]?.status??"unavailable"};}):{recommendation:"unavailable",workflow:"unavailable"};return buildDemoReadiness({core,identity,demo:{provisioned:center.provisioned,classification:center.environment?.classification,scenarioStatus:center.scenario?.status,locations:center.locations.length,metrics:center.metrics.length,recommendationStatus:states.recommendation,workflowStatus:states.workflow,lastReset:center.environment?.resetAt},assets:{cinematic:Boolean(process.env.DEMO_COMMERCIAL_URL),poster:Boolean(process.env.DEMO_POSTER_URL),captions:Boolean(process.env.DEMO_CAPTIONS_URL),audioLicense:process.env.DEMO_AUDIO_LICENSE_CONFIRMED==="true"}});}
+async function identityReadiness(){const url=process.env.IDENTITY_SERVICE_URL?.trim();if(!url)return {reachable:false,redis:false};try{const response=await fetch(`${url.replace(/\/$/,"")}/health/ready`,{signal:AbortSignal.timeout(4000)});const body=await response.json() as {checks?:{redis?:boolean}};return {reachable:response.ok,redis:body.checks?.redis===true};}catch{return {reachable:false,redis:false};}}
 
 export async function seedDemo(actorId:string){
   const identity=await provisionDemoIdentity(actorId); const now=new Date();

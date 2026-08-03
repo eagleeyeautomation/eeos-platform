@@ -75,7 +75,7 @@ import { GOAL_TYPES } from "./decision-orchestration/core";
 import { createBusinessGoal, decideWorkflow, getAutomationDashboard, prepareDecisionWorkflow, updateBusinessGoal } from "./decision-orchestration/service";
 import { INDUSTRY_KEYS, scoreIndustryOpportunity } from "./industry-intelligence/core";
 import { configureOrganizationIndustryPacks, getOrganizationIndustryContext, listIndustryCatalog, recordIndustryKpi } from "./industry-intelligence/service";
-import { advancePresentation, approvePresentationWorkflow, completePresentation, getDemoCenter, getPresentationDefinition, getPresentationState, presentationCopilot, previousPresentation, replayDemo, resetDemo, restartPresentation, seedDemo, startDemoScenario, startPresentation } from "./demo/service";
+import { advancePresentation, approvePresentationWorkflow, completePresentation, getDemoCenter, getDemoReadiness, getPresentationDefinition, getPresentationState, presentationCopilot, previousPresentation, replayDemo, resetDemo, restartPresentation, seedDemo, startDemoScenario, startPresentation } from "./demo/service";
 
 export const appRouter = router({
   system: systemRouter,
@@ -788,6 +788,7 @@ export const appRouter = router({
 
   demo: router({
     environment: protectedProcedure.query(async({ctx})=>{await requirePlatformAdmin(ctx.user);return getDemoCenter();}),
+    readiness: protectedProcedure.query(async({ctx})=>{await requirePlatformAdmin(ctx.user);return getDemoReadiness();}),
     seed: protectedProcedure.mutation(async({ctx})=>{const authorization=await requirePlatformAdmin(ctx.user);return seedDemo(authorization.userId);}),
     start: protectedProcedure.mutation(async({ctx})=>{const authorization=await requirePlatformAdmin(ctx.user);return startDemoScenario(authorization.userId);}),
     reset: protectedProcedure.mutation(async({ctx})=>{const authorization=await requirePlatformAdmin(ctx.user);return resetDemo(authorization.userId);}),
