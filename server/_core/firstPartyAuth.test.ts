@@ -544,6 +544,35 @@ describe("EEOS first-party authentication", () => {
     });
   });
 
+  it("classifies sequential reuse of an accepted TOTP counter as replay", async () => {
+    const account = user();
+    const token = "pending-session-for-sequential-replay";
+    const secret = "JBSWY3DPEHPK3PXP";
+    const counter = Math.floor(Date.now() / 30_000);
+    const session = {
+      id: 33, userId: account.id, tokenHash: hashOpaqueToken(token),
+      expiresAt: new Date(Date.now() + 60_000), revokedAt: null, createdAt: now,
+      lastSeenAt: new Date(), recentAuthAt: new Date(), mfaVerifiedAt: null,
+      ipAddress: null, userAgent: null,
+    };
+    dbMocks.getAuthSessionByTokenHash.mockResolvedValue(session);
+    dbMocks.getUserById.mockResolvedValue(account);
+    dbMocks.getMfaFactor.mockResolvedValue({ encryptedSecret: encryptMfaSecret(secret), enabledAt: now, lastTotpCounter: counter });
+
+    await withServer(async (baseUrl) => {
+      const pending = await fetch(`${baseUrl}/api/auth/mfa/pending`, { headers: { Cookie: `${COOKIE_NAME}=${token}` } });
+      const context = await pending.json() as { csrfToken: string };
+      const response = await fetch(`${baseUrl}/api/auth/mfa/challenge`, {
+        method: "POST",
+        headers: { Cookie: `${COOKIE_NAME}=${token}`, "content-type": "application/json", "x-eeos-csrf-token": context.csrfToken },
+        body: JSON.stringify({ code: totpCode(secret, counter) }),
+      });
+      expect(response.status).toBe(401);
+      expect(dbMocks.updateMfaCounter).not.toHaveBeenCalled();
+      expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.mfa.challenge.replay_denied" }));
+    });
+  });
+
   it("consumes a recovery code once, marks only that pending session verified, and audits its use", async () => {
     const account = user();
     const token = "pending-session-for-recovery-code";

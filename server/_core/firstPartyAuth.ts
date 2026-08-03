@@ -618,7 +618,11 @@ export function registerFirstPartyAuthRoutes(app: Express) {
       const recoveryHash = hashRecoveryCode(parsed.data.code);
       const recovered = await consumeMfaRecoveryCode(user.id, recoveryHash);
       let counter: number | undefined;
-      if (!recovered) counter = verifyTotp(decryptMfaSecret(factor.encryptedSecret), parsed.data.code, Date.now(), factor.lastTotpCounter);
+      if (!recovered) counter = verifyTotp(decryptMfaSecret(factor.encryptedSecret), parsed.data.code, Date.now());
+      if (counter !== undefined && factor.lastTotpCounter != null && counter <= factor.lastTotpCounter) {
+        await audit({ actorUserId: user.id, action: "auth.mfa.challenge.replay_denied", targetType: "user", targetId: String(user.id), outcome: "denied" });
+        return void res.status(401).json({ success: false, error: "Invalid authentication code." });
+      }
       if (!recovered && counter === undefined) {
         await audit({ actorUserId: user.id, action: "auth.mfa.challenge.failed", targetType: "user", targetId: String(user.id), outcome: "denied" });
         return void res.status(401).json({ success: false, error: "Invalid authentication code." });
