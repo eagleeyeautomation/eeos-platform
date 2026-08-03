@@ -12,6 +12,12 @@ Certification state: **Media package and commercial-use provenance validated; cl
 | Music | “Eagle Eye Rising,” embedded continuously beneath narration and through the closing tail | Donna PRO commercial-use evidence verified |
 | Final mix | Stereo AAC 48 kHz, approximately 128 kbps; peak −1.34 dBFS, RMS −18.40 dBFS; no clipping detected | Treated as final embedded mix |
 
+Deployed application paths:
+
+- `/eeos-assets/demo/eeos-commercial-1080p-web.mp4`
+- `/eeos-assets/demo/eeos-commercial-poster.jpg`
+- `/eeos-assets/demo/eeos-commercial.en.vtt`
+
 Do not commit the master to Git; use approved asset storage and retain its immutable storage identifier.
 
 Approved narration baseline is the exact Sprint 3 copy beginning “Every day, executives make hundreds of decisions” and ending “Stop Managing. Start Leading.”

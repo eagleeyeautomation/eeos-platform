@@ -44,6 +44,9 @@ Turn information into intelligence. Turn intelligence into leadership.
 EEOS. Fortune 500 Intelligence. Built for Every Business. Stop Managing. Start Leading.`;
 
 export const commercialAsset = {
-  status: "blocked" as const,
-  reason: "No approved commercial master, web derivative, captions, narration master, or music-license evidence was supplied.",
+  status: "ready" as const,
+  video: "/eeos-assets/demo/eeos-commercial-1080p-web.mp4",
+  poster: "/eeos-assets/demo/eeos-commercial-poster.jpg",
+  captions: "/eeos-assets/demo/eeos-commercial.en.vtt",
+  durationSeconds: 62.729,
 };

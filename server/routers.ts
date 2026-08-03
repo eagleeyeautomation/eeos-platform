@@ -788,7 +788,7 @@ export const appRouter = router({
 
   demo: router({
     environment: protectedProcedure.query(async({ctx})=>{await requirePlatformAdmin(ctx.user);return getDemoCenter();}),
-    readiness: protectedProcedure.query(async({ctx})=>{await requirePlatformAdmin(ctx.user);return getDemoReadiness();}),
+    readiness: protectedProcedure.query(async({ctx})=>{await requirePlatformAdmin(ctx.user);const session=await sdk.currentSession(ctx.req);return getDemoReadiness(evaluateRecentMfa(session).allowed);}),
     seed: protectedProcedure.mutation(async({ctx})=>{const authorization=await requirePlatformAdmin(ctx.user);return seedDemo(authorization.userId);}),
     start: protectedProcedure.mutation(async({ctx})=>{const authorization=await requirePlatformAdmin(ctx.user);return startDemoScenario(authorization.userId);}),
     reset: protectedProcedure.mutation(async({ctx})=>{const authorization=await requirePlatformAdmin(ctx.user);return resetDemo(authorization.userId);}),
