@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { setSessionCsrfToken } from "@/lib/csrf";
 
 export type ProductRole =
   | "PLATFORM_ADMIN"
@@ -58,10 +59,12 @@ export function ProductSessionProvider({ children }: { children: ReactNode }) {
         });
         const payload = await response.json();
         if (!cancelled) {
+          setSessionCsrfToken(payload.csrfToken);
           setSession({ ...anonymousSession, ...payload, loading: false });
         }
       } catch {
         if (!cancelled) {
+          setSessionCsrfToken(null);
           setSession({ ...anonymousSession, loading: false });
         }
       }
