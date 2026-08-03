@@ -14,6 +14,12 @@ describe("MFA authenticator setup", () => {
     expect(source).toContain("if (response.status === 404) return");
   });
 
+  it("offers in-session password reauthentication when recent auth expires", () => {
+    expect(source).toContain('fetch("/api/auth/reauthenticate"');
+    expect(source).toContain('aria-label="Current password"');
+    expect(source).toContain("Continue enrollment");
+  });
+
   it("displays only the validated Base32 secret as the manual setup key", () => {
     expect(source).toContain("/^[A-Z2-7]+$/");
     expect(source).toContain("{setupKey}");

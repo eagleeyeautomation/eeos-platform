@@ -173,6 +173,12 @@ export async function markSessionMfaVerified(id: number) {
   await db.update(authSessions).set({ mfaVerifiedAt: new Date() }).where(eq(authSessions.id, id));
 }
 
+export async function markSessionRecentlyAuthenticated(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(authSessions).set({ recentAuthAt: new Date() }).where(eq(authSessions.id, id));
+}
+
 export async function getMfaFactor(userId: number) {
   const db = await getDb();
   if (!db) return undefined;

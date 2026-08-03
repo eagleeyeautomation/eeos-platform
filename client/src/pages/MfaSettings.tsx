@@ -15,25 +15,38 @@ export default function MfaSettings() {
   const session = useProductSession();
   const [uri, setUri] = useState(""); const [code, setCode] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]); const [error, setError] = useState("");
+  const [needsReauthentication, setNeedsReauthentication] = useState(false);
+  const [password, setPassword] = useState("");
   const setupKey = readBase32Secret(uri);
   const hasValidSetup = Boolean(setupKey);
+  async function resume() {
+    const response = await fetch("/api/auth/mfa/enrollment/resume", {
+      method: "POST", credentials: "include",
+      headers: { "x-eeos-csrf-token": session.csrfToken ?? "" },
+    });
+    if (response.status === 404) return;
+    if (response.status === 403) { setNeedsReauthentication(true); return; }
+    const payload = await response.json();
+    if (response.ok) { setUri(payload.provisioningUri); setNeedsReauthentication(false); }
+    else setError(payload.error);
+  }
   useEffect(() => {
     if (!session.csrfToken) return;
-    const controller = new AbortController();
-    void fetch("/api/auth/mfa/enrollment/resume", {
-      method: "POST", credentials: "include", signal: controller.signal,
-      headers: { "x-eeos-csrf-token": session.csrfToken },
-    }).then(async (response) => {
-      if (response.status === 404) return;
-      const payload = await response.json();
-      if (response.ok) setUri(payload.provisioningUri);
-      else setError(payload.error);
-    }).catch((reason) => {
-      if (reason instanceof DOMException && reason.name === "AbortError") return;
+    void resume().catch(() => {
       setError("MFA enrollment could not be loaded.");
     });
-    return () => controller.abort();
   }, [session.csrfToken]);
+  async function reauthenticate(event: FormEvent) {
+    event.preventDefault(); setError("");
+    const response = await fetch("/api/auth/reauthenticate", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json", "x-eeos-csrf-token": session.csrfToken ?? "" },
+      body: JSON.stringify({ password }),
+    });
+    const payload = await response.json();
+    if (!response.ok) return setError(payload.error);
+    setPassword(""); setNeedsReauthentication(false); await resume();
+  }
   async function start() {
     const response = await fetch("/api/auth/mfa/enrollment/start", { method: "POST", credentials: "include", headers: { "x-eeos-csrf-token": session.csrfToken ?? "" } });
     const payload = await response.json(); if (!response.ok) return setError(payload.error); setUri(payload.provisioningUri);
@@ -43,7 +56,13 @@ export default function MfaSettings() {
     const payload = await response.json(); if (!response.ok) return setError(payload.error); setRecoveryCodes(payload.recoveryCodes); setUri("");
   }
   return <main className="mx-auto max-w-2xl px-6 py-24"><h1 className="text-3xl font-bold">Multi-factor authentication</h1>
-    {!uri && recoveryCodes.length === 0 && <button onClick={start} className="mt-6 rounded-xl bg-[#C9A227] px-5 py-3 font-semibold text-black">Begin secure enrollment</button>}
+    {needsReauthentication && <form onSubmit={reauthenticate} className="mt-6 space-y-4">
+      <h2 className="font-bold">Confirm your password</h2>
+      <p className="text-sm">Reauthenticate to continue the existing pending MFA enrollment.</p>
+      <input aria-label="Current password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} className="rounded-lg border px-4 py-3" />
+      <button className="rounded-lg bg-[#C9A227] px-4 py-3 text-black">Continue enrollment</button>
+    </form>}
+    {!needsReauthentication && !uri && recoveryCodes.length === 0 && <button onClick={start} className="mt-6 rounded-xl bg-[#C9A227] px-5 py-3 font-semibold text-black">Begin secure enrollment</button>}
     {uri && !hasValidSetup && <p className="mt-4 text-red-600">The authenticator setup could not be displayed safely. Begin enrollment again.</p>}
     {uri && hasValidSetup && <form onSubmit={confirm} className="mt-6 space-y-4">
       <section aria-labelledby="mfa-qr-heading" className="space-y-3">

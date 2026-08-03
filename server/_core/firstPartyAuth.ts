@@ -24,6 +24,7 @@ import {
   enableMfaFactor,
   listActiveAuthSessions,
   markSessionMfaVerified,
+  markSessionRecentlyAuthenticated,
   revokeAuthSessionById,
   savePendingMfaFactor,
   updateMfaCounter,
@@ -87,6 +88,7 @@ const createInvitationSchema = z.object({
 });
 
 const mfaCodeSchema = z.object({ code: z.string().trim().min(6).max(64) });
+const reauthenticateSchema = z.object({ password: z.string().min(1).max(512) });
 const sessionRevokeSchema = z.object({ sessionId: z.string().regex(/^session_[a-f0-9]{32}$/) });
 const distributedLimiter = new AuthenticationRateLimiter(createProductionRateLimitStore());
 
@@ -650,6 +652,28 @@ export function registerFirstPartyAuthRoutes(app: Express) {
       await audit({ actorUserId: user.id, action: "auth.mfa.enrollment.started", targetType: "user", targetId: String(user.id) });
       res.setHeader("Cache-Control", "no-store");
       res.status(200).json({ success: true, provisioningUri: `otpauth://totp/EEOS:${label}?secret=${secret}&issuer=EEOS&algorithm=SHA1&digits=6&period=30` });
+    } catch {
+      res.status(401).json({ success: false, error: "Authentication is required." });
+    }
+  });
+
+  app.post("/api/auth/reauthenticate", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) return void res.status(403).json({ success: false, error: "A valid EEOS CSRF token is required." });
+    const parsed = reauthenticateSchema.safeParse(req.body);
+    if (!parsed.success) return void res.status(400).json({ success: false, error: "Password is required." });
+    try {
+      const user = await sdk.authenticateRequest(req);
+      const session = await sdk.currentSession(req);
+      if (!session) throw new Error("Session unavailable");
+      if (!(await enforceDistributedLimit(req, res, "reauthenticate", String(user.id), 5, user.role === "admin"))) return;
+      if (!(await verifyPassword(parsed.data.password, user.passwordHash))) {
+        await audit({ actorUserId: user.id, action: "auth.reauthentication.failed", targetType: "user", targetId: String(user.id), outcome: "denied" });
+        return void res.status(401).json({ success: false, error: "Reauthentication failed." });
+      }
+      await markSessionRecentlyAuthenticated(session.id);
+      await audit({ actorUserId: user.id, action: "auth.reauthentication.succeeded", targetType: "user", targetId: String(user.id) });
+      res.setHeader("Cache-Control", "no-store");
+      res.status(200).json({ success: true });
     } catch {
       res.status(401).json({ success: false, error: "Authentication is required." });
     }

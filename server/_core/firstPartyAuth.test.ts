@@ -34,6 +34,7 @@ const dbMocks = vi.hoisted(() => ({
   enableMfaFactor: vi.fn(),
   listActiveAuthSessions: vi.fn(),
   markSessionMfaVerified: vi.fn(),
+  markSessionRecentlyAuthenticated: vi.fn(),
   revokeAuthSessionById: vi.fn(),
   savePendingMfaFactor: vi.fn(),
   updateMfaCounter: vi.fn(),
@@ -477,6 +478,33 @@ describe("EEOS first-party authentication", () => {
       expect(dbMocks.enableMfaFactor).toHaveBeenCalledWith(account.id, confirmed.recoveryCodes.map(hashRecoveryCode), counter);
       expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.mfa.enrollment.started" }));
       expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.mfa.enrollment.completed" }));
+    });
+  });
+
+  it("reauthenticates the current session without replacing it", async () => {
+    const account = user({ passwordHash: await hashPassword("valid-password") });
+    const token = "session-needing-reauthentication";
+    const session = {
+      id: 31, userId: account.id, tokenHash: hashOpaqueToken(token),
+      expiresAt: new Date(Date.now() + 60_000), revokedAt: null, createdAt: now,
+      lastSeenAt: new Date(), recentAuthAt: new Date(Date.now() - 20 * 60_000), mfaVerifiedAt: null,
+      ipAddress: null, userAgent: null,
+    };
+    dbMocks.getAuthSessionByTokenHash.mockResolvedValue(session);
+    dbMocks.getUserById.mockResolvedValue(account);
+
+    await withServer(async (baseUrl) => {
+      const contextResponse = await fetch(`${baseUrl}/api/auth/session`, { headers: { Cookie: `${COOKIE_NAME}=${token}` } });
+      const context = await contextResponse.json() as { csrfToken: string };
+      const response = await fetch(`${baseUrl}/api/auth/reauthenticate`, {
+        method: "POST",
+        headers: { Cookie: `${COOKIE_NAME}=${token}`, "content-type": "application/json", "x-eeos-csrf-token": context.csrfToken },
+        body: JSON.stringify({ password: "valid-password" }),
+      });
+      expect(response.status).toBe(200);
+      expect(dbMocks.markSessionRecentlyAuthenticated).toHaveBeenCalledWith(session.id);
+      expect(dbMocks.createAuthSession).not.toHaveBeenCalled();
+      expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.reauthentication.succeeded" }));
     });
   });
 
