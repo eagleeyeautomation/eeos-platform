@@ -13,10 +13,12 @@ export type PresentationStep = {
     expected: string;
     fallback: string;
     maxTime: string;
+    takeaway: string;
+    deeperDetail: string;
   };
 };
 
-const note = (say:string, click:string, notice:string, expected:string, fallback:string, maxTime:string) => ({say,click,notice,expected,fallback,maxTime});
+const note = (say:string, click:string, notice:string, expected:string, fallback:string, maxTime:string) => ({say,click,notice,expected,fallback,maxTime,takeaway:notice,deeperDetail:`Optional detail: ${expected}`});
 
 export const FLAGSHIP_PRESENTATION = {
   id: "summit-flagship-guided-v1",
