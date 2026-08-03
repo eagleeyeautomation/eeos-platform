@@ -456,6 +456,15 @@ describe("EEOS first-party authentication", () => {
       expect(dbMocks.savePendingMfaFactor).toHaveBeenCalledWith(account.id, expect.stringMatching(/^v1\./));
 
       dbMocks.getMfaFactor.mockResolvedValue({ encryptedSecret: encryptMfaSecret(secret!), enabledAt: null, lastTotpCounter: null });
+      const resumed = await fetch(`${baseUrl}/api/auth/mfa/enrollment/resume`, {
+        method: "POST", headers: { Cookie: `${COOKIE_NAME}=${token}`, "x-eeos-csrf-token": context.csrfToken },
+      });
+      expect(resumed.status).toBe(200);
+      expect(resumed.headers.get("cache-control")).toBe("no-store");
+      const resumedPayload = await resumed.json() as { provisioningUri: string };
+      expect(new URL(resumedPayload.provisioningUri).searchParams.get("secret")).toBe(secret);
+      expect(dbMocks.savePendingMfaFactor).toHaveBeenCalledTimes(1);
+
       dbMocks.enableMfaFactor.mockResolvedValue(undefined);
       const counter = Math.floor(Date.now() / 30_000);
       const confirm = await fetch(`${baseUrl}/api/auth/mfa/enrollment/confirm`, {

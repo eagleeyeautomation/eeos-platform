@@ -1,6 +1,6 @@
 import { useProductSession } from "@/contexts/ProductSessionContext";
 import { QRCodeSVG } from "qrcode.react";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 function readBase32Secret(provisioningUri: string) {
   try {
@@ -17,6 +17,23 @@ export default function MfaSettings() {
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]); const [error, setError] = useState("");
   const setupKey = readBase32Secret(uri);
   const hasValidSetup = Boolean(setupKey);
+  useEffect(() => {
+    if (!session.csrfToken) return;
+    const controller = new AbortController();
+    void fetch("/api/auth/mfa/enrollment/resume", {
+      method: "POST", credentials: "include", signal: controller.signal,
+      headers: { "x-eeos-csrf-token": session.csrfToken },
+    }).then(async (response) => {
+      if (response.status === 404) return;
+      const payload = await response.json();
+      if (response.ok) setUri(payload.provisioningUri);
+      else setError(payload.error);
+    }).catch((reason) => {
+      if (reason instanceof DOMException && reason.name === "AbortError") return;
+      setError("MFA enrollment could not be loaded.");
+    });
+    return () => controller.abort();
+  }, [session.csrfToken]);
   async function start() {
     const response = await fetch("/api/auth/mfa/enrollment/start", { method: "POST", credentials: "include", headers: { "x-eeos-csrf-token": session.csrfToken ?? "" } });
     const payload = await response.json(); if (!response.ok) return setError(payload.error); setUri(payload.provisioningUri);

@@ -642,11 +642,32 @@ export function registerFirstPartyAuthRoutes(app: Express) {
         return void res.status(403).json({ success: false, error: "Recent authentication is required." });
       }
       if (!(await enforceDistributedLimit(req, res, "mfa-enrollment", String(user.id), 5, user.role === "admin"))) return;
-      if ((await getMfaFactor(user.id))?.enabledAt) return void res.status(409).json({ success: false, error: "MFA is already enabled." });
-      const secret = generateTotpSecret();
-      await savePendingMfaFactor(user.id, encryptMfaSecret(secret));
+      const existingFactor = await getMfaFactor(user.id);
+      if (existingFactor?.enabledAt) return void res.status(409).json({ success: false, error: "MFA is already enabled." });
+      const secret = existingFactor ? decryptMfaSecret(existingFactor.encryptedSecret) : generateTotpSecret();
+      if (!existingFactor) await savePendingMfaFactor(user.id, encryptMfaSecret(secret));
       const label = encodeURIComponent(user.email ?? `user-${user.id}`);
       await audit({ actorUserId: user.id, action: "auth.mfa.enrollment.started", targetType: "user", targetId: String(user.id) });
+      res.setHeader("Cache-Control", "no-store");
+      res.status(200).json({ success: true, provisioningUri: `otpauth://totp/EEOS:${label}?secret=${secret}&issuer=EEOS&algorithm=SHA1&digits=6&period=30` });
+    } catch {
+      res.status(401).json({ success: false, error: "Authentication is required." });
+    }
+  });
+
+  app.post("/api/auth/mfa/enrollment/resume", async (req: Request, res: Response) => {
+    if (!hasValidSessionCsrf(req)) return void res.status(403).json({ success: false, error: "A valid EEOS CSRF token is required." });
+    try {
+      const user = await sdk.authenticateRequest(req);
+      const session = await sdk.currentSession(req);
+      if (!session?.recentAuthAt || session.recentAuthAt.getTime() < Date.now() - 10 * 60_000) {
+        return void res.status(403).json({ success: false, error: "Recent authentication is required." });
+      }
+      const factor = await getMfaFactor(user.id);
+      if (!factor || factor.enabledAt) return void res.status(404).json({ success: false, error: "No pending enrollment is available." });
+      const secret = decryptMfaSecret(factor.encryptedSecret);
+      const label = encodeURIComponent(user.email ?? `user-${user.id}`);
+      res.setHeader("Cache-Control", "no-store");
       res.status(200).json({ success: true, provisioningUri: `otpauth://totp/EEOS:${label}?secret=${secret}&issuer=EEOS&algorithm=SHA1&digits=6&period=30` });
     } catch {
       res.status(401).json({ success: false, error: "Authentication is required." });

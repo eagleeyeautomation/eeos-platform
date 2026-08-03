@@ -9,6 +9,11 @@ describe("MFA authenticator setup", () => {
     expect(source).not.toContain("api.qrserver.com");
   });
 
+  it("resumes an existing pending enrollment after a page refresh", () => {
+    expect(source).toContain('fetch("/api/auth/mfa/enrollment/resume"');
+    expect(source).toContain("if (response.status === 404) return");
+  });
+
   it("displays only the validated Base32 secret as the manual setup key", () => {
     expect(source).toContain("/^[A-Z2-7]+$/");
     expect(source).toContain("{setupKey}");
