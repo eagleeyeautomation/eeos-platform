@@ -23,7 +23,7 @@ import {
   disableMfaFactor,
   enableMfaFactor,
   listActiveAuthSessions,
-  markSessionMfaVerified,
+  markSessionMfaVerifiedAndRecent,
   markSessionRecentlyAuthenticated,
   revokeAuthSessionById,
   savePendingMfaFactor,
@@ -631,7 +631,7 @@ export function registerFirstPartyAuthRoutes(app: Express) {
         await audit({ actorUserId: user.id, action: "auth.mfa.challenge.replay_denied", targetType: "user", targetId: String(user.id), outcome: "denied" });
         return void res.status(401).json({ success: false, error: "Invalid authentication code." });
       }
-      await markSessionMfaVerified(session.id);
+      await markSessionMfaVerifiedAndRecent(session.id);
       await audit({ actorUserId: user.id, action: recovered ? "auth.mfa.recovery.used" : "auth.mfa.challenge.succeeded", targetType: "user", targetId: String(user.id) });
       res.status(200).json({ success: true, redirectTo: user.role === "admin" ? "/admin" : "/executive-home" });
     } catch {

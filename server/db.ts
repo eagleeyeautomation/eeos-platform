@@ -167,10 +167,14 @@ export async function revokeAuthSessionById(userId: number, sessionId: number) {
   return Number(result[0].affectedRows) > 0;
 }
 
-export async function markSessionMfaVerified(id: number) {
+export async function markSessionMfaVerifiedAndRecent(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(authSessions).set({ mfaVerifiedAt: new Date() }).where(eq(authSessions.id, id));
+  const verifiedAt = new Date();
+  await db.update(authSessions).set({
+    mfaVerifiedAt: verifiedAt,
+    recentAuthAt: verifiedAt,
+  }).where(eq(authSessions.id, id));
 }
 
 export async function markSessionRecentlyAuthenticated(id: number) {

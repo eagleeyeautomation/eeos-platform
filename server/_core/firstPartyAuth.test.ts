@@ -33,7 +33,7 @@ const dbMocks = vi.hoisted(() => ({
   disableMfaFactor: vi.fn(),
   enableMfaFactor: vi.fn(),
   listActiveAuthSessions: vi.fn(),
-  markSessionMfaVerified: vi.fn(),
+  markSessionMfaVerifiedAndRecent: vi.fn(),
   markSessionRecentlyAuthenticated: vi.fn(),
   revokeAuthSessionById: vi.fn(),
   savePendingMfaFactor: vi.fn(),
@@ -529,7 +529,7 @@ describe("EEOS first-party authentication", () => {
         body: JSON.stringify({ code: "000000" }),
       });
       expect(invalid.status).toBe(401);
-      expect(dbMocks.markSessionMfaVerified).not.toHaveBeenCalled();
+      expect(dbMocks.markSessionMfaVerifiedAndRecent).not.toHaveBeenCalled();
       expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.mfa.challenge.failed" }));
 
       const counter = Math.floor(Date.now() / 30_000);
@@ -539,7 +539,7 @@ describe("EEOS first-party authentication", () => {
         body: JSON.stringify({ code: totpCode(secret, counter) }),
       });
       expect(replay.status).toBe(401);
-      expect(dbMocks.markSessionMfaVerified).not.toHaveBeenCalled();
+      expect(dbMocks.markSessionMfaVerifiedAndRecent).not.toHaveBeenCalled();
       expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.mfa.challenge.replay_denied" }));
     });
   });
@@ -573,6 +573,37 @@ describe("EEOS first-party authentication", () => {
     });
   });
 
+  it("atomically refreshes recent authentication when a fresh TOTP challenge succeeds", async () => {
+    const account = user({ role: "admin" });
+    const token = "pending-session-needing-recent-auth-refresh";
+    const secret = "JBSWY3DPEHPK3PXP";
+    const counter = Math.floor(Date.now() / 30_000);
+    dbMocks.getAuthSessionByTokenHash.mockResolvedValue({
+      id: 34, userId: account.id, tokenHash: hashOpaqueToken(token),
+      expiresAt: new Date(Date.now() + 60_000), revokedAt: null, createdAt: now,
+      lastSeenAt: new Date(), recentAuthAt: new Date(Date.now() - 20 * 60_000), mfaVerifiedAt: null,
+      ipAddress: null, userAgent: null,
+    });
+    dbMocks.getUserById.mockResolvedValue(account);
+    dbMocks.getMfaFactor.mockResolvedValue({ encryptedSecret: encryptMfaSecret(secret), enabledAt: now, lastTotpCounter: counter - 1 });
+    dbMocks.consumeMfaRecoveryCode.mockResolvedValue(false);
+    dbMocks.updateMfaCounter.mockResolvedValue(true);
+    dbMocks.markSessionMfaVerifiedAndRecent.mockResolvedValue(undefined);
+
+    await withServer(async (baseUrl) => {
+      const pending = await fetch(`${baseUrl}/api/auth/mfa/pending`, { headers: { Cookie: `${COOKIE_NAME}=${token}` } });
+      const context = await pending.json() as { csrfToken: string };
+      const response = await fetch(`${baseUrl}/api/auth/mfa/challenge`, {
+        method: "POST",
+        headers: { Cookie: `${COOKIE_NAME}=${token}`, "content-type": "application/json", "x-eeos-csrf-token": context.csrfToken },
+        body: JSON.stringify({ code: totpCode(secret, counter) }),
+      });
+      expect(response.status).toBe(200);
+      expect(dbMocks.markSessionMfaVerifiedAndRecent).toHaveBeenCalledWith(34);
+      expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.mfa.challenge.succeeded" }));
+    });
+  });
+
   it("consumes a recovery code once, marks only that pending session verified, and audits its use", async () => {
     const account = user();
     const token = "pending-session-for-recovery-code";
@@ -585,7 +616,7 @@ describe("EEOS first-party authentication", () => {
     dbMocks.getUserById.mockResolvedValue(account);
     dbMocks.getMfaFactor.mockResolvedValue({ encryptedSecret: encryptMfaSecret("JBSWY3DPEHPK3PXP"), enabledAt: now, lastTotpCounter: null });
     dbMocks.consumeMfaRecoveryCode.mockResolvedValue(true);
-    dbMocks.markSessionMfaVerified.mockResolvedValue(undefined);
+    dbMocks.markSessionMfaVerifiedAndRecent.mockResolvedValue(undefined);
 
     await withServer(async (baseUrl) => {
       const pending = await fetch(`${baseUrl}/api/auth/mfa/pending`, { headers: { Cookie: `${COOKIE_NAME}=${token}` } });
@@ -596,7 +627,7 @@ describe("EEOS first-party authentication", () => {
       });
       expect(response.status).toBe(200);
       expect(dbMocks.consumeMfaRecoveryCode).toHaveBeenCalledWith(account.id, hashRecoveryCode(recoveryCode));
-      expect(dbMocks.markSessionMfaVerified).toHaveBeenCalledWith(32);
+      expect(dbMocks.markSessionMfaVerifiedAndRecent).toHaveBeenCalledWith(32);
       expect(dbMocks.insertAuthAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.mfa.recovery.used" }));
     });
   });
