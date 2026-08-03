@@ -6,6 +6,9 @@ import { useProductSession } from "@/contexts/ProductSessionContext";
 import { Link, useLocation } from "wouter";
 import { useEffect, useState } from "react";
 
+const COMMERCIAL_CERTIFICATION_REASON =
+  "Controlled synthetic production verification for EEOS Commercial Add-ons and New-Customer Billing Policy certification.";
+
 const ADMIN_MODULES = [
   { label: "Organizations", href: "/admin/organizations", icon: Building2 },
   { label: "Customer Onboarding", href: "/admin/onboarding", icon: ClipboardList },
@@ -653,10 +656,16 @@ function IntelligenceGovernanceAdmin() {
 function CommercialLicensingAdmin() {
   const utils = trpc.useUtils();
   const { data, isLoading, error } = trpc.admin.licensing.useQuery(undefined, { retry: false });
+  const createSyntheticMutation = trpc.admin.createSyntheticCommercialLicensingOrganization.useMutation({
+    onSuccess: () => utils.admin.licensing.invalidate(),
+  });
   const grantMutation = trpc.admin.grantCommercialAddon.useMutation({
     onSuccess: () => utils.admin.licensing.invalidate(),
   });
   const removeMutation = trpc.admin.removeCommercialAddon.useMutation({
+    onSuccess: () => utils.admin.licensing.invalidate(),
+  });
+  const expireMutation = trpc.admin.expireCommercialAddon.useMutation({
     onSuccess: () => utils.admin.licensing.invalidate(),
   });
 
@@ -671,6 +680,29 @@ function CommercialLicensingAdmin() {
         <StatCard label="Execution" value={data.controls.externalExecutionStatus} detail="External execution remains blocked" />
         <StatCard label="Commercial Organizations" value={data.organizations.filter((org) => org.billingClassification === "COMMERCIAL").length} detail="Only new external organizations" />
       </div>
+
+      {data.organizations.filter((org) => org.billingClassification === "COMMERCIAL").length === 0 ? (
+        <div className="rounded-xl border border-[#C9A227]/25 bg-[#C9A227]/10 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-white">Controlled synthetic commercial organization required</div>
+              <p className="mt-2 max-w-3xl text-xs leading-5 text-white/58">
+                Creates EEOS Commercial Licensing Test for production certification only. No payment provider, payment method,
+                invoices, connectors, operational data, or external execution are created.
+              </p>
+              <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-[#C9A227]">SYNTHETIC LICENSING TEST — DO NOT BILL</p>
+            </div>
+            <button
+              type="button"
+              disabled={createSyntheticMutation.isPending}
+              onClick={() => createSyntheticMutation.mutate({ reason: COMMERCIAL_CERTIFICATION_REASON })}
+              className="rounded-lg border border-[#C9A227]/40 bg-[#C9A227]/14 px-4 py-2 text-xs font-semibold text-[#F6E6A7] transition hover:bg-[#C9A227]/20 disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              {createSyntheticMutation.isPending ? "Creating..." : "Create Synthetic Test Organization"}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] p-4">
@@ -699,7 +731,9 @@ function CommercialLicensingAdmin() {
       <div className="space-y-3">
         {data.organizations.map((organization) => {
           const activeKeys = new Set(organization.addons.map((addon) => addon.key));
+          const isSyntheticLicensingTest = organization.organizationSlug === "eeos-commercial-licensing-test";
           const canManage = organization.billingClassification === "COMMERCIAL" && organization.membershipId !== null;
+          const pending = grantMutation.isPending || removeMutation.isPending || expireMutation.isPending;
           return (
             <div key={`${organization.organizationId}:${organization.membershipId ?? "none"}`} className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -713,6 +747,11 @@ function CommercialLicensingAdmin() {
                   {organization.billingClassification === "COMMERCIAL" ? "Commercial" : "Non-billed"}
                 </StatusPill>
               </div>
+              {isSyntheticLicensingTest ? (
+                <div className="mt-3 rounded-lg border border-[#C9A227]/25 bg-[#C9A227]/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#F6E6A7]">
+                  SYNTHETIC LICENSING TEST — DO NOT BILL · No payment provider · No connectors · External execution blocked
+                </div>
+              ) : null}
               <div className="mt-3 grid gap-2 text-xs text-white/48 sm:grid-cols-4">
                 <div>Base plan: {organization.basePlanCode ?? "Not assigned"}</div>
                 <div>Base price: ${organization.basePlanMonthlyPrice}/month</div>
@@ -731,7 +770,6 @@ function CommercialLicensingAdmin() {
               <div className="mt-4 flex flex-wrap gap-2">
                 {data.addons.map((addon) => {
                   const active = activeKeys.has(addon.key);
-                  const pending = grantMutation.isPending || removeMutation.isPending;
                   return (
                     <button
                       key={addon.key}
@@ -740,9 +778,9 @@ function CommercialLicensingAdmin() {
                       onClick={() => {
                         if (!organization.membershipId) return;
                         if (active) {
-                          removeMutation.mutate({ organizationId: organization.organizationId, membershipId: organization.membershipId, addonKey: addon.key });
+                          removeMutation.mutate({ organizationId: organization.organizationId, membershipId: organization.membershipId, addonKey: addon.key, reason: COMMERCIAL_CERTIFICATION_REASON });
                         } else {
-                          grantMutation.mutate({ organizationId: organization.organizationId, membershipId: organization.membershipId, addonKey: addon.key });
+                          grantMutation.mutate({ organizationId: organization.organizationId, membershipId: organization.membershipId, addonKey: addon.key, reason: COMMERCIAL_CERTIFICATION_REASON });
                         }
                       }}
                       className="rounded-lg border border-white/12 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-35"
@@ -752,6 +790,24 @@ function CommercialLicensingAdmin() {
                   );
                 })}
               </div>
+              {canManage && organization.addons.length > 0 ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {organization.addons.map((addon) => (
+                    <button
+                      key={`expire-${addon.key}`}
+                      type="button"
+                      disabled={pending}
+                      onClick={() => {
+                        if (!organization.membershipId) return;
+                        expireMutation.mutate({ organizationId: organization.organizationId, membershipId: organization.membershipId, addonKey: addon.key, reason: COMMERCIAL_CERTIFICATION_REASON });
+                      }}
+                      className="rounded-lg border border-amber-300/20 px-3 py-2 text-xs font-semibold text-amber-100 transition hover:bg-amber-300/10 disabled:cursor-not-allowed disabled:opacity-35"
+                    >
+                      Expire {addon.name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               {!canManage ? (
                 <p className="mt-3 text-xs text-white/38">Commercial add-ons are intentionally blocked for internal founder and demo organizations.</p>
               ) : null}

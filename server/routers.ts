@@ -77,6 +77,8 @@ import { INDUSTRY_KEYS, scoreIndustryOpportunity } from "./industry-intelligence
 import { configureOrganizationIndustryPacks, getOrganizationIndustryContext, listIndustryCatalog, recordIndustryKpi } from "./industry-intelligence/service";
 import { advancePresentation, approvePresentationWorkflow, completePresentation, getDemoCenter, getDemoReadiness, getPresentationDefinition, getPresentationState, presentationCopilot, previousPresentation, replayDemo, resetDemo, restartPresentation, seedDemo, startDemoScenario, startPresentation } from "./demo/service";
 import {
+  createSyntheticCommercialLicensingOrganization,
+  expireCommercialAddon,
   grantCommercialAddon,
   listCommercialLicensing,
   parseCommercialAddonKey,
@@ -877,20 +879,41 @@ export const appRouter = router({
       await requirePlatformAdmin(ctx.user);
       return listCommercialLicensing();
     }),
+    createSyntheticCommercialLicensingOrganization: protectedProcedure
+      .input(z.object({
+        reason: z.string().min(20).max(500),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const admin = await requirePlatformAdmin(ctx.user);
+        const session = await sdk.currentSession(ctx.req);
+        if (!evaluateRecentMfa(session).allowed) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Recent MFA-verified authentication is required to create a synthetic commercial licensing organization." });
+        }
+        return createSyntheticCommercialLicensingOrganization({
+          actorUserId: Number(admin.userId),
+          reason: input.reason,
+        });
+      }),
     grantCommercialAddon: protectedProcedure
       .input(z.object({
         organizationId: z.number().int().positive(),
         membershipId: z.number().int().positive(),
         addonKey: z.string(),
+        reason: z.string().min(20).max(500).optional(),
         endsAt: z.string().datetime().nullable().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const admin = await requirePlatformAdmin(ctx.user);
+        const session = await sdk.currentSession(ctx.req);
+        if (!evaluateRecentMfa(session).allowed) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Recent MFA-verified authentication is required to grant commercial add-ons." });
+        }
         return grantCommercialAddon({
           organizationId: input.organizationId,
           membershipId: input.membershipId,
           actorUserId: Number(admin.userId),
           addonKey: parseCommercialAddonKey(input.addonKey),
+          reason: input.reason,
           endsAt: input.endsAt ? new Date(input.endsAt) : null,
         });
       }),
@@ -899,14 +922,41 @@ export const appRouter = router({
         organizationId: z.number().int().positive(),
         membershipId: z.number().int().positive(),
         addonKey: z.string(),
+        reason: z.string().min(20).max(500).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const admin = await requirePlatformAdmin(ctx.user);
+        const session = await sdk.currentSession(ctx.req);
+        if (!evaluateRecentMfa(session).allowed) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Recent MFA-verified authentication is required to remove commercial add-ons." });
+        }
         return removeCommercialAddon({
           organizationId: input.organizationId,
           membershipId: input.membershipId,
           actorUserId: Number(admin.userId),
           addonKey: parseCommercialAddonKey(input.addonKey),
+          reason: input.reason,
+        });
+      }),
+    expireCommercialAddon: protectedProcedure
+      .input(z.object({
+        organizationId: z.number().int().positive(),
+        membershipId: z.number().int().positive(),
+        addonKey: z.string(),
+        reason: z.string().min(20).max(500).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const admin = await requirePlatformAdmin(ctx.user);
+        const session = await sdk.currentSession(ctx.req);
+        if (!evaluateRecentMfa(session).allowed) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Recent MFA-verified authentication is required to expire commercial add-ons." });
+        }
+        return expireCommercialAddon({
+          organizationId: input.organizationId,
+          membershipId: input.membershipId,
+          actorUserId: Number(admin.userId),
+          addonKey: parseCommercialAddonKey(input.addonKey),
+          reason: input.reason,
         });
       }),
   }),
