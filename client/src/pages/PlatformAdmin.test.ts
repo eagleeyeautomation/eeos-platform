@@ -14,4 +14,11 @@ describe("Platform administrator organization entry", () => {
     expect(source).toContain("/api/admin/organizations/${organizationId}/enter");
     expect(source).toContain('"x-eeos-csrf-token": session.csrfToken');
   });
+
+  it("marks the commercial licensing lab as synthetic and resettable", () => {
+    expect(source).toContain("SYNTHETIC COMMERCIAL LICENSING LAB");
+    expect(source).toContain("Do not bill");
+    expect(source).toContain("Reset Licensing Lab");
+    expect(source).toContain("resetCommercialLicensingLab");
+  });
 });

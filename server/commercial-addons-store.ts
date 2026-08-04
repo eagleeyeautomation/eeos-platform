@@ -6,7 +6,10 @@ import {
   classifyOrganizationForBilling,
   COMMERCIAL_ADDONS,
   COMMERCIAL_BASE_PLANS,
+  COMMERCIAL_LICENSING_LAB_NAME,
+  COMMERCIAL_LICENSING_LAB_SLUG,
   isCommercialAddonKey,
+  isCommercialLicensingLab,
   mapLegacyPlanToBasePlan,
   resolveCommercialAddonAccess,
   type CommercialAddonKey,
@@ -21,6 +24,8 @@ type CommercialOrganizationRow = {
   organization_slug: string;
   organization_name: string;
   organization_type: string;
+  organization_industry: string | null;
+  organization_created_at: Date;
   membership_id: string | null;
   membership_plan: string | null;
   billing_classification: CommercialEntitlementRecord["billingClassification"] | null;
@@ -29,6 +34,7 @@ type CommercialOrganizationRow = {
 };
 
 type CommercialAddonRow = {
+  id: string;
   organization_id: string;
   addon_key: CommercialAddonKey;
   status: "active" | "removed" | "expired";
@@ -38,23 +44,39 @@ type CommercialAddonRow = {
   ends_at: Date | null;
 };
 
-const SYNTHETIC_COMMERCIAL_ORGANIZATION = {
-  slug: "eeos-commercial-licensing-test",
-  name: "EEOS Commercial Licensing Test",
-  basePlanCode: "INTELLIGENCE" as BasePlanCode,
-  basePlanLegacy: "professional",
-  basePlanMonthlyPrice: 199,
+type CommercialAuditRow = {
+  organization_id: string;
+  action: string;
+  addon_key: CommercialAddonKey | null;
+  next_value: Record<string, unknown> | null;
+  created_at: Date;
 };
+
+const SYNTHETIC_COMMERCIAL_ORGANIZATION = {
+  slug: COMMERCIAL_LICENSING_LAB_SLUG,
+  name: COMMERCIAL_LICENSING_LAB_NAME,
+  subtitle: "Synthetic Test Organization — Internal Use Only",
+  purpose:
+    "Permanent synthetic production tenant used only to verify EEOS pricing, licenses, entitlements, add-ons, usage limits, upgrades, downgrades, expiration, suspension, billing synchronization, and customer-facing licensing behavior.",
+  basePlanCode: "FOUNDATION" as BasePlanCode,
+  basePlanLegacy: "starter",
+  basePlanMonthlyPrice: 99,
+};
+
+export const COMMERCIAL_CERTIFICATION_REASON =
+  "Controlled synthetic production verification for EEOS Commercial Add-ons and New-Customer Billing Policy certification.";
 
 export async function listCommercialLicensing() {
   return withDatabase(async (client) => {
-    const [organizations, addons] = await Promise.all([
+    const [organizations, addons, auditEvents] = await Promise.all([
       client.query<CommercialOrganizationRow>(`
         select
           o.id::text as organization_id,
           o.slug as organization_slug,
           o.name as organization_name,
           o.type::text as organization_type,
+          o.industry as organization_industry,
+          o.created_at as organization_created_at,
           m.id::text as membership_id,
           m.plan::text as membership_plan,
           p.billing_classification::text as billing_classification,
@@ -68,6 +90,7 @@ export async function listCommercialLicensing() {
       client.query<CommercialAddonRow>(`
         select
           organization_id::text,
+          id::text,
           addon_key::text as addon_key,
           status::text as status,
           monthly_price,
@@ -76,6 +99,17 @@ export async function listCommercialLicensing() {
           ends_at
         from commercial_membership_addons
         order by starts_at desc
+      `),
+      client.query<CommercialAuditRow>(`
+        select
+          organization_id::text,
+          action,
+          addon_key::text as addon_key,
+          next_value,
+          created_at
+        from commercial_addon_audit_events
+        order by created_at desc
+        limit 250
       `),
     ]);
 
@@ -107,11 +141,40 @@ export async function listCommercialLicensing() {
         };
       });
 
+      const isLab = isCommercialLicensingLab({ slug: row.organization_slug, name: row.organization_name });
+      const organizationAudits = auditEvents.rows
+        .filter((audit) => audit.organization_id === row.organization_id)
+        .slice(0, 8)
+        .map((audit) => {
+          const nextValue = audit.next_value ?? {};
+          const effectiveEntitlements = Array.isArray(nextValue.effectiveEntitlements)
+            ? nextValue.effectiveEntitlements.filter((value): value is CommercialAddonKey => typeof value === "string" && isCommercialAddonKey(value))
+            : [];
+          return {
+            action: audit.action,
+            addonKey: audit.addon_key,
+            status: typeof nextValue.status === "string" ? nextValue.status : null,
+            reason: typeof nextValue.reason === "string" ? nextValue.reason : null,
+            source: typeof nextValue.source === "string" ? nextValue.source : null,
+            effectiveEntitlements,
+            createdAt: audit.created_at.toISOString(),
+          };
+        });
+
       return {
         organizationId: Number(row.organization_id),
         membershipId: row.membership_id ? Number(row.membership_id) : null,
         organizationSlug: row.organization_slug,
         organizationName: row.organization_name,
+        subtitle: isLab ? SYNTHETIC_COMMERCIAL_ORGANIZATION.subtitle : null,
+        isSynthetic: isLab,
+        isTestOrganization: isLab,
+        billingExempt: isLab,
+        doNotBill: isLab,
+        licenseStatus: "ACTIVE" as const,
+        connectorStatus: "none" as const,
+        warningBanner: isLab ? commercialLabWarningBanner() : null,
+        auditEvents: organizationAudits,
         billingClassification: row.billing_classification ?? fallbackClassification,
         basePlanCode: row.base_plan_code ?? basePlan?.code ?? null,
         basePlanMonthlyPrice: row.base_plan_monthly_price ?? basePlan?.monthlyPrice ?? 0,
@@ -137,6 +200,26 @@ export async function listCommercialLicensing() {
   });
 }
 
+export async function getCurrentCommercialLicensing(organizationId: string | null | undefined) {
+  if (!organizationId) return null;
+  const data = await listCommercialLicensing();
+  const organization = data.organizations.find((item) => String(item.organizationId) === String(organizationId));
+  if (!organization) return null;
+  return {
+    basePlanVersion: data.basePlanVersion,
+    basePlans: data.basePlans,
+    addons: data.addons,
+    organization,
+    controls: data.controls,
+    availableActions: {
+      requestAddon: true,
+      contactSales: true,
+      externalExecution: false,
+      paymentProvider: false,
+    },
+  };
+}
+
 export async function createSyntheticCommercialLicensingOrganization(input: {
   actorUserId: number;
   reason: string;
@@ -146,7 +229,7 @@ export async function createSyntheticCommercialLicensingOrganization(input: {
     const organization = await client.query<{ id: string }>(
       `
         insert into organizations (slug, name, type, industry, website, logo_url, is_active)
-        values ($1, $2, 'customer', 'Synthetic licensing certification', null, null, true)
+        values ($1, $2, 'customer', $3, null, null, true)
         on conflict (slug) do update set
           name = excluded.name,
           type = 'customer',
@@ -157,7 +240,7 @@ export async function createSyntheticCommercialLicensingOrganization(input: {
           updated_at = now()
         returning id::text
       `,
-      [SYNTHETIC_COMMERCIAL_ORGANIZATION.slug, SYNTHETIC_COMMERCIAL_ORGANIZATION.name],
+      [SYNTHETIC_COMMERCIAL_ORGANIZATION.slug, SYNTHETIC_COMMERCIAL_ORGANIZATION.name, SYNTHETIC_COMMERCIAL_ORGANIZATION.purpose],
     );
     const organizationId = Number(organization.rows[0]?.id);
     if (!organizationId) throw new Error("Synthetic commercial organization could not be created.");
@@ -185,6 +268,15 @@ export async function createSyntheticCommercialLicensingOrganization(input: {
     )).rows[0];
     const membershipId = Number(membership?.id);
     if (!membershipId) throw new Error("Synthetic commercial membership could not be created.");
+
+    await client.query(
+      `
+        update memberships
+        set plan = $2, status = 'active', billing_email = null, trial_ends_at = null, renews_at = null, max_subaccounts = 0, updated_at = now()
+        where id = $1
+      `,
+      [membershipId, SYNTHETIC_COMMERCIAL_ORGANIZATION.basePlanLegacy],
+    );
 
     await client.query(
       `
@@ -222,8 +314,15 @@ export async function createSyntheticCommercialLicensingOrganization(input: {
         reason,
         status: "synthetic_created",
         synthetic: true,
+        isSynthetic: true,
+        isTestOrganization: true,
+        billingExempt: true,
+        doNotBill: true,
+        licenseStatus: "ACTIVE",
+        classification: "COMMERCIAL_TEST_VIA_COMMERCIAL",
         basePlanCode: SYNTHETIC_COMMERCIAL_ORGANIZATION.basePlanCode,
         billingEnabled: false,
+        billingExemptionReason: "Permanent synthetic licensing certification tenant.",
         paymentProvider: null,
         externalExecutionEnabled: false,
         connectorStatus: "none",
@@ -241,6 +340,105 @@ export async function createSyntheticCommercialLicensingOrganization(input: {
       charged: false,
       paymentProviderIntegrated: false,
       externalExecutionStatus: "blocked" as const,
+    };
+  });
+}
+
+export async function resetSyntheticCommercialLicensingLab(input: {
+  organizationId: number;
+  membershipId: number;
+  actorUserId: number;
+  reason?: string;
+}) {
+  return withTransaction(async (client) => {
+    await requireCommercialLab(client, input.organizationId);
+    const beforeKeys = await selectActiveCommercialAddonKeys(client, input.organizationId);
+    await client.query(
+      `
+        update memberships
+        set plan = $3, status = 'active', billing_email = null, trial_ends_at = null, renews_at = null, max_subaccounts = 0, updated_at = now()
+        where id = $1 and organization_id = $2
+      `,
+      [input.membershipId, input.organizationId, SYNTHETIC_COMMERCIAL_ORGANIZATION.basePlanLegacy],
+    );
+    await client.query(
+      `
+        update commercial_membership_addons
+        set status = 'removed', ends_at = now(), removed_by_user_id = $3, updated_at = now()
+        where organization_id = $1 and membership_id = $2 and status = 'active'
+      `,
+      [input.organizationId, input.membershipId, input.actorUserId],
+    );
+    await client.query(
+      `
+        insert into commercial_organization_billing_profiles (
+          organization_id, billing_classification, base_plan_code, base_plan_version,
+          base_plan_monthly_price, billing_enabled, payment_provider, external_execution_enabled
+        )
+        values ($1, 'COMMERCIAL', $2::eeos_base_plan_code, $3, $4, false, null, false)
+        on conflict (organization_id) do update set
+          billing_classification = 'COMMERCIAL',
+          base_plan_code = excluded.base_plan_code,
+          base_plan_version = excluded.base_plan_version,
+          base_plan_monthly_price = excluded.base_plan_monthly_price,
+          billing_enabled = false,
+          payment_provider = null,
+          external_execution_enabled = false,
+          updated_at = now()
+      `,
+      [
+        input.organizationId,
+        SYNTHETIC_COMMERCIAL_ORGANIZATION.basePlanCode,
+        BASE_PLAN_VERSION,
+        SYNTHETIC_COMMERCIAL_ORGANIZATION.basePlanMonthlyPrice,
+      ],
+    );
+    const afterKeys = await selectActiveCommercialAddonKeys(client, input.organizationId);
+    await recordCommercialAddonAudit(client, {
+      organizationId: input.organizationId,
+      membershipId: input.membershipId,
+      actorUserId: input.actorUserId,
+      action: "commercial_license_lab.reset",
+      addonKey: null,
+      previousValue: buildAuditValue({
+        reason: input.reason ?? COMMERCIAL_CERTIFICATION_REASON,
+        status: "before_reset",
+        activeAddonKeys: beforeKeys,
+        effectiveEntitlements: resolveCommercialAddonAccess(beforeKeys),
+      }),
+      nextValue: buildAuditValue({
+        reason: input.reason ?? COMMERCIAL_CERTIFICATION_REASON,
+        status: "reset",
+        licenseStatus: "ACTIVE",
+        basePlanCode: SYNTHETIC_COMMERCIAL_ORGANIZATION.basePlanCode,
+        billingExempt: true,
+        doNotBill: true,
+        paymentProvider: null,
+        externalExecution: "blocked",
+        connectorStatus: "none",
+        activeAddonKeys: afterKeys,
+        effectiveEntitlements: resolveCommercialAddonAccess(afterKeys),
+      }),
+    });
+    return { reset: true, charged: false, externalExecution: "blocked" as const };
+  });
+}
+
+export async function checkCommercialAddonAccess(input: {
+  organizationId: number;
+  addonKey: CommercialAddonKey;
+}) {
+  return withDatabase(async (client) => {
+    const activeKeys = await selectActiveCommercialAddonKeys(client, input.organizationId);
+    const effective = resolveCommercialAddonAccess(activeKeys);
+    return {
+      allowed: effective.includes(input.addonKey),
+      addonKey: input.addonKey,
+      activeAddonKeys: activeKeys,
+      effectiveEntitlements: effective,
+      reason: effective.includes(input.addonKey)
+        ? "Commercial entitlement is active."
+        : "Commercial entitlement is not active for this organization.",
     };
   });
 }
@@ -263,6 +461,7 @@ export async function grantCommercialAddon(input: {
     }>("select id::text, slug, name, type::text from organizations where id = $1 limit 1", [input.organizationId]);
     const org = organization.rows[0];
     if (!org) throw new Error("Organization not found.");
+    if (isCommercialLicensingLab({ slug: org.slug, name: org.name })) await requireCommercialLab(client, input.organizationId);
 
     const classification = classifyOrganizationForBilling({
       slug: org.slug,
@@ -384,6 +583,7 @@ export async function expireCommercialAddon(input: {
   reason?: string;
 }) {
   return withTransaction(async (client) => {
+    await requireCommercialLab(client, input.organizationId);
     const beforeKeys = await selectActiveCommercialAddonKeys(client, input.organizationId);
     await client.query(
       `
@@ -488,6 +688,24 @@ async function selectActiveCommercialAddonKeys(client: PoolClient, organizationI
     [organizationId],
   );
   return result.rows.map((row) => row.addon_key);
+}
+
+async function requireCommercialLab(client: PoolClient, organizationId: number) {
+  const result = await client.query<{ slug: string; name: string }>(
+    "select slug, name from organizations where id = $1 limit 1",
+    [organizationId],
+  );
+  const organization = result.rows[0];
+  if (!organization || !isCommercialLicensingLab(organization)) {
+    throw new Error("This governed licensing action is restricted to the EEOS Commercial Licensing Lab.");
+  }
+}
+
+function commercialLabWarningBanner() {
+  return {
+    title: "SYNTHETIC COMMERCIAL LICENSING LAB",
+    body: "Internal certification only. Do not bill. No customer data. No external execution.",
+  };
 }
 
 function normalizeCertificationReason(reason: string) {

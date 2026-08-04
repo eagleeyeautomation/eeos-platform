@@ -77,12 +77,15 @@ import { INDUSTRY_KEYS, scoreIndustryOpportunity } from "./industry-intelligence
 import { configureOrganizationIndustryPacks, getOrganizationIndustryContext, listIndustryCatalog, recordIndustryKpi } from "./industry-intelligence/service";
 import { advancePresentation, approvePresentationWorkflow, completePresentation, getDemoCenter, getDemoReadiness, getPresentationDefinition, getPresentationState, presentationCopilot, previousPresentation, replayDemo, resetDemo, restartPresentation, seedDemo, startDemoScenario, startPresentation } from "./demo/service";
 import {
+  checkCommercialAddonAccess,
   createSyntheticCommercialLicensingOrganization,
   expireCommercialAddon,
+  getCurrentCommercialLicensing,
   grantCommercialAddon,
   listCommercialLicensing,
   parseCommercialAddonKey,
   removeCommercialAddon,
+  resetSyntheticCommercialLicensingLab,
 } from "./commercial-addons-store";
 
 export const appRouter = router({
@@ -794,6 +797,13 @@ export const appRouter = router({
       .query(({input})=>scoreIndustryOpportunity(input)),
   }),
 
+  licensing: router({
+    current: protectedProcedure.query(async ({ ctx }) => {
+      const authorization = await resolveOrganizationAuthorizationContext(ctx.user);
+      return getCurrentCommercialLicensing(authorization?.organizationId ?? null);
+    }),
+  }),
+
   demo: router({
     environment: protectedProcedure.query(async({ctx})=>{await requirePlatformAdmin(ctx.user);return getDemoCenter();}),
     readiness: protectedProcedure.query(async({ctx})=>{await requirePlatformAdmin(ctx.user);const session=await sdk.currentSession(ctx.req);return getDemoReadiness(evaluateRecentMfa(session).allowed);}),
@@ -894,6 +904,18 @@ export const appRouter = router({
           reason: input.reason,
         });
       }),
+    checkCommercialAddonAccess: protectedProcedure
+      .input(z.object({
+        organizationId: z.number().int().positive(),
+        addonKey: z.string(),
+      }))
+      .query(async ({ ctx, input }) => {
+        await requirePlatformAdmin(ctx.user);
+        return checkCommercialAddonAccess({
+          organizationId: input.organizationId,
+          addonKey: parseCommercialAddonKey(input.addonKey),
+        });
+      }),
     grantCommercialAddon: protectedProcedure
       .input(z.object({
         organizationId: z.number().int().positive(),
@@ -956,6 +978,25 @@ export const appRouter = router({
           membershipId: input.membershipId,
           actorUserId: Number(admin.userId),
           addonKey: parseCommercialAddonKey(input.addonKey),
+          reason: input.reason,
+        });
+      }),
+    resetCommercialLicensingLab: protectedProcedure
+      .input(z.object({
+        organizationId: z.number().int().positive(),
+        membershipId: z.number().int().positive(),
+        reason: z.string().min(20).max(500).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const admin = await requirePlatformAdmin(ctx.user);
+        const session = await sdk.currentSession(ctx.req);
+        if (!evaluateRecentMfa(session).allowed) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Recent MFA-verified authentication is required to reset the commercial licensing lab." });
+        }
+        return resetSyntheticCommercialLicensingLab({
+          organizationId: input.organizationId,
+          membershipId: input.membershipId,
+          actorUserId: Number(admin.userId),
           reason: input.reason,
         });
       }),

@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 
 const COMMERCIAL_CERTIFICATION_REASON =
   "Controlled synthetic production verification for EEOS Commercial Add-ons and New-Customer Billing Policy certification.";
+const COMMERCIAL_LICENSING_LAB_SLUG = "eeos-commercial-licensing-lab";
 
 const ADMIN_MODULES = [
   { label: "Organizations", href: "/admin/organizations", icon: Building2 },
@@ -668,6 +669,9 @@ function CommercialLicensingAdmin() {
   const expireMutation = trpc.admin.expireCommercialAddon.useMutation({
     onSuccess: () => utils.admin.licensing.invalidate(),
   });
+  const resetMutation = trpc.admin.resetCommercialLicensingLab.useMutation({
+    onSuccess: () => utils.admin.licensing.invalidate(),
+  });
 
   if (error) return <EmptyState>Commercial licensing could not be loaded for this administrator session.</EmptyState>;
   if (isLoading || !data) return <EmptyState>Loading commercial licensing...</EmptyState>;
@@ -685,12 +689,12 @@ function CommercialLicensingAdmin() {
         <div className="rounded-xl border border-[#C9A227]/25 bg-[#C9A227]/10 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-sm font-semibold text-white">Controlled synthetic commercial organization required</div>
+              <div className="text-sm font-semibold text-white">Controlled synthetic commercial licensing lab required</div>
               <p className="mt-2 max-w-3xl text-xs leading-5 text-white/58">
-                Creates EEOS Commercial Licensing Test for production certification only. No payment provider, payment method,
+                Creates EEOS Commercial Licensing Lab for production certification only. No payment provider, payment method,
                 invoices, connectors, operational data, or external execution are created.
               </p>
-              <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-[#C9A227]">SYNTHETIC LICENSING TEST — DO NOT BILL</p>
+              <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-[#C9A227]">SYNTHETIC COMMERCIAL LICENSING LAB — DO NOT BILL</p>
             </div>
             <button
               type="button"
@@ -698,7 +702,7 @@ function CommercialLicensingAdmin() {
               onClick={() => createSyntheticMutation.mutate({ reason: COMMERCIAL_CERTIFICATION_REASON })}
               className="rounded-lg border border-[#C9A227]/40 bg-[#C9A227]/14 px-4 py-2 text-xs font-semibold text-[#F6E6A7] transition hover:bg-[#C9A227]/20 disabled:cursor-not-allowed disabled:opacity-45"
             >
-              {createSyntheticMutation.isPending ? "Creating..." : "Create Synthetic Test Organization"}
+              {createSyntheticMutation.isPending ? "Creating..." : "Create Commercial Licensing Lab"}
             </button>
           </div>
         </div>
@@ -731,16 +735,17 @@ function CommercialLicensingAdmin() {
       <div className="space-y-3">
         {data.organizations.map((organization) => {
           const activeKeys = new Set(organization.addons.map((addon) => addon.key));
-          const isSyntheticLicensingTest = organization.organizationSlug === "eeos-commercial-licensing-test";
+          const isSyntheticLicensingTest = organization.organizationSlug === COMMERCIAL_LICENSING_LAB_SLUG || organization.isSynthetic;
           const canManage = organization.billingClassification === "COMMERCIAL" && organization.membershipId !== null;
-          const pending = grantMutation.isPending || removeMutation.isPending || expireMutation.isPending;
+          const pending = grantMutation.isPending || removeMutation.isPending || expireMutation.isPending || resetMutation.isPending;
           return (
             <div key={`${organization.organizationId}:${organization.membershipId ?? "none"}`} className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold">{organization.organizationName}</div>
+                  {organization.subtitle ? <div className="mt-1 text-xs text-[#C9A227]">{organization.subtitle}</div> : null}
                   <div className="mt-1 text-[10px] uppercase tracking-[0.16em] text-white/35">
-                    {organization.organizationSlug} · {organization.billingClassification}
+                    {organization.organizationSlug} · {organization.isSynthetic ? "COMMERCIAL_TEST" : organization.billingClassification}
                   </div>
                 </div>
                 <StatusPill tone={organization.billingClassification === "COMMERCIAL" ? "good" : "neutral"}>
@@ -749,7 +754,7 @@ function CommercialLicensingAdmin() {
               </div>
               {isSyntheticLicensingTest ? (
                 <div className="mt-3 rounded-lg border border-[#C9A227]/25 bg-[#C9A227]/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#F6E6A7]">
-                  SYNTHETIC LICENSING TEST — DO NOT BILL · No payment provider · No connectors · External execution blocked
+                  SYNTHETIC COMMERCIAL LICENSING LAB · Internal certification only · Do not bill · No customer data · No external execution
                 </div>
               ) : null}
               <div className="mt-3 grid gap-2 text-xs text-white/48 sm:grid-cols-4">
@@ -758,6 +763,14 @@ function CommercialLicensingAdmin() {
                 <div>Total: ${organization.totalMonthlyPrice}/month</div>
                 <div>Execution: {organization.externalExecutionStatus}</div>
               </div>
+              {isSyntheticLicensingTest ? (
+                <div className="mt-3 grid gap-2 text-xs text-white/48 sm:grid-cols-4">
+                  <div>License: {organization.licenseStatus ?? "ACTIVE"}</div>
+                  <div>Billing exempt: {organization.billingExempt ? "TRUE" : "FALSE"}</div>
+                  <div>Do not bill: {organization.doNotBill ? "TRUE" : "FALSE"}</div>
+                  <div>Connectors: {organization.connectorStatus ?? "none"}</div>
+                </div>
+              ) : null}
               <div className="mt-3 flex flex-wrap gap-2">
                 {organization.addons.length === 0 ? (
                   <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/40">No active add-ons</span>
@@ -806,6 +819,49 @@ function CommercialLicensingAdmin() {
                       Expire {addon.name}
                     </button>
                   ))}
+                </div>
+              ) : null}
+              {canManage && isSyntheticLicensingTest ? (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => {
+                      if (!organization.membershipId) return;
+                      resetMutation.mutate({ organizationId: organization.organizationId, membershipId: organization.membershipId, reason: COMMERCIAL_CERTIFICATION_REASON });
+                    }}
+                    className="rounded-lg border border-[#C9A227]/35 bg-[#C9A227]/10 px-3 py-2 text-xs font-semibold text-[#F6E6A7] transition hover:bg-[#C9A227]/15 disabled:cursor-not-allowed disabled:opacity-35"
+                  >
+                    Reset Licensing Lab
+                  </button>
+                </div>
+              ) : null}
+              {isSyntheticLicensingTest ? (
+                <div className="mt-4 rounded-lg border border-white/10 bg-black/18 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-semibold text-white">Licensing Lab Audit History</div>
+                    <StatusPill tone="neutral">Append-only</StatusPill>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {(organization.auditEvents ?? []).length === 0 ? (
+                      <div className="text-xs text-white/40">No licensing lab audit events recorded yet.</div>
+                    ) : (organization.auditEvents ?? []).map((event) => (
+                      <div key={`${event.action}:${event.createdAt}`} className="rounded-lg border border-white/8 px-3 py-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="text-xs font-semibold text-white">{event.action}</div>
+                          <div className="text-[10px] uppercase tracking-[0.14em] text-white/35">{formatDate(event.createdAt)}</div>
+                        </div>
+                        <div className="mt-1 grid gap-1 text-[11px] text-white/45 sm:grid-cols-3">
+                          <div>Add-on: {event.addonKey ?? "base license"}</div>
+                          <div>Status: {event.status ?? "recorded"}</div>
+                          <div>Source: {event.source ?? "governed action"}</div>
+                        </div>
+                        {event.effectiveEntitlements.length > 0 ? (
+                          <div className="mt-1 text-[11px] text-[#C9A227]">Effective: {event.effectiveEntitlements.join(", ")}</div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : null}
               {!canManage ? (

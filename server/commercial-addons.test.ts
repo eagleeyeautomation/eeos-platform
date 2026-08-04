@@ -4,6 +4,8 @@ import {
   assertExternalExecutionBlocked,
   calculateCommercialMonthlyTotal,
   classifyOrganizationForBilling,
+  COMMERCIAL_LICENSING_LAB_NAME,
+  COMMERCIAL_LICENSING_LAB_SLUG,
   mapLegacyPlanToBasePlan,
   resolveCommercialAddonAccess,
 } from "./commercial-addons";
@@ -25,6 +27,15 @@ describe("commercial add-on billing policy", () => {
     expect(classifyOrganizationForBilling({ slug: "abc-hvac", name: "ABC HVAC", organizationType: "customer" })).toBe("COMMERCIAL");
     expect(() => assertCommercialAddonGrantAllowed("COMMERCIAL")).not.toThrow();
     expect(() => assertCommercialAddonGrantAllowed("INTERNAL_FOUNDER")).toThrow(/new external commercial organizations/i);
+  });
+
+  it("keeps the permanent licensing lab commercial without treating it as a real customer billing target", () => {
+    expect(classifyOrganizationForBilling({
+      slug: COMMERCIAL_LICENSING_LAB_SLUG,
+      name: COMMERCIAL_LICENSING_LAB_NAME,
+      organizationType: "customer",
+    })).toBe("COMMERCIAL");
+    expect(mapLegacyPlanToBasePlan("starter")).toMatchObject({ marketingName: "Starter", code: "FOUNDATION", monthlyPrice: 99 });
   });
 
   it("deduplicates suite overlap and keeps approved pricing", () => {

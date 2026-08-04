@@ -36,6 +36,7 @@ import ResetPassword from "./pages/ResetPassword";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import MfaChallenge from "./pages/MfaChallenge";
 import MfaSettings from "./pages/MfaSettings";
+import SettingsLicensing from "./pages/SettingsLicensing";
 import AccessDenied from "./pages/AccessDenied";
 import PlatformAdmin from "./pages/PlatformAdmin";
 import OwnerCommandCenter, { type OwnerCommandCenterProps } from "./pages/OwnerCommandCenter";
@@ -123,6 +124,7 @@ function Router() {
       <Route path="/invitations/accept" component={AcceptInvitation} />
       <Route path="/mfa-challenge" component={MfaChallenge} />
       <Route path="/settings/security/mfa" component={owner(MfaSettings)} />
+      <Route path="/settings/licensing" component={owner(SettingsLicensing)} />
       <Route path="/admin/security/mfa" component={admin(MfaSettings)} />
       <Route path="/onboarding" component={Onboarding} />
       <Route path="/integrations" component={Integrations} />

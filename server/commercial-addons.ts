@@ -72,6 +72,26 @@ export type CommercialEntitlementRecord = {
   membershipId: number | null;
   organizationSlug: string;
   organizationName: string;
+  subtitle?: string | null;
+  isSynthetic?: boolean;
+  isTestOrganization?: boolean;
+  billingExempt?: boolean;
+  doNotBill?: boolean;
+  licenseStatus?: "ACTIVE" | "SUSPENDED";
+  connectorStatus?: "none";
+  warningBanner?: {
+    title: string;
+    body: string;
+  } | null;
+  auditEvents?: Array<{
+    action: string;
+    addonKey: CommercialAddonKey | null;
+    status: string | null;
+    reason: string | null;
+    source: string | null;
+    effectiveEntitlements: CommercialAddonKey[];
+    createdAt: string;
+  }>;
   billingClassification: BillingClassification;
   basePlanCode: BasePlanCode | null;
   basePlanMonthlyPrice: number;
@@ -90,12 +110,22 @@ export type CommercialEntitlementRecord = {
   externalExecutionStatus: ExternalExecutionStatus;
 };
 
+export const COMMERCIAL_LICENSING_LAB_SLUG = "eeos-commercial-licensing-lab";
+export const COMMERCIAL_LICENSING_LAB_NAME = "EEOS Commercial Licensing Lab";
+
+export function isCommercialLicensingLab(organization: Pick<CommercialOrganizationInput, "slug" | "name">) {
+  const slug = organization.slug.toLowerCase();
+  const name = organization.name.toLowerCase();
+  return slug === COMMERCIAL_LICENSING_LAB_SLUG || name.includes("eeos commercial licensing lab");
+}
+
 const INTERNAL_ORGANIZATION_SLUGS = new Set(["eea", "eagle-eye-automation", "prn-staffers", "summit-demo"]);
 
 export function classifyOrganizationForBilling(organization: CommercialOrganizationInput): BillingClassification {
   const slug = organization.slug.toLowerCase();
   const name = organization.name.toLowerCase();
 
+  if (isCommercialLicensingLab(organization)) return "COMMERCIAL";
   if (slug === "summit-demo" || name.includes("summit demo")) return "INTERNAL_DEMO";
   if (organization.organizationType === "platform_owner") return "INTERNAL_FOUNDER";
   if (INTERNAL_ORGANIZATION_SLUGS.has(slug) || name.includes("prn staffers")) return "INTERNAL_FOUNDER";
